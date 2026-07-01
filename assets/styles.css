@@ -1,0 +1,3244 @@
+:root{
+  --bg:#F5F8EF; --paper:#FFF9EA; --paper2:#EAF8FF; --ink:#203248; --muted:#64748B;
+  --blue:#54D4FF; --green:#55E6A5; --yellow:#FFD572; --orange:#FFB457; --red:#FF6B6B;
+  --line:#20324818; --shadow:0 18px 0 #20324812, 0 28px 50px #2032481f;
+  --radius:30px; --container:min(1160px, calc(100% - 32px));
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,#F7FBF2,#EDF8FF 48%,#FDF3DD);color:var(--ink);font:16px/1.55 Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(#20324814 1.2px, transparent 1.2px);background-size:26px 26px;mask-image:linear-gradient(#000, transparent 80%);z-index:-1}
+a{color:inherit;text-decoration:none} img{max-width:100%;display:block} button{font:inherit}
+.container{width:var(--container);margin:auto}.section{padding:72px 0}.narrow{max-width:780px}
+.site-header{position:sticky;top:0;z-index:30;background:#FFF9EAe8;backdrop-filter:blur(12px);border-bottom:3px solid #20324812}
+.nav-wrap{min-height:76px;display:flex;align-items:center;gap:18px}
+.brand{display:flex;align-items:center;gap:12px;flex:1}.brand img{width:48px}.brand b{display:block}.brand small{display:block;color:var(--muted)}
+.main-nav{display:flex;gap:16px;flex-wrap:wrap}.main-nav a{font-weight:800;padding:8px 10px;border-radius:999px}.main-nav a:hover{background:#2032480c}
+.btn,.round-btn{border:0;border-radius:999px;background:var(--ink);color:white;font-weight:900;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;box-shadow:0 6px 0 #00000022;cursor:pointer;transition:.18s}
+.btn:hover,.round-btn:hover{transform:translateY(-2px);box-shadow:0 8px 0 #00000022}.btn:active,.round-btn:active{transform:translateY(3px);box-shadow:0 3px 0 #00000022}
+.btn-small{padding:10px 16px}.btn-ghost{background:white;color:var(--ink);border:3px solid var(--ink)}
+.round-btn{width:50px;height:50px;padding:0;background:#fff;color:var(--ink);border:3px solid var(--ink)}
+.hero{position:relative;min-height:720px;display:grid;align-items:center;overflow:hidden}.hero-art{position:absolute;inset:0}.hero-art img{width:100%;height:100%;object-fit:cover}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#fff9eaf0 0%,#fff9eadd 38%,#fff9ea8a 62%,#fff9ea15)}
+.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.05fr .72fr;gap:34px;align-items:center}
+.eyebrow{text-transform:uppercase;letter-spacing:.16em;color:#167a8d;font-size:.78rem;font-weight:900;margin:0 0 10px}
+h1,h2,h3,h4,p{margin-top:0}h1{font-size:clamp(3rem,7vw,6rem);line-height:.92;letter-spacing:-.055em;margin-bottom:20px}h2{font-size:clamp(2rem,4vw,3.5rem);line-height:1;letter-spacing:-.035em;margin-bottom:16px}h3{font-size:1.48rem;margin-bottom:10px}
+.lead{font-size:clamp(1.08rem,1.7vw,1.25rem);max-width:58ch;color:#41566b}.actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:24px}
+.hero-side{display:grid;gap:14px}.hot-card{display:block;background:#fff;border:4px solid var(--ink);border-radius:26px;padding:20px;box-shadow:var(--shadow);transition:.22s}
+.hot-card:hover{transform:rotate(-1deg) translateY(-4px)}.hot-card:nth-child(2):hover{transform:rotate(1deg) translateY(-4px)}
+.hot-card span{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--yellow);font-weight:900;margin-bottom:10px}.hot-card b{display:block;font-size:1.2rem}.hot-card small{display:block;color:var(--muted)}
+.section-head{max-width:820px;margin-bottom:30px}.cards-3,.service-grid,.product-grid,.detail-grid,.contact-grid{display:grid;gap:22px}.cards-3,.service-grid{grid-template-columns:repeat(3,1fr)}.product-grid,.detail-grid{grid-template-columns:repeat(2,1fr)}.contact-grid{grid-template-columns:1fr 1fr .9fr}
+.info-card,.service-card,.product-card,.panel,.cycle-shell{background:white;border:4px solid var(--ink);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.info-card,.panel,.cycle-shell{padding:26px}.round-icon{width:70px;height:70px;border-radius:24px;background:var(--yellow);display:grid;place-items:center;font-size:2rem;margin-bottom:18px;border:3px solid var(--ink)}
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center}.reverse{grid-template-columns:1fr 1fr}.soft-block{background:#fff7dc80}
+.image-link,.big-illustration{border:4px solid var(--ink);border-radius:var(--radius);background:white;box-shadow:var(--shadow);overflow:hidden}.image-link{display:block}.image-link:hover{transform:translateY(-4px)}
+.service-card img,.product-card img{height:250px;width:100%;object-fit:cover}.service-card div,.product-card div{padding:22px}
+.page-hero{padding:72px 0 26px}.product-hero .big-illustration{background:#fff;min-height:330px}.copy p{color:#41566b}
+.spec-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.spec-row span{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:9px 13px;font-weight:900}
+.check-list{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px}.check-list li{position:relative;padding-left:32px;color:#41566b}.check-list li:before{content:"✓";position:absolute;left:0;top:-2px;width:23px;height:23px;border-radius:50%;background:var(--green);border:2px solid var(--ink);display:grid;place-items:center;font-weight:900;color:var(--ink);font-size:.82rem}
+.spec-list{display:grid;gap:10px}.spec-list div,.registry-grid div{display:grid;gap:4px;background:#F2FAFF;border:3px solid #20324814;border-radius:18px;padding:13px}.spec-list dt,.registry-grid dt{font-weight:900;color:#51677c;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}.spec-list dd,.registry-grid dd{margin:0;font-weight:900}
+.registry-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.note{margin:18px 0 0;color:#64748B}
+.cycle-top{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:20px}.cycle-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.wash-ui{display:grid;grid-template-columns:360px 1fr;gap:22px}.tank-stage{position:relative;min-height:420px;background:#EAF8FF;border:4px solid var(--ink);border-radius:28px;padding:20px;overflow:hidden}.tank{position:absolute;left:50%;top:62px;transform:translateX(-50%);width:180px;height:260px;border:7px solid var(--ink);border-radius:58px 58px 36px 36px;background:#CFF4FF;overflow:hidden}.liquid{position:absolute;left:0;right:0;bottom:0;height:35%;background:#54D4FF;transition:.3s}.spray-lines{position:absolute;left:25px;right:25px;top:36px;height:90px;opacity:.18;background:repeating-linear-gradient(90deg,transparent 0 18px,#fff 18px 22px);transition:.25s}.spray-lines.on{opacity:.85}.bubbles{position:absolute;inset:0;background:radial-gradient(circle at 20% 70%,#fff 0 5px,transparent 6px),radial-gradient(circle at 60% 80%,#fff 0 4px,transparent 5px),radial-gradient(circle at 72% 62%,#fff 0 5px,transparent 6px);animation:bubbles 2.8s linear infinite}.impeller{position:absolute;left:50%;bottom:66px;margin-left:-34px;width:68px;height:68px;border-radius:50%;border:5px solid var(--ink);background:#fff}.impeller:before{content:"↻";display:grid;place-items:center;height:100%;font-size:2rem;font-weight:900}.impeller.on{animation:spin 1s linear infinite;background:#FFF2C7}.drain{position:absolute;left:50%;bottom:48px;width:18px;height:70px;background:#54D4FF;border-radius:0 0 12px 12px;opacity:0}.drain.on{opacity:1}.legend{position:absolute;inset:auto 18px 18px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.legend-item{background:white;border:3px solid #20324818;border-radius:16px;padding:9px;display:flex;gap:8px;align-items:center;font-weight:900}.legend-item.on{border-color:var(--ink);transform:translateY(-4px)}
+.phase-panel{display:grid;gap:14px}.current-step{display:grid;grid-template-columns:90px 1fr;gap:16px;align-items:center;background:#FFF9EA;border:4px solid var(--ink);border-radius:24px;padding:18px}.step-num{width:82px;height:82px;border-radius:24px;background:var(--yellow);border:3px solid var(--ink);display:grid;place-items:center;font-size:2rem;font-weight:900}.outputs{display:flex;gap:8px;flex-wrap:wrap}.outputs span{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 11px;font-weight:900}.step-buttons{display:flex;gap:7px;flex-wrap:wrap}.step-buttons button{border:2px solid var(--ink);background:#fff;border-radius:12px;padding:7px 9px;font-weight:900;cursor:pointer}.step-buttons button.active{background:var(--yellow)}
+.kiln-ui{display:grid;grid-template-columns:360px 1fr;gap:22px}.kiln-stage{min-height:370px;background:#FFF3DC;border:4px solid var(--ink);border-radius:28px;display:grid;place-items:center;padding:24px}.kiln-box{position:relative;width:240px;height:250px;border:6px solid var(--ink);border-radius:38px;background:#34495E}.kiln-door{position:absolute;right:30px;top:38px;width:144px;height:166px;border:5px solid var(--ink);border-radius:28px;background:#FFD572;overflow:hidden}.flame{position:absolute;inset:30px;background:#FF8A3D;border-radius:45% 45% 20% 20%;opacity:.55}.kiln-door.hot .flame{animation:heat .8s infinite alternate;opacity:.95}.kiln-controller{position:absolute;left:18px;bottom:30px;width:74px;height:116px;border:4px solid var(--ink);border-radius:20px;background:#162D45;padding:11px}.kiln-display{height:34px;border-radius:10px;background:#8BE3FF;color:#162D45;font-weight:900;text-align:center;line-height:34px}.kiln-chart{background:white;border:4px solid var(--ink);border-radius:24px;padding:15px}.kiln-chart svg{width:100%;height:230px}.kiln-info{background:#FFF9EA;border:4px solid var(--ink);border-radius:24px;padding:18px;margin-top:14px}.kiln-steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.kiln-steps button{border:2px solid var(--ink);background:#fff;border-radius:999px;padding:8px 12px;font-weight:900;cursor:pointer}.kiln-steps button.active{background:var(--yellow)}
+.map-card{min-height:260px;background:#EAF8FF;border:4px dashed var(--ink);border-radius:28px;display:grid;place-items:center;text-align:center;padding:24px}.map-card b{font-size:2rem}.map-card span{color:#41566b}
+.site-footer{padding:46px 0 24px;background:#203248;color:white;margin-top:48px}.footer-layout{display:grid;grid-template-columns:1.2fr .6fr 1fr;gap:24px}.footer-brand{color:white}.footer-brand small,.site-footer p{color:#cbd5e1}.footer-links{display:grid;gap:8px}.footer-bottom{border-top:1px solid #ffffff24;margin-top:28px;padding-top:18px;display:flex;justify-content:space-between;color:#cbd5e1}
+.reveal{opacity:0;transform:translateY(18px);transition:.65s ease}.reveal.visible{opacity:1;transform:none}.delay{transition-delay:.08s}.delay-2{transition-delay:.16s}
+@keyframes bubbles{to{background-position:0 -100px,0 -140px,0 -120px}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes heat{to{transform:scale(1.08);opacity:.65}}
+@media(max-width:980px){.hero-grid,.split-grid,.cards-3,.service-grid,.product-grid,.detail-grid,.contact-grid,.wash-ui,.kiln-ui,.footer-layout{grid-template-columns:1fr}.hero{min-height:auto;padding:78px 0}.hero-side{max-width:520px}.nav-wrap{flex-wrap:wrap;padding:12px 0}.main-nav{order:3;width:100%;gap:6px}.registry-grid{grid-template-columns:1fr}.cycle-top{align-items:flex-start;flex-direction:column}.hero:after{background:#fff9eada}.legend{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){h1{font-size:3rem}.section{padding:52px 0}.current-step{grid-template-columns:1fr}.btn-small{display:none}.tank-stage,.kiln-stage{min-height:360px}.legend{position:relative;inset:auto;margin-top:300px;grid-template-columns:1fr}}
+
+
+/* v2: CIP tank animation — horizontal milk tank, spray ball, pump loop, drain and dosing manifold */
+.cip-ui{grid-template-columns:minmax(520px,.98fr) 1fr}
+.cip-stage{
+  position:relative;min-height:520px;background:#EAF8FF;border:4px solid var(--ink);border-radius:28px;
+  padding:20px;overflow:hidden;background-image:linear-gradient(#ffffff80,#ffffff00 42%),radial-gradient(circle at 78% 18%,#fff8,transparent 22%);
+}
+.cip-stage:before{content:"";position:absolute;left:18px;right:18px;bottom:24px;height:88px;border-radius:24px;background:#D8F3D2;border:3px solid #20324818}
+.cip-sources{position:absolute;left:18px;top:18px;width:156px;display:grid;gap:8px;z-index:4}
+.source{
+  height:64px;border:3px solid var(--ink);border-radius:18px;background:white;display:grid;grid-template-columns:34px 38px 1fr;
+  align-items:center;gap:6px;padding:7px 9px;box-shadow:0 6px 0 #20324814;transition:.18s ease
+}
+.source i{font-style:normal;font-size:1.3rem}.source b{font-size:1.05rem}.source small{font-size:.72rem;color:#566b7c;line-height:1.05}
+.source.on{transform:translateX(5px);box-shadow:0 8px 0 #2032481f}
+.source-cold.on{background:#BCEFFF}.source-hot.on{background:#FFE0B5}.source-alkali.on{background:#C9FFE6}.source-acid.on{background:#E3D7FF}
+.cip-lines{position:absolute;inset:0;z-index:1;pointer-events:none}
+.pipe{position:absolute;border-radius:999px;background:#A8C3D1;border:3px solid var(--ink);opacity:.35;transition:.2s ease}
+.pipe:after{content:"";position:absolute;inset:4px;border-radius:inherit;background:repeating-linear-gradient(90deg,#fff 0 12px,#ffffff00 12px 24px);opacity:0;animation:flow 1s linear infinite}
+.pipe-cold{left:174px;top:48px;width:104px;height:12px}.pipe-hot{left:174px;top:120px;width:104px;height:12px}.pipe-alkali{left:174px;top:192px;width:104px;height:12px}.pipe-acid{left:174px;top:264px;width:104px;height:12px}
+.pipe-mix{left:272px;top:54px;width:12px;height:224px}.pipe-feed{left:278px;top:158px;width:206px;height:12px}.pipe-return{right:116px;bottom:116px;width:260px;height:12px}.pipe-drain{left:50%;bottom:80px;width:180px;height:12px;transform:translateX(-20px) rotate(8deg);transform-origin:left center}
+.cip-ui.is-cold .pipe-cold,.cip-ui.is-hot .pipe-hot,.cip-ui.is-alkali .pipe-alkali,.cip-ui.is-acid .pipe-acid,.cip-ui.is-pump .pipe-feed,.cip-ui.is-pump .pipe-return,.cip-ui.is-drain .pipe-drain{opacity:1}
+.cip-ui.is-cold .pipe-cold,.cip-ui.is-cold .pipe-cold:after{background:#54D4FF}.cip-ui.is-hot .pipe-hot,.cip-ui.is-hot .pipe-hot:after{background:#FFB457}.cip-ui.is-alkali .pipe-alkali,.cip-ui.is-alkali .pipe-alkali:after{background:#55E6A5}.cip-ui.is-acid .pipe-acid,.cip-ui.is-acid .pipe-acid:after{background:#B99CFF}.cip-ui.is-pump .pipe-feed,.cip-ui.is-pump .pipe-return{background:#8BE3FF}.cip-ui.is-drain .pipe-drain{background:#54D4FF}
+.cip-ui.is-cold .pipe-cold:after,.cip-ui.is-hot .pipe-hot:after,.cip-ui.is-alkali .pipe-alkali:after,.cip-ui.is-acid .pipe-acid:after,.cip-ui.is-pump .pipe-feed:after,.cip-ui.is-pump .pipe-return:after,.cip-ui.is-drain .pipe-drain:after{opacity:.85}
+.mixing-node{position:absolute;left:246px;top:136px;width:86px;height:86px;border:4px solid var(--ink);border-radius:24px;background:#FFF9EA;z-index:3;display:grid;place-items:center;text-align:center;padding:6px;box-shadow:0 8px 0 #20324818}
+.mixing-node b{font-size:.68rem;line-height:1.05}.mix-dot{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#54D4FF,#FFB457,#55E6A5,#B99CFF);border:3px solid var(--ink)}
+.milk-tank{position:absolute;left:320px;top:118px;width:326px;height:244px;z-index:3}
+.tank-shadow{position:absolute;left:36px;right:32px;bottom:-28px;height:36px;border-radius:50%;background:#20324822}
+.tank-body{position:absolute;left:0;right:0;top:38px;height:164px;border:7px solid var(--ink);border-radius:84px;background:#CFF4FF;overflow:hidden;box-shadow:inset 0 0 0 8px #ffffff55}
+.tank-body:before{content:"";position:absolute;left:50px;right:50px;top:18px;height:26px;border-radius:999px;background:#fff8}
+.tank-end{position:absolute;top:0;width:108px;height:100%;border-radius:50%;background:#B8E8F8;border:0 solid var(--ink)}
+.tank-end.left{left:-20px;border-right:4px solid #20324822}.tank-end.right{right:-20px;border-left:4px solid #20324822}
+.tank-top-nozzle{position:absolute;left:50%;top:-20px;transform:translateX(-50%);width:72px;height:54px;border:6px solid var(--ink);border-radius:22px;background:#FFF9EA;z-index:3}
+.spray-ball{position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);width:36px;height:36px;border:5px solid var(--ink);border-radius:50%;background:#fff}
+.spray-ball:after{content:"";position:absolute;left:9px;top:9px;width:6px;height:6px;border-radius:50%;background:var(--ink);box-shadow:12px 0 0 var(--ink),6px 10px 0 var(--ink)}
+.spray-cloud{position:absolute;left:90px;right:90px;top:42px;height:86px;opacity:.1;transition:.2s ease}
+.spray-cloud span{position:absolute;top:0;width:5px;height:92px;background:#fff;border-radius:999px;transform-origin:top center}
+.spray-cloud span:nth-child(1){left:5%;transform:rotate(32deg)}.spray-cloud span:nth-child(2){left:28%;transform:rotate(14deg)}.spray-cloud span:nth-child(3){left:50%;transform:rotate(0)}.spray-cloud span:nth-child(4){left:70%;transform:rotate(-16deg)}.spray-cloud span:nth-child(5){left:90%;transform:rotate(-32deg)}
+.cip-ui.is-pump .spray-cloud{opacity:.88;animation:sprayPulse .55s ease-in-out infinite alternate}
+.wall-film{position:absolute;top:56px;width:26px;height:90px;border-radius:999px;background:#fff8;opacity:0;transition:.2s}.film-a{left:44px}.film-b{right:44px}
+.cip-ui.is-pump .wall-film{opacity:.75;animation:film 1.3s linear infinite}
+.wash-pool{position:absolute;left:54px;right:54px;bottom:8px;height:10px;border-radius:50% 50% 22px 22px;background:#54D4FF;border-top:4px solid #20324822;transition:.25s;overflow:hidden}
+.wave{position:absolute;left:-30%;right:-30%;height:12px;top:-4px;border-radius:50%;background:#fff8;animation:wave 1.3s linear infinite}.w2{animation-delay:.45s;opacity:.55}
+.bottom-outlet{position:absolute;left:50%;bottom:-9px;width:36px;height:30px;transform:translateX(-50%);background:#CFF4FF;border:5px solid var(--ink);border-radius:0 0 14px 14px}
+.tank-label{position:absolute;left:76px;right:76px;bottom:0;text-align:center;font-weight:900;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:6px 10px}
+.pump-unit{position:absolute;right:84px;bottom:64px;width:128px;height:94px;background:white;border:4px solid var(--ink);border-radius:24px;z-index:4;display:grid;grid-template-columns:58px 1fr;align-items:center;gap:6px;padding:10px;box-shadow:0 8px 0 #20324818;transition:.18s}
+.pump-wheel{width:54px;height:54px;border:5px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:#EAF8FF;font-weight:900;font-size:1.7rem}.pump-unit b{font-size:1.45rem}.pump-unit small{grid-column:2;color:#566b7c;font-size:.74rem}.pump-unit.on{background:#FFF2C7}.pump-unit.on .pump-wheel{animation:spin .75s linear infinite;background:#8BE3FF}
+.drain-box{position:absolute;right:280px;bottom:38px;width:116px;height:74px;background:#fff;border:4px solid var(--ink);border-radius:22px;z-index:4;text-align:center;padding:8px;box-shadow:0 8px 0 #20324818}.drain-box small{display:block;color:#566b7c}.drain-water{height:8px;margin:7px auto 0;width:60px;border-radius:999px;background:#54D4FF;opacity:0}.drain-box.on{background:#EAF8FF}.drain-box.on .drain-water{opacity:1;animation:drainMove .45s linear infinite}
+.controller-mini{position:absolute;right:22px;top:20px;width:172px;background:#162D45;border:4px solid var(--ink);border-radius:22px;padding:12px;z-index:5;box-shadow:0 8px 0 #20324818}
+.controller-mini .screen{height:82px;background:#8BE3FF;border:3px solid var(--ink);border-radius:14px;padding:9px;display:grid;align-content:center;gap:5px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;color:#14293c;font-weight:900;font-size:.84rem;overflow:hidden}.ctrl-dots{display:flex;gap:7px;margin-top:10px}.ctrl-dots i{width:13px;height:13px;border:3px solid var(--ink);border-radius:50%;background:#55E6A5}.ctrl-dots i:nth-child(2){background:#FFB457}.ctrl-dots i:nth-child(3){background:#FF6B6B}
+.phase-explain{background:#EAF8FF;border:4px solid var(--ink);border-radius:24px;padding:18px}.phase-explain b{display:block;margin-bottom:6px;font-size:1.08rem}.phase-explain p{margin:0;color:#41566b}
+@keyframes flow{to{background-position:24px 0}}@keyframes sprayPulse{to{opacity:.45;transform:scaleY(.96)}}@keyframes film{to{transform:translateY(24px);opacity:.25}}@keyframes wave{to{transform:translateX(42px)}}@keyframes drainMove{to{background-position:18px 0}}
+@media(max-width:980px){.cip-ui{grid-template-columns:1fr}.cip-stage{min-height:560px}.milk-tank{left:50%;transform:translateX(-50%);top:155px}.cip-sources{width:calc(100% - 40px);grid-template-columns:repeat(2,1fr)}.source{height:58px}.controller-mini{right:20px;top:160px}.mixing-node{left:30px;top:190px}.pipe-cold,.pipe-hot,.pipe-alkali,.pipe-acid,.pipe-mix,.pipe-feed{display:none}.pump-unit{right:38px;bottom:68px}.drain-box{left:38px;right:auto;bottom:70px}}
+@media(max-width:620px){.cip-stage{min-height:650px}.cip-sources{grid-template-columns:1fr}.milk-tank{width:286px;top:288px}.controller-mini{left:20px;right:auto;top:288px;width:150px}.mixing-node{display:none}.pump-unit{right:22px;bottom:68px}.drain-box{left:22px;bottom:70px}.pipe-return,.pipe-drain{display:none}}
+
+/* v3: header brand — one-line company name without subtitle */
+.site-header .brand{
+  align-items:center;
+}
+.site-header .brand .brand-name{
+  display:flex;
+  align-items:center;
+  height:48px;
+}
+.site-header .brand .brand-name b{
+  display:block;
+  font-size:1.28rem;
+  line-height:1;
+  letter-spacing:.035em;
+  white-space:nowrap;
+}
+.site-header .brand .brand-name small{
+  display:none;
+}
+
+/* v4: Russian brand and centered first-screen layout on medium widths */
+.site-header .brand .brand-name b{
+  font-size:1.2rem;
+  letter-spacing:.01em;
+}
+
+@media (max-width:1100px){
+  .hero-grid{
+    grid-template-columns:1fr;
+    justify-items:center;
+    text-align:center;
+    max-width:760px;
+  }
+  .hero-copy{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .hero-copy .lead{
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .hero-copy .actions{
+    justify-content:center;
+  }
+  .hero-side{
+    width:min(100%,560px);
+    margin-inline:auto;
+    justify-items:stretch;
+  }
+  .hot-card{
+    text-align:left;
+  }
+}
+
+/* v15: feature cards with integrated geometric corner art */
+.feature-cards .feature-card{
+  position:relative;
+  min-height:295px;
+  padding:140px 26px 28px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.feature-cards .feature-card::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:132px;
+  background:
+    radial-gradient(circle at 82% 10%, #FFD57255 0 42px, transparent 43px),
+    linear-gradient(180deg, #FFF3C4 0%, #FFF9EA 72%, #ffffff00 100%);
+  z-index:-2;
+}
+.feature-cards .feature-card::after{
+  content:"";
+  position:absolute;
+  left:22px;
+  right:22px;
+  top:108px;
+  height:4px;
+  border-radius:999px;
+  background:linear-gradient(90deg, transparent, #20324822 20%, #20324822 80%, transparent);
+  z-index:-1;
+}
+.feature-card h3{position:relative;z-index:2}
+.feature-card p{position:relative;z-index:2}
+.feature-art{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+}
+
+/* Проектирование — шестерёнка выходит из правого верхнего угла */
+.gear-art .gear-ring{
+  position:absolute;
+  width:132px;
+  height:132px;
+  right:-32px;
+  top:-34px;
+  border:14px solid var(--ink);
+  border-radius:50%;
+  background:#FFF9EA;
+  box-shadow:0 0 0 12px #54D4FF55;
+  transform:rotate(12deg);
+}
+.gear-art .gear-core{
+  position:absolute;
+  width:44px;
+  height:44px;
+  right:12px;
+  top:12px;
+  border:9px solid var(--ink);
+  border-radius:50%;
+  background:#54D4FF;
+}
+.gear-art .gear-tooth{
+  position:absolute;
+  width:26px;
+  height:52px;
+  right:34px;
+  top:-18px;
+  border-radius:10px;
+  background:var(--ink);
+  transform-origin:14px 88px;
+}
+.gear-art .t1{transform:rotate(0deg)}
+.gear-art .t2{transform:rotate(45deg)}
+.gear-art .t3{transform:rotate(90deg)}
+.gear-art .t4{transform:rotate(135deg)}
+.gear-art .draft-line{
+  position:absolute;
+  left:24px;
+  height:7px;
+  border-radius:999px;
+  background:#54D4FF;
+  box-shadow:0 0 0 3px #20324810;
+}
+.gear-art .l1{top:46px;width:116px}
+.gear-art .l2{top:70px;width:86px;background:#55E6A5}
+.gear-art .l3{top:94px;width:132px;background:#FFB457}
+
+/* Производство — ключ слева и паяющий манипулятор справа */
+.production-art .wrench-head{
+  position:absolute;
+  width:64px;
+  height:64px;
+  left:-10px;
+  top:-10px;
+  border:12px solid var(--ink);
+  border-right-color:transparent;
+  border-radius:50%;
+  transform:rotate(-34deg);
+  background:#fff;
+}
+.production-art .wrench-handle{
+  position:absolute;
+  width:24px;
+  height:112px;
+  left:56px;
+  top:32px;
+  border-radius:999px;
+  background:var(--ink);
+  transform:rotate(-34deg);
+}
+.production-art .robot-arm{
+  position:absolute;
+  border:10px solid var(--ink);
+  border-radius:999px;
+  background:#fff;
+}
+.production-art .arm-a{
+  width:128px;
+  height:28px;
+  right:-10px;
+  top:30px;
+  transform:rotate(-18deg);
+}
+.production-art .arm-b{
+  width:96px;
+  height:28px;
+  right:42px;
+  top:76px;
+  transform:rotate(28deg);
+}
+.production-art .solder-tip{
+  position:absolute;
+  right:88px;
+  top:106px;
+  width:22px;
+  height:58px;
+  clip-path:polygon(50% 0,100% 72%,50% 100%,0 72%);
+  background:#FFB457;
+  border:4px solid var(--ink);
+  transform:rotate(12deg);
+}
+.production-art .pcb-board{
+  position:absolute;
+  right:26px;
+  top:116px;
+  width:102px;
+  height:48px;
+  border:4px solid var(--ink);
+  border-radius:14px;
+  background:#55E6A5;
+  transform:rotate(-3deg);
+}
+.production-art .pcb-board i{
+  position:absolute;
+  width:14px;
+  height:14px;
+  border:3px solid var(--ink);
+  border-radius:50%;
+  background:#FFF9EA;
+  top:15px;
+}
+.production-art .pcb-board i:nth-child(1){left:16px}
+.production-art .pcb-board i:nth-child(2){left:42px}
+.production-art .pcb-board i:nth-child(3){left:68px}
+
+/* Программирование — граф, узлы и код в свободной верхней зоне */
+.code-art .node{
+  position:absolute;
+  width:24px;
+  height:24px;
+  border:4px solid var(--ink);
+  border-radius:50%;
+  background:#54D4FF;
+  z-index:2;
+}
+.code-art .n1{right:148px;top:34px}
+.code-art .n2{right:92px;top:72px;background:#55E6A5}
+.code-art .n3{right:44px;top:30px;background:#FFD572}
+.code-art .n4{right:28px;top:104px;background:#FFB457}
+.code-art .graph-line{
+  position:absolute;
+  height:6px;
+  border-radius:999px;
+  background:var(--ink);
+  transform-origin:left center;
+}
+.code-art .g1{right:106px;top:57px;width:70px;transform:rotate(34deg)}
+.code-art .g2{right:52px;top:58px;width:62px;transform:rotate(-38deg)}
+.code-art .g3{right:42px;top:95px;width:58px;transform:rotate(68deg)}
+.code-art .code-chip{
+  position:absolute;
+  left:26px;
+  top:28px;
+  width:76px;
+  height:58px;
+  border:4px solid var(--ink);
+  border-radius:18px;
+  background:#EAF8FF;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  font-size:1.45rem;
+  color:var(--ink);
+  transform:rotate(-4deg);
+}
+.code-art .binary{
+  position:absolute;
+  left:118px;
+  font-weight:900;
+  color:#20324899;
+  font-size:1.05rem;
+  letter-spacing:.08em;
+}
+.code-art .b1{top:26px}
+.code-art .b2{top:58px;left:142px;color:#167a8d}
+.code-art .b3{top:90px;left:112px;color:#9A6A17}
+
+@media(max-width:980px){
+  .feature-cards .feature-card{min-height:260px}
+}
+
+/* v16: homepage КПМТ-10С product visual — tank, cooling unit and controller */
+.kpmt-home-demo{
+  min-height:380px;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%);
+  position:relative;
+  overflow:hidden;
+  display:block;
+}
+.kpmt-home-demo img{display:none}
+.kpmt-scene{
+  position:relative;
+  min-height:390px;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  border-radius:calc(var(--radius) - 4px);
+}
+.kpmt-scene:before{
+  content:"";
+  position:absolute;
+  left:-4%;
+  right:-4%;
+  bottom:0;
+  height:92px;
+  background:#D8F3D2;
+  border-top:4px solid #20324818;
+}
+.kpmt-scene:after{
+  content:"";
+  position:absolute;
+  inset:18px;
+  border-radius:28px;
+  border:3px dashed #20324814;
+  pointer-events:none;
+}
+.kpmt-tank{
+  position:absolute;
+  left:54px;
+  bottom:68px;
+  width:178px;
+  height:252px;
+  border:6px solid var(--ink);
+  border-radius:56px 56px 34px 34px;
+  background:linear-gradient(90deg,#C7EAF5,#F8FEFF 42%,#A9D6E7);
+  overflow:hidden;
+  box-shadow:0 14px 0 #20324814;
+}
+.tank-neck{
+  position:absolute;
+  left:50%;
+  top:-5px;
+  width:60px;
+  height:34px;
+  transform:translateX(-50%);
+  border:5px solid var(--ink);
+  border-top:0;
+  border-radius:0 0 18px 18px;
+  background:#EAF8FF;
+  z-index:4;
+}
+.spray-head{
+  position:absolute;
+  left:50%;
+  top:34px;
+  width:34px;
+  height:20px;
+  transform:translateX(-50%);
+  border:4px solid var(--ink);
+  border-radius:0 0 18px 18px;
+  background:#FFF9EA;
+  z-index:5;
+}
+.spray-rays{
+  position:absolute;
+  left:50%;
+  top:65px;
+  width:112px;
+  height:116px;
+  transform:translateX(-50%);
+  z-index:4;
+}
+.spray-rays span{
+  position:absolute;
+  top:0;
+  width:8px;
+  height:96px;
+  border-radius:999px;
+  background:repeating-linear-gradient(to bottom,#54D4FF 0 9px,transparent 9px 18px);
+  opacity:.35;
+  filter:drop-shadow(0 2px 0 #ffffff80);
+  animation:dashPour 1.05s steps(3,end) infinite;
+}
+.spray-rays span:nth-child(1){left:22px;transform:rotate(18deg);animation-delay:0s}
+.spray-rays span:nth-child(2){left:52px;animation-delay:.14s}
+.spray-rays span:nth-child(3){left:82px;transform:rotate(-18deg);animation-delay:.28s}
+.tank-water{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:37%;
+  background:linear-gradient(180deg,#84E5FF,#54D4FF);
+  border-top:4px solid #2032481f;
+  animation:tankLevel 5.4s ease-in-out infinite;
+}
+.tank-water:before,.tank-water:after{
+  content:"";
+  position:absolute;
+  left:-18%;
+  right:-18%;
+  height:18px;
+  border-radius:50%;
+  top:-9px;
+  background:#ffffff90;
+  animation:waveMove 2s linear infinite;
+}
+.tank-water:after{
+  top:4px;
+  opacity:.42;
+  animation-delay:.55s;
+}
+.tank-shine{
+  position:absolute;
+  left:28px;
+  top:34px;
+  width:24px;
+  height:130px;
+  border-radius:999px;
+  background:#fff8;
+}
+.cooling-unit{
+  position:absolute;
+  right:68px;
+  bottom:84px;
+  width:190px;
+  height:174px;
+  border:6px solid var(--ink);
+  border-radius:30px;
+  background:#FFF9EA;
+  box-shadow:0 14px 0 #20324814;
+}
+.cooling-unit:before{
+  content:"";
+  position:absolute;
+  left:18px;
+  right:18px;
+  top:16px;
+  height:18px;
+  border-radius:999px;
+  background:#AEEAFF;
+  border:3px solid #20324818;
+}
+.fan{
+  position:absolute;
+  width:62px;
+  height:62px;
+  border:5px solid var(--ink);
+  border-radius:50%;
+  background:#EAF8FF;
+  top:48px;
+  animation:fanSpin 2.1s linear infinite;
+}
+.fan-a{left:24px}
+.fan-b{right:24px;animation-duration:2.5s}
+.fan i{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:10px;
+  height:26px;
+  margin:-26px 0 0 -5px;
+  border-radius:999px;
+  background:#54D4FF;
+  transform-origin:5px 26px;
+}
+.fan i:nth-child(2){transform:rotate(120deg)}
+.fan i:nth-child(3){transform:rotate(240deg)}
+.fan:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:14px;
+  height:14px;
+  margin:-7px 0 0 -7px;
+  border-radius:50%;
+  background:var(--ink);
+}
+.cooling-grille{
+  position:absolute;
+  left:28px;
+  right:28px;
+  bottom:24px;
+  height:34px;
+  border-radius:12px;
+  background:repeating-linear-gradient(90deg,#203248 0 7px,transparent 7px 16px);
+  opacity:.48;
+}
+.cooling-pipe{
+  position:absolute;
+  left:-76px;
+  top:106px;
+  width:78px;
+  height:18px;
+  border:5px solid var(--ink);
+  border-left:0;
+  border-radius:0 999px 999px 0;
+  background:#AEEAFF;
+}
+.kpmt-controller{
+  position:absolute;
+  left:217px;
+  bottom:92px;
+  width:126px;
+  height:150px;
+  border:6px solid var(--ink);
+  border-radius:24px;
+  background:#162D45;
+  box-shadow:0 12px 0 #20324818;
+  padding:14px;
+}
+.ctrl-screen{
+  height:64px;
+  border:4px solid var(--ink);
+  border-radius:14px;
+  background:#8BE3FF;
+  overflow:hidden;
+  padding:8px;
+  display:grid;
+  gap:4px;
+}
+.ctrl-screen span{
+  display:block;
+  color:#14293C;
+  font:900 14px/1 ui-monospace,Menlo,Consolas,monospace;
+  white-space:nowrap;
+  animation:screenText 4.2s steps(1,end) infinite;
+}
+.ctrl-screen i{
+  display:block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#14293C;
+  opacity:.35;
+  animation:dotRun 1.2s ease-in-out infinite;
+}
+.ctrl-screen i:nth-child(2){animation-delay:.15s}
+.ctrl-screen i:nth-child(3){animation-delay:.3s}
+.ctrl-screen i:nth-child(4){animation-delay:.45s}
+.ctrl-lamps{
+  display:flex;
+  gap:8px;
+  margin:12px 0 10px;
+}
+.ctrl-lamps b{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  border:3px solid var(--ink);
+  background:#33465B;
+  animation:lampBlink 1.8s ease-in-out infinite;
+}
+.ctrl-lamps b:nth-child(1){background:#55E6A5}
+.ctrl-lamps b:nth-child(2){background:#FFB457;animation-delay:.35s}
+.ctrl-lamps b:nth-child(3){background:#54D4FF;animation-delay:.7s}
+.ctrl-buttons{
+  display:flex;
+  gap:10px;
+}
+.ctrl-buttons b{
+  width:34px;
+  height:18px;
+  border-radius:999px;
+  border:3px solid var(--ink);
+  background:#FFF9EA;
+}
+.kpmt-caption{
+  position:absolute;
+  left:34px;
+  top:24px;
+  display:grid;
+  gap:2px;
+  background:#FFF9EA;
+  border:4px solid var(--ink);
+  border-radius:20px;
+  padding:12px 16px;
+  box-shadow:0 8px 0 #20324814;
+}
+.kpmt-caption strong{font-size:1.2rem}
+.kpmt-caption small{color:#41566b;font-weight:800}
+@keyframes dashPour{
+  0%{background-position:0 0;opacity:.25}
+  33%{background-position:0 18px;opacity:.9}
+  66%{background-position:0 36px;opacity:.55}
+  100%{background-position:0 54px;opacity:.25}
+}
+@keyframes tankLevel{
+  0%,100%{height:34%}
+  45%{height:48%}
+  72%{height:41%}
+}
+@keyframes waveMove{to{transform:translateX(28px)}}
+@keyframes fanSpin{to{transform:rotate(360deg)}}
+@keyframes dotRun{
+  0%,100%{opacity:.25;transform:translateX(0)}
+  50%{opacity:1;transform:translateX(52px)}
+}
+@keyframes lampBlink{50%{filter:brightness(1.55);box-shadow:0 0 0 6px #ffffff28}}
+@keyframes screenText{
+  0%,24%{content:""}
+}
+@media(max-width:980px){
+  .kpmt-home-demo{min-height:460px}
+  .kpmt-scene{min-height:460px}
+  .kpmt-tank{left:36px;bottom:78px}
+  .cooling-unit{right:34px;bottom:74px;transform:scale(.9);transform-origin:right bottom}
+  .kpmt-controller{left:205px;bottom:96px;transform:scale(.88);transform-origin:left bottom}
+}
+@media(max-width:620px){
+  .kpmt-home-demo{min-height:580px}
+  .kpmt-scene{min-height:580px}
+  .kpmt-caption{left:18px;top:18px}
+  .kpmt-tank{left:50%;transform:translateX(-50%);bottom:250px}
+  .kpmt-controller{left:28px;bottom:80px;transform:none}
+  .cooling-unit{right:20px;bottom:60px;transform:scale(.78);transform-origin:right bottom}
+}
+
+/* v18: refined КПМТ home animation */
+.kpmt-caption{display:none!important}
+
+.kpmt-tank{
+  left:52px;
+  bottom:68px;
+  width:192px;
+  height:258px;
+  border:6px solid var(--ink);
+  border-radius:58px 58px 38px 38px;
+  background:linear-gradient(90deg,#B9DDE9,#F9FEFF 40%,#A7D1E3 72%,#8CB7C8 100%);
+  overflow:visible;
+  box-shadow:0 14px 0 #20324814;
+  z-index:2;
+}
+.kpmt-tank:before{
+  content:"";
+  position:absolute;
+  left:14px;
+  right:14px;
+  top:20px;
+  height:18px;
+  border-radius:999px;
+  background:#fff7;
+}
+.tank-top-ring{
+  position:absolute;
+  left:12px;
+  right:12px;
+  top:8px;
+  height:16px;
+  border-radius:999px;
+  border:4px solid #20324822;
+  background:#d8edf6;
+}
+.tank-hatch{
+  position:absolute;
+  top:-10px;
+  width:46px;
+  height:18px;
+  border:4px solid var(--ink);
+  border-radius:14px 14px 8px 8px;
+  background:#FFF9EA;
+  z-index:4;
+}
+.hatch-a{left:34px}
+.hatch-b{right:34px}
+.tank-neck{
+  top:2px;
+  width:64px;
+  height:30px;
+  z-index:4;
+}
+.spray-head{
+  top:37px;
+  z-index:5;
+}
+.tank-ladder{
+  position:absolute;
+  right:-22px;
+  top:44px;
+  width:18px;
+  height:148px;
+  border-left:4px solid var(--ink);
+  border-right:4px solid var(--ink);
+  z-index:1;
+}
+.tank-ladder i{
+  position:absolute;
+  left:-2px;
+  right:-2px;
+  height:4px;
+  background:var(--ink);
+  border-radius:999px;
+}
+.tank-ladder i:nth-child(1){top:18px}
+.tank-ladder i:nth-child(2){top:52px}
+.tank-ladder i:nth-child(3){top:86px}
+.tank-ladder i:nth-child(4){top:120px}
+.tank-water{
+  border-radius:0 0 30px 30px;
+}
+.tank-leg{
+  position:absolute;
+  bottom:-34px;
+  width:18px;
+  height:38px;
+  border:5px solid var(--ink);
+  border-top:0;
+  border-radius:0 0 12px 12px;
+  background:#D5EAF3;
+}
+.leg-a{left:46px}
+.leg-b{right:46px}
+
+.cooling-unit{
+  right:34px;
+  bottom:82px;
+  width:270px;
+  height:178px;
+  z-index:2;
+}
+.cooling-unit:before{
+  left:16px;
+  right:16px;
+}
+.fan{
+  top:52px;
+  width:58px;
+  height:58px;
+  animation:none!important;
+}
+.fan-a{left:10px}
+.fan-b{right:10px}
+.cooling-unit .kpmt-controller{
+  position:absolute;
+  left:50%;
+  top:42px;
+  bottom:auto;
+  width:96px;
+  height:120px;
+  transform:translateX(-50%);
+  border-width:5px;
+  border-radius:22px;
+  padding:10px;
+  box-shadow:0 8px 0 #20324818;
+  z-index:4;
+}
+.cooling-unit .ctrl-screen{
+  height:54px;
+  border-width:3px;
+  border-radius:12px;
+  padding:7px;
+  gap:3px;
+}
+.cooling-unit .ctrl-screen span{
+  font-size:11px;
+  letter-spacing:-.02em;
+  text-align:center;
+  animation:none!important;
+}
+.cooling-unit .ctrl-screen i{
+  width:7px;
+  height:7px;
+}
+.cooling-unit .ctrl-lamps{
+  gap:6px;
+  margin:8px 0 8px;
+  justify-content:center;
+}
+.cooling-unit .ctrl-lamps b{
+  width:15px;
+  height:15px;
+  border-width:3px;
+}
+.cooling-unit .ctrl-buttons{
+  justify-content:center;
+  gap:7px;
+}
+.cooling-unit .ctrl-buttons b{
+  width:25px;
+  height:14px;
+  border-width:3px;
+}
+.cooling-grille{
+  left:20px;
+  right:20px;
+  bottom:16px;
+  height:18px;
+  opacity:.32;
+}
+.cooling-pipe{
+  position:absolute;
+  left:-78px;
+  border:5px solid var(--ink);
+  border-left:0;
+  border-radius:0 999px 999px 0;
+  z-index:0;
+  opacity:.96;
+}
+.pipe-back{
+  top:86px;
+  width:86px;
+  height:14px;
+  background:#B7E6F5;
+}
+.pipe-front{
+  top:112px;
+  width:74px;
+  height:18px;
+  background:#8FD6EE;
+}
+@media(max-width:980px){
+  .kpmt-tank{left:36px;bottom:76px}
+  .cooling-unit{right:18px;bottom:70px;transform:scale(.84);transform-origin:right bottom}
+  .cooling-unit .kpmt-controller{transform:translateX(-50%)}
+}
+@media(max-width:620px){
+  .kpmt-tank{left:50%;transform:translateX(-50%);bottom:248px}
+  .tank-ladder{right:-18px}
+  .cooling-unit{right:12px;bottom:56px;transform:scale(.72);transform-origin:right bottom}
+}
+
+/* v19: pipes behind equipment and product label alignment */
+.kpmt-scene{position:relative}
+.pipe-bridge{
+  position:absolute;
+  left:226px;
+  right:292px;
+  border-radius:999px;
+  pointer-events:none;
+  z-index:1;
+  opacity:.96;
+  box-shadow:0 5px 0 #20324810;
+}
+.pipe-bridge-top{
+  top:198px;
+  height:14px;
+  background:#B7E6F5;
+  border:4px solid var(--ink);
+}
+.pipe-bridge-bottom{
+  top:242px;
+  height:20px;
+  background:#8FD6EE;
+  border:5px solid var(--ink);
+}
+.kpmt-tank{
+  z-index:5;
+}
+.cooling-unit{
+  z-index:4;
+}
+.cooling-pipe{
+  display:none!important;
+}
+.tank-ladder{
+  z-index:8;
+  right:-24px;
+  background:linear-gradient(90deg, transparent 0 5px, #EAF8FF 5px 13px, transparent 13px);
+}
+.tank-leg{
+  z-index:-1;
+  bottom:-40px;
+  height:46px;
+  background:#CFE5EF;
+}
+.leg-a{left:48px}
+.leg-b{right:48px}
+.kpmt-tank:after{
+  content:"";
+  position:absolute;
+  left:30px;
+  right:30px;
+  bottom:-4px;
+  height:14px;
+  border-radius:999px;
+  background:#83AFC1;
+  border:4px solid var(--ink);
+  z-index:2;
+}
+/* align the small "Продукт" label with the product headings on the homepage */
+.section.split .copy > .eyebrow{
+  margin-left:3px;
+}
+@media(max-width:980px){
+  .pipe-bridge{left:210px;right:240px}
+  .pipe-bridge-top{top:204px}
+  .pipe-bridge-bottom{top:246px}
+}
+@media(max-width:620px){
+  .pipe-bridge{display:none}
+}
+
+/* v20: КПМТ home visual spacing, rear pipes, side hatch */
+.kpmt-tank{
+  left:28px;
+  bottom:68px;
+  overflow:visible;
+}
+.kpmt-tank:before,
+.tank-top-ring,
+.tank-hatch{
+  display:none!important;
+}
+.tank-side-hatch{
+  position:absolute;
+  right:-14px;
+  top:44px;
+  width:46px;
+  height:34px;
+  border:5px solid var(--ink);
+  border-radius:18px 20px 20px 18px;
+  background:#FFF9EA;
+  z-index:9;
+  box-shadow:0 5px 0 #20324814;
+}
+.tank-side-hatch:after{
+  content:"";
+  position:absolute;
+  left:11px;
+  top:8px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#AEEAFF;
+  border:3px solid var(--ink);
+}
+.tank-ladder{
+  right:-36px;
+  top:92px;
+  z-index:10;
+  background:linear-gradient(90deg, transparent 0 5px, #EAF8FF 5px 13px, transparent 13px);
+}
+.cooling-unit{
+  right:10px;
+  bottom:82px;
+  z-index:5;
+}
+.pipe-bridge{
+  left:258px;
+  right:286px;
+  z-index:1;
+  opacity:.92;
+  box-shadow:none;
+}
+.pipe-bridge-top{
+  top:206px;
+  height:13px;
+  border-width:4px;
+}
+.pipe-bridge-bottom{
+  top:242px;
+  height:20px;
+  border-width:5px;
+}
+.tank-leg{
+  z-index:-1;
+  bottom:-42px;
+  height:48px;
+  border-top:0;
+}
+.kpmt-tank:after{
+  bottom:-2px;
+  z-index:4;
+}
+@media(max-width:980px){
+  .kpmt-tank{left:24px;bottom:76px}
+  .cooling-unit{right:6px;bottom:70px;transform:scale(.82);transform-origin:right bottom}
+  .pipe-bridge{left:236px;right:242px}
+  .pipe-bridge-top{top:208px}
+  .pipe-bridge-bottom{top:246px}
+  .tank-ladder{right:-32px}
+}
+@media(max-width:620px){
+  .kpmt-tank{left:50%;transform:translateX(-50%);bottom:248px}
+  .tank-side-hatch{right:-12px;top:44px}
+  .tank-ladder{right:-28px;top:92px}
+  .cooling-unit{right:12px;bottom:56px;transform:scale(.72);transform-origin:right bottom}
+}
+
+
+/* v21: устойчивость передних графических блоков при сужении/растяжении */
+/* Сервисные карточки: декоративная графика остается в верхней зоне и не наезжает на текст */
+.feature-cards .feature-card{
+  min-width:0;
+  contain:layout paint;
+}
+.feature-cards .feature-card h3,
+.feature-cards .feature-card p{
+  max-width:100%;
+}
+.feature-cards .feature-art{
+  overflow:hidden;
+  clip-path:inset(0 round var(--radius) var(--radius) 0 0);
+}
+.production-art .pcb-board{
+  z-index:1;
+}
+.production-art .robot-arm,
+.production-art .solder-tip{
+  z-index:2;
+}
+.code-art .binary{
+  z-index:1;
+}
+.code-art .node,
+.code-art .graph-line,
+.code-art .code-chip{
+  z-index:2;
+}
+@media(max-width:520px){
+  .feature-cards .feature-card{
+    padding-top:128px;
+    min-height:250px;
+  }
+  .feature-cards .feature-card::before{height:118px}
+  .feature-cards .feature-card::after{top:98px}
+  .gear-art .gear-ring{width:112px;height:112px;right:-26px;top:-28px;border-width:12px}
+  .gear-art .gear-core{width:36px;height:36px;right:10px;top:10px;border-width:8px}
+  .gear-art .gear-tooth{width:22px;height:44px;right:30px;top:-16px;transform-origin:12px 76px}
+  .gear-art .draft-line{left:18px;height:6px}
+  .gear-art .l1{top:42px;width:88px}
+  .gear-art .l2{top:64px;width:66px}
+  .gear-art .l3{top:86px;width:96px}
+
+  .production-art .wrench-head{width:52px;height:52px;border-width:10px;left:-8px;top:-8px}
+  .production-art .wrench-handle{width:20px;height:94px;left:46px;top:26px}
+  .production-art .arm-a{width:98px;height:24px;right:-8px;top:28px;border-width:8px}
+  .production-art .arm-b{width:74px;height:24px;right:34px;top:66px;border-width:8px}
+  .production-art .solder-tip{right:70px;top:96px;width:18px;height:42px}
+  .production-art .pcb-board{right:14px;top:96px;width:82px;height:38px;border-width:3px}
+  .production-art .pcb-board i{width:10px;height:10px;border-width:2px;top:12px}
+  .production-art .pcb-board i:nth-child(1){left:14px}
+  .production-art .pcb-board i:nth-child(2){left:34px}
+  .production-art .pcb-board i:nth-child(3){left:54px}
+
+  .code-art .code-chip{left:18px;top:26px;width:62px;height:48px;font-size:1.1rem}
+  .code-art .binary{font-size:.85rem;left:92px}
+  .code-art .b1{top:28px}
+  .code-art .b2{top:54px;left:108px}
+  .code-art .b3{top:80px;left:92px}
+  .code-art .node{width:20px;height:20px;border-width:3px}
+  .code-art .n1{right:108px;top:34px}
+  .code-art .n2{right:72px;top:66px}
+  .code-art .n3{right:34px;top:32px}
+  .code-art .n4{right:26px;top:96px}
+  .code-art .graph-line{height:5px}
+  .code-art .g1{right:80px;top:52px;width:48px;transform:rotate(36deg)}
+  .code-art .g2{right:42px;top:54px;width:42px;transform:rotate(-40deg)}
+  .code-art .g3{right:34px;top:86px;width:42px;transform:rotate(67deg)}
+}
+@media(max-width:370px){
+  .feature-cards .feature-card{padding-top:112px}
+  .feature-cards .feature-art{opacity:.75}
+  .code-art .binary{display:none}
+  .code-art .graph-line{display:none}
+  .production-art .pcb-board{right:8px;top:82px;transform:scale(.72);transform-origin:right top}
+  .production-art .solder-tip{top:88px;right:62px;transform:scale(.78) rotate(12deg)}
+}
+
+/* КПМТ на главной: фиксированная внутренняя сцена, элементы не масштабируются и не слипаются */
+.kpmt-home-demo{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  min-height:420px!important;
+}
+.kpmt-home-demo .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  max-width:none!important;
+  height:390px!important;
+  min-height:390px!important;
+  flex:0 0 640px!important;
+  transform:none!important;
+  margin:0 auto!important;
+}
+.kpmt-home-demo .kpmt-tank{
+  left:36px!important;
+  bottom:66px!important;
+  transform:none!important;
+  z-index:6!important;
+}
+.kpmt-home-demo .cooling-unit{
+  right:26px!important;
+  bottom:82px!important;
+  transform:none!important;
+  z-index:5!important;
+}
+.kpmt-home-demo .pipe-bridge{
+  left:260px!important;
+  right:300px!important;
+  z-index:1!important;
+}
+.kpmt-home-demo .pipe-bridge-top{top:206px!important;height:13px!important}
+.kpmt-home-demo .pipe-bridge-bottom{top:244px!important;height:20px!important}
+.kpmt-home-demo .tank-ladder{
+  right:-38px!important;
+  z-index:12!important;
+}
+.kpmt-home-demo .tank-leg{
+  z-index:-1!important;
+  bottom:-42px!important;
+}
+.kpmt-home-demo .kpmt-tank:after{
+  z-index:5!important;
+}
+@media(max-width:680px){
+  .kpmt-home-demo{
+    justify-content:flex-start!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scrollbar-width:thin;
+  }
+  .kpmt-home-demo .kpmt-scene{
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+}
+
+/* v22: КПМТ without tubes, attached ladder, NE hatch */
+.kpmt-home-demo .pipe-bridge,
+.kpmt-home-demo .cooling-pipe{
+  display:none !important;
+}
+
+.kpmt-home-demo .kpmt-tank{
+  left:34px !important;
+  overflow:visible !important;
+}
+
+.kpmt-home-demo .tank-ladder{
+  right:-10px !important;
+  top:90px !important;
+  width:16px !important;
+  height:150px !important;
+  border-left:4px solid var(--ink) !important;
+  border-right:4px solid var(--ink) !important;
+  background:linear-gradient(90deg, transparent 0 3px, #EAF8FF 3px 13px, transparent 13px) !important;
+  z-index:8 !important;
+}
+
+.kpmt-home-demo .tank-ladder i{
+  left:-2px !important;
+  right:-2px !important;
+  height:4px !important;
+  background:var(--ink) !important;
+  border-radius:999px !important;
+}
+
+.kpmt-home-demo .tank-side-hatch{
+  right:8px !important;
+  top:18px !important;
+  width:42px !important;
+  height:28px !important;
+  border:5px solid var(--ink) !important;
+  border-radius:16px 18px 16px 18px !important;
+  background:#FFF9EA !important;
+  transform:rotate(28deg) !important;
+  transform-origin:center !important;
+  z-index:9 !important;
+  box-shadow:0 5px 0 #20324814 !important;
+}
+
+.kpmt-home-demo .tank-side-hatch:after{
+  left:10px !important;
+  top:6px !important;
+  width:12px !important;
+  height:12px !important;
+  border:3px solid var(--ink) !important;
+  background:#AEEAFF !important;
+}
+
+@media(max-width:980px){
+  .kpmt-home-demo .kpmt-tank{
+    left:28px !important;
+  }
+  .kpmt-home-demo .tank-ladder{
+    right:-8px !important;
+  }
+}
+
+@media(max-width:620px){
+  .kpmt-home-demo .kpmt-tank{
+    left:50% !important;
+    transform:translateX(-50%) !important;
+  }
+  .kpmt-home-demo .tank-ladder{
+    right:-8px !important;
+    top:90px !important;
+  }
+}
+
+/* v23: code refine — stable foreground graphics, KPMT, feature cards, oven/footer */
+.feature-cards{
+  align-items:stretch;
+}
+.feature-cards .feature-card{
+  min-height:285px;
+  padding:148px 26px 28px !important;
+  overflow:hidden;
+  contain:layout paint;
+}
+.feature-cards .feature-card::before{
+  height:136px;
+  background:linear-gradient(180deg,#FFF3C4 0%,#FFF9EA 76%,#ffffff00 100%);
+}
+.feature-card h3,
+.feature-card p{
+  position:relative;
+  z-index:5;
+}
+.feature-art{
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:136px;
+  bottom:auto;
+  overflow:hidden;
+  z-index:2;
+  pointer-events:none;
+}
+
+/* Проектирование: стенд с чертежом, карандаш и линейка вместо непонятных фигур */
+.design-art .draft-board{
+  position:absolute;
+  left:28px;
+  top:26px;
+  width:132px;
+  height:88px;
+  border:4px solid var(--ink);
+  border-radius:18px;
+  background:#EAF8FF;
+  transform:rotate(-3deg);
+}
+.design-art .draft-board i{
+  position:absolute;
+  left:18px;
+  height:5px;
+  border-radius:999px;
+  background:var(--ink);
+  opacity:.35;
+}
+.design-art .draft-board i:nth-child(1){top:24px;width:82px}
+.design-art .draft-board i:nth-child(2){top:44px;width:58px}
+.design-art .draft-board i:nth-child(3){top:64px;width:96px}
+.design-art .pencil{
+  position:absolute;
+  right:38px;
+  top:38px;
+  width:112px;
+  height:20px;
+  border:4px solid var(--ink);
+  border-radius:999px;
+  background:#FFD572;
+  transform:rotate(-28deg);
+}
+.design-art .pencil:before{
+  content:"";
+  position:absolute;
+  right:-21px;
+  top:-4px;
+  width:0;
+  height:0;
+  border-top:14px solid transparent;
+  border-bottom:14px solid transparent;
+  border-left:24px solid #C9864A;
+}
+.design-art .pencil:after{
+  content:"";
+  position:absolute;
+  left:8px;
+  top:-4px;
+  width:18px;
+  height:20px;
+  border:4px solid var(--ink);
+  border-radius:8px;
+  background:#FFB6C1;
+}
+.design-art .ruler{
+  position:absolute;
+  left:156px;
+  top:82px;
+  width:132px;
+  height:24px;
+  border:4px solid var(--ink);
+  border-radius:10px;
+  background:#FFF9EA;
+  transform:rotate(8deg);
+}
+.design-art .ruler i{
+  position:absolute;
+  top:3px;
+  width:4px;
+  height:10px;
+  border-radius:999px;
+  background:var(--ink);
+}
+.design-art .ruler i:nth-child(1){left:24px}
+.design-art .ruler i:nth-child(2){left:56px;height:14px}
+.design-art .ruler i:nth-child(3){left:88px}
+
+/* Производство: шестеренка встроена в правый верхний угол и не наезжает на текст */
+.feature-production{
+  position:relative;
+}
+.feature-production::before{
+  background:
+    radial-gradient(circle at calc(100% - 44px) 34px, #FFF9EA 0 58px, transparent 60px),
+    linear-gradient(180deg,#FFF3C4 0%,#FFF9EA 76%,#ffffff00 100%) !important;
+}
+.production-art .corner-gear{
+  position:absolute;
+  right:-16px;
+  top:-20px;
+  width:132px;
+  height:132px;
+  border:10px solid var(--ink);
+  border-radius:50%;
+  background:#FFF9EA;
+  box-shadow:0 0 0 8px #55E6A555;
+}
+.production-art .corner-gear i{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:28px;
+  height:52px;
+  margin:-78px 0 0 -14px;
+  border-radius:10px;
+  background:var(--ink);
+  transform-origin:14px 78px;
+}
+.production-art .corner-gear i:nth-child(1){transform:rotate(0deg)}
+.production-art .corner-gear i:nth-child(2){transform:rotate(45deg)}
+.production-art .corner-gear i:nth-child(3){transform:rotate(90deg)}
+.production-art .corner-gear i:nth-child(4){transform:rotate(135deg)}
+.production-art .corner-gear b{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:42px;
+  height:42px;
+  margin:-21px 0 0 -21px;
+  border:8px solid var(--ink);
+  border-radius:50%;
+  background:#55E6A5;
+}
+
+/* Кодовый блок: при сжатии графика остается в верхней зоне */
+.code-art .graph-line,
+.code-art .node,
+.code-art .code-chip,
+.code-art .binary{
+  max-width:100%;
+}
+@media(max-width:760px){
+  .feature-cards .feature-card{
+    padding-top:126px !important;
+    min-height:260px;
+  }
+  .feature-art{
+    height:118px;
+    transform:scale(.86);
+    transform-origin:top right;
+  }
+  .feature-card p{
+    font-size:.96rem;
+  }
+}
+@media(max-width:420px){
+  .feature-art{
+    transform:scale(.74);
+  }
+}
+
+/* КПМТ на главной: ближе к холодильной установке, лестница до люка, люк на северо-восточном изгибе */
+.kpmt-home-demo .pipe-bridge,
+.kpmt-home-demo .cooling-pipe{
+  display:none!important;
+}
+.kpmt-home-demo .kpmt-tank{
+  left:42px!important;
+  bottom:66px!important;
+  overflow:visible!important;
+}
+.kpmt-home-demo .cooling-unit{
+  right:64px!important;
+  bottom:82px!important;
+  transform:none!important;
+}
+.kpmt-home-demo .tank-ladder{
+  right:-8px!important;
+  top:36px!important;
+  width:16px!important;
+  height:206px!important;
+  border-left:4px solid var(--ink)!important;
+  border-right:4px solid var(--ink)!important;
+  background:linear-gradient(90deg,transparent 0 3px,#EAF8FF 3px 13px,transparent 13px)!important;
+  z-index:8!important;
+}
+.kpmt-home-demo .tank-ladder i:nth-child(1){top:26px!important}
+.kpmt-home-demo .tank-ladder i:nth-child(2){top:70px!important}
+.kpmt-home-demo .tank-ladder i:nth-child(3){top:114px!important}
+.kpmt-home-demo .tank-ladder i:nth-child(4){top:158px!important}
+.kpmt-home-demo .tank-side-hatch{
+  right:6px!important;
+  top:20px!important;
+  width:46px!important;
+  height:30px!important;
+  border:5px solid var(--ink)!important;
+  border-radius:18px!important;
+  background:#FFF9EA!important;
+  transform:rotate(24deg)!important;
+  z-index:10!important;
+  box-shadow:0 5px 0 #20324814!important;
+}
+.kpmt-home-demo .tank-side-hatch:after{
+  left:11px!important;
+  top:7px!important;
+  width:12px!important;
+  height:12px!important;
+  background:#AEEAFF!important;
+  border:3px solid var(--ink)!important;
+}
+@media(max-width:980px){
+  .kpmt-home-demo .kpmt-tank{left:34px!important}
+  .kpmt-home-demo .cooling-unit{right:50px!important}
+}
+@media(max-width:680px){
+  .kpmt-home-demo{
+    overflow-x:auto!important;
+  }
+  .kpmt-home-demo .kpmt-scene{
+    width:640px!important;
+    min-width:640px!important;
+  }
+}
+
+/* Footer: no marketing duplicate under logo */
+.site-footer .footer-brand small{
+  display:none!important;
+}
+.site-footer .footer-layout > div:first-child > p{
+  display:none!important;
+}
+
+/* v24: visual fixes — feature blocks, КПМТ spacing, oven, footer */
+.feature-art{
+  height:138px!important;
+}
+.feature-cards .feature-card{
+  padding-top:150px!important;
+  min-height:288px!important;
+}
+
+/* Проектирование: все инструменты собраны в один аккуратный набор */
+.design-art .design-kit{
+  position:absolute;
+  left:24px;
+  top:18px;
+  width:250px;
+  height:112px;
+}
+.design-art .draft-board{
+  position:absolute;
+  left:0;
+  top:12px;
+  width:132px;
+  height:88px;
+  border:4px solid var(--ink);
+  border-radius:18px;
+  background:#EAF8FF;
+  transform:rotate(-3deg);
+}
+.design-art .draft-board i{
+  position:absolute;
+  left:18px;
+  height:5px;
+  border-radius:999px;
+  background:var(--ink);
+  opacity:.35;
+}
+.design-art .draft-board i:nth-child(1){top:24px;width:82px}
+.design-art .draft-board i:nth-child(2){top:44px;width:58px}
+.design-art .draft-board i:nth-child(3){top:64px;width:96px}
+.design-art .pencil{
+  position:absolute;
+  left:108px;
+  top:50px;
+  width:122px;
+  height:22px;
+  border:4px solid var(--ink);
+  border-radius:999px 0 0 999px;
+  background:#FFD572;
+  transform:rotate(-26deg);
+  transform-origin:61px 11px;
+}
+.design-art .pencil b{
+  position:absolute;
+  left:-1px;
+  top:-4px;
+  width:26px;
+  height:22px;
+  border:4px solid var(--ink);
+  border-radius:999px 6px 6px 999px;
+  background:#FFB6C1;
+}
+.design-art .pencil i{
+  position:absolute;
+  right:-29px;
+  top:-4px;
+  width:31px;
+  height:30px;
+  background:#C9864A;
+  clip-path:polygon(0 0, 100% 50%, 0 100%);
+}
+.design-art .pencil i:after{
+  content:"";
+  position:absolute;
+  right:0;
+  top:9px;
+  width:12px;
+  height:12px;
+  background:var(--ink);
+  clip-path:polygon(0 0,100% 50%,0 100%);
+}
+.design-art .ruler{
+  position:absolute;
+  left:92px;
+  top:82px;
+  width:140px;
+  height:28px;
+  border:4px solid var(--ink);
+  border-radius:10px;
+  background:#FFF9EA;
+  transform:rotate(8deg);
+}
+.design-art .ruler:before{
+  content:"";
+  position:absolute;
+  inset:6px 10px auto 10px;
+  height:4px;
+  border-radius:999px;
+  background:#20324833;
+}
+.design-art .ruler i{
+  position:absolute;
+  top:5px;
+  width:4px;
+  border-radius:999px;
+  background:var(--ink);
+}
+.design-art .ruler i:nth-child(1){left:22px;height:10px}
+.design-art .ruler i:nth-child(2){left:44px;height:16px}
+.design-art .ruler i:nth-child(3){left:66px;height:10px}
+.design-art .ruler i:nth-child(4){left:88px;height:16px}
+.design-art .ruler i:nth-child(5){left:110px;height:10px}
+
+/* Производство: нормальная шестеренка с зубьями по кругу */
+.production-art .corner-gear{
+  position:absolute;
+  right:-16px;
+  top:-18px;
+  width:126px;
+  height:126px;
+  border:10px solid var(--ink);
+  border-radius:50%;
+  background:#FFF9EA;
+  box-shadow:0 0 0 8px #55E6A555;
+}
+.production-art .corner-gear .tooth{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:22px;
+  height:34px;
+  margin:-78px 0 0 -11px;
+  border-radius:8px;
+  background:var(--ink);
+  transform-origin:11px 78px;
+}
+.production-art .corner-gear .t1{transform:rotate(0deg)}
+.production-art .corner-gear .t2{transform:rotate(45deg)}
+.production-art .corner-gear .t3{transform:rotate(90deg)}
+.production-art .corner-gear .t4{transform:rotate(135deg)}
+.production-art .corner-gear .t5{transform:rotate(180deg)}
+.production-art .corner-gear .t6{transform:rotate(225deg)}
+.production-art .corner-gear .t7{transform:rotate(270deg)}
+.production-art .corner-gear .t8{transform:rotate(315deg)}
+.production-art .corner-gear b{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:44px;
+  height:44px;
+  margin:-22px 0 0 -22px;
+  border:8px solid var(--ink);
+  border-radius:50%;
+  background:#55E6A5;
+}
+@media(max-width:760px){
+  .feature-art{
+    transform:scale(.82)!important;
+    transform-origin:top left!important;
+  }
+  .feature-cards .feature-card{
+    padding-top:126px!important;
+  }
+}
+
+/* КПМТ на главной: меньше расстояние, симметричнее, без труб */
+.kpmt-home-demo .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+}
+.kpmt-home-demo .kpmt-tank{
+  left:78px!important;
+  bottom:66px!important;
+}
+.kpmt-home-demo .cooling-unit{
+  right:78px!important;
+  bottom:82px!important;
+}
+.kpmt-home-demo .tank-ladder{
+  right:-8px!important;
+  top:36px!important;
+  height:206px!important;
+}
+.kpmt-home-demo .tank-side-hatch{
+  right:6px!important;
+  top:20px!important;
+}
+@media(max-width:680px){
+  .kpmt-home-demo{
+    overflow-x:auto!important;
+  }
+}
+
+/* Блок печи на главной: SVG сам задает печь слева и график справа */
+.image-link[href="products/oven-control.html"]{
+  background:#FFF3DC;
+}
+
+/* Footer: крупная эмблема и название по центру левой области */
+.site-footer .footer-layout > div:first-child{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:150px;
+}
+.site-footer .footer-brand{
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+}
+.site-footer .footer-brand img{
+  width:78px;
+  height:78px;
+}
+.site-footer .footer-brand b{
+  font-size:1.75rem;
+  line-height:1;
+}
+.site-footer .footer-brand small,
+.site-footer .footer-layout > div:first-child > p{
+  display:none!important;
+}
+
+/* v25: separate SVG parts for clean feature-card graphics */
+.feature-cards .feature-card{
+  position:relative;
+  min-height:292px!important;
+  padding:150px 26px 28px!important;
+  overflow:hidden!important;
+  contain:layout paint;
+}
+.feature-cards .feature-card::before{
+  height:138px!important;
+}
+.feature-card h3,
+.feature-card p{
+  position:relative;
+  z-index:5;
+}
+.feature-svg-art{
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  right:0!important;
+  height:140px!important;
+  bottom:auto!important;
+  overflow:hidden!important;
+  pointer-events:none!important;
+  z-index:3!important;
+}
+.feature-svg-art .part{
+  position:absolute;
+  display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+/* Проектирование: один собранный набор, а не разбросанные куски */
+.design-art-v25 .board-part{
+  left:22px;
+  top:14px;
+  width:146px;
+  height:auto;
+  transform:rotate(-3deg);
+  filter:drop-shadow(0 7px 0 #20324814);
+}
+.design-art-v25 .ruler-part{
+  left:108px;
+  top:90px;
+  width:150px;
+  height:auto;
+  transform:rotate(6deg);
+  filter:drop-shadow(0 5px 0 #20324812);
+}
+.design-art-v25 .pencil-part{
+  left:118px;
+  top:38px;
+  width:154px;
+  height:auto;
+  transform:rotate(-24deg);
+  transform-origin:center;
+  filter:drop-shadow(0 5px 0 #20324812);
+}
+
+/* Производство: настоящая шестерёнка из отдельного SVG, заходящая в угол */
+.production-art-v25 .gear-part{
+  right:-24px;
+  top:-30px;
+  width:154px;
+  height:154px;
+  filter:drop-shadow(0 8px 0 #20324814);
+}
+.feature-production::before{
+  background:
+    radial-gradient(circle at calc(100% - 44px) 36px, #FFF9EA 0 62px, transparent 64px),
+    linear-gradient(180deg,#FFF3C4 0%,#FFF9EA 76%,#ffffff00 100%)!important;
+}
+
+/* Старые декоративные правила не должны влиять на новые SVG-детали */
+.design-art-v25 .draft-board,
+.design-art-v25 .pencil,
+.design-art-v25 .ruler,
+.production-art-v25 .corner-gear{
+  display:none!important;
+}
+
+@media(max-width:760px){
+  .feature-cards .feature-card{
+    padding-top:126px!important;
+    min-height:260px!important;
+  }
+  .feature-svg-art{
+    height:118px!important;
+  }
+  .design-art-v25 .board-part{width:122px;left:18px;top:12px}
+  .design-art-v25 .ruler-part{width:128px;left:88px;top:78px}
+  .design-art-v25 .pencil-part{width:132px;left:96px;top:34px}
+  .production-art-v25 .gear-part{width:130px;right:-22px;top:-28px}
+}
+@media(max-width:420px){
+  .design-art-v25 .board-part{width:112px}
+  .design-art-v25 .ruler-part{width:112px;left:82px}
+  .design-art-v25 .pencil-part{width:118px;left:88px}
+  .production-art-v25 .gear-part{width:118px}
+}
+
+/* v26: separate program parts and hatch fix */
+
+/* Шестерёнка: ближе к углу, без обрубания засветом */
+.feature-production .feature-art{
+  overflow:visible!important;
+}
+.feature-production{
+  overflow:hidden!important;
+}
+.production-art-v25 .gear-part{
+  right:-42px!important;
+  top:-42px!important;
+  width:176px!important;
+  height:176px!important;
+  filter:none!important;
+}
+.feature-production::before{
+  background:
+    radial-gradient(circle at calc(100% - 28px) 24px, #FFF9EA 0 72px, transparent 74px),
+    linear-gradient(180deg,#FFF3C4 0%,#FFF9EA 76%,#ffffff00 100%)!important;
+}
+
+/* Программирование: граф, цифры и модуль как отдельные аккуратные SVG-элементы */
+.program-art-v26{
+  overflow:hidden!important;
+}
+.program-art-v26 .program-digits{
+  left:18px;
+  top:18px;
+  width:154px;
+  height:auto;
+  opacity:.74;
+}
+.program-art-v26 .program-graph{
+  right:22px;
+  top:18px;
+  width:178px;
+  height:auto;
+  filter:drop-shadow(0 5px 0 #20324812);
+}
+.program-art-v26 .program-chip{
+  left:112px;
+  top:58px;
+  width:88px;
+  height:auto;
+  transform:rotate(-4deg);
+  filter:drop-shadow(0 5px 0 #20324812);
+}
+.program-art-v26 .node,
+.program-art-v26 .graph-line,
+.program-art-v26 .code-chip,
+.program-art-v26 .binary{
+  display:none!important;
+}
+
+/* КПМТ: люк сделан отдельным SVG, сидит на северо-восточном изгибе бочки */
+.kpmt-home-demo .tank-side-hatch{
+  display:block!important;
+  position:absolute!important;
+  right:0!important;
+  top:14px!important;
+  width:60px!important;
+  height:48px!important;
+  transform:rotate(18deg)!important;
+  transform-origin:center!important;
+  z-index:13!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  pointer-events:none!important;
+}
+.kpmt-home-demo .tank-side-hatch:after{
+  display:none!important;
+}
+
+@media(max-width:760px){
+  .production-art-v25 .gear-part{
+    right:-34px!important;
+    top:-36px!important;
+    width:148px!important;
+    height:148px!important;
+  }
+  .program-art-v26 .program-digits{
+    width:126px;
+    left:14px;
+    top:14px;
+  }
+  .program-art-v26 .program-graph{
+    width:146px;
+    right:12px;
+    top:16px;
+  }
+  .program-art-v26 .program-chip{
+    width:74px;
+    left:92px;
+    top:54px;
+  }
+}
+
+@media(max-width:420px){
+  .program-art-v26 .program-digits{
+    width:112px;
+  }
+  .program-art-v26 .program-graph{
+    width:130px;
+  }
+  .program-art-v26 .program-chip{
+    width:66px;
+    left:82px;
+  }
+}
+
+/* v27: gear edge clipping fix */
+.feature-production{
+  overflow:hidden!important;
+}
+.feature-production .feature-art{
+  overflow:visible!important;
+}
+.feature-production::before{
+  background:linear-gradient(180deg,#FFF3C4 0%,#FFF9EA 76%,#ffffff00 100%)!important;
+}
+.production-art-v25 .gear-part{
+  right:-58px!important;
+  top:-58px!important;
+  width:194px!important;
+  height:194px!important;
+  max-width:none!important;
+  filter:none!important;
+  object-fit:contain!important;
+  z-index:4!important;
+}
+@media(max-width:760px){
+  .production-art-v25 .gear-part{
+    right:-48px!important;
+    top:-50px!important;
+    width:166px!important;
+    height:166px!important;
+  }
+}
+@media(max-width:420px){
+  .production-art-v25 .gear-part{
+    right:-42px!important;
+    top:-44px!important;
+    width:148px!important;
+    height:148px!important;
+  }
+}
+
+/* v28: gear true edge fix */
+.feature-production{
+  overflow:hidden!important;
+}
+
+.feature-production::before{
+  background:linear-gradient(180deg,#FFF3C4 0%,#FFF9EA 76%,#ffffff00 100%)!important;
+}
+
+.feature-production .feature-svg-art,
+.feature-production .production-art-v25{
+  left:0!important;
+  right:0!important;
+  top:0!important;
+  width:100%!important;
+  height:140px!important;
+  transform:none!important;
+  transform-origin:top right!important;
+  overflow:visible!important;
+  clip-path:none!important;
+}
+
+.production-art-v25 .gear-part{
+  position:absolute!important;
+  right:-56px!important;
+  top:-52px!important;
+  width:190px!important;
+  height:190px!important;
+  max-width:none!important;
+  filter:none!important;
+  transform:none!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
+
+@media(max-width:760px){
+  .feature-production .feature-svg-art,
+  .feature-production .production-art-v25{
+    transform:none!important;
+    height:136px!important;
+  }
+  .production-art-v25 .gear-part{
+    right:-52px!important;
+    top:-48px!important;
+    width:178px!important;
+    height:178px!important;
+  }
+}
+
+@media(max-width:420px){
+  .production-art-v25 .gear-part{
+    right:-44px!important;
+    top:-42px!important;
+    width:158px!important;
+    height:158px!important;
+  }
+}
+
+
+/* v35: all KPMT hatch elements removed */
+.kpmt-home-demo .tank-side-hatch,
+.kpmt-home-demo .tank-external-hatch,
+.kpmt-home-demo .tank-line-hatch,
+.kpmt-home-demo .tank-line-hatch *,
+.kpmt-home-demo img[class*="hatch"],
+.kpmt-home-demo div[class*="hatch"]{
+  display:none!important;
+}
+.kpmt-home-demo .tank-ladder{
+  background:transparent!important;
+  right:-10px!important;
+  z-index:8!important;
+}
+
+/* v36: refined ladder using separate SVG */
+.kpmt-home-demo .tank-ladder,
+.kpmt-home-demo .ladder-svg{
+  display:block!important;
+  position:absolute!important;
+  right:-28px!important;
+  top:48px!important;
+  width:54px!important;
+  height:198px!important;
+  z-index:12!important;
+  background:transparent!important;
+  border:0!important;
+  object-fit:contain!important;
+  pointer-events:none!important;
+  filter:drop-shadow(0 5px 0 #20324814);
+}
+.kpmt-home-demo .tank-ladder i,
+.kpmt-home-demo .tank-ladder:before,
+.kpmt-home-demo .tank-ladder:after{
+  display:none!important;
+  content:none!important;
+}
+@media(max-width:980px){
+  .kpmt-home-demo .tank-ladder,
+  .kpmt-home-demo .ladder-svg{
+    right:-26px!important;
+    top:48px!important;
+    width:52px!important;
+    height:194px!important;
+  }
+}
+@media(max-width:680px){
+  .kpmt-home-demo .tank-ladder,
+  .kpmt-home-demo .ladder-svg{
+    right:-26px!important;
+    top:48px!important;
+    width:52px!important;
+    height:194px!important;
+  }
+}/* v37: oven product visual fix */
+.image-link[href="products/oven-control.html"]{background:#FFF3DC!important;overflow:hidden!important}
+.image-link[href="products/oven-control.html"] img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;display:block!important}
+
+/* v38: oven graph and vase fix */
+.image-link[href="products/oven-control.html"]{
+  background:#FFF3DC!important;
+  overflow:hidden!important;
+}
+.image-link[href="products/oven-control.html"] img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  display:block!important;
+}
+
+/* v39: oven sync vase final */
+.image-link[href="products/oven-control.html"]{
+  background:#FFF3DC!important;
+  overflow:hidden!important;
+}
+.image-link[href="products/oven-control.html"] img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  display:block!important;
+}
+
+/* v40: nav active, top anchor, oven complete */
+html{
+  scroll-behavior:smooth;
+}
+
+.main-nav a[aria-current="page"]{
+  text-decoration:underline;
+  text-decoration-thickness:3px;
+  text-underline-offset:8px;
+}
+
+.main-nav a[aria-current="page"]:hover{
+  transform:none;
+}
+
+.footer-bottom a[href="#top"]{
+  cursor:pointer;
+}
+
+/* v41: mobile header and layout fixes */
+
+/* Шапка уезжает вверх при явной прокрутке вниз и возвращается только при заметной прокрутке вверх */
+.site-header{
+  transition:transform .22s ease, box-shadow .22s ease;
+  will-change:transform;
+}
+.site-header.header-hidden{
+  transform:translateY(calc(-100% - 8px));
+}
+
+/* Верхняя навигация: без переноса на вторую строку после удаления "Контакты" */
+.main-nav{
+  flex-wrap:nowrap!important;
+  white-space:nowrap;
+}
+.main-nav a{
+  white-space:nowrap;
+}
+@media(max-width:520px){
+  .site-header .container,
+  .nav-layout,
+  .header-inner{
+    gap:10px!important;
+  }
+  .main-nav{
+    gap:12px!important;
+    font-size:.88rem;
+    min-width:0;
+  }
+  .nav-cta,
+  .btn.nav-cta,
+  .header-actions .btn{
+    padding:10px 12px!important;
+    font-size:.86rem!important;
+  }
+}
+
+/* Главный первый экран: текст не обрезается на узких экранах, "ё" не задевает строку выше */
+.hero-title,
+.hero h1,
+.hero-copy h1{
+  line-height:1.08!important;
+  overflow:visible!important;
+}
+.hero-kicker,
+.hero .eyebrow{
+  margin-bottom:16px!important;
+}
+@media(max-width:520px){
+  .hero{
+    padding-top:34px!important;
+  }
+  .hero-title,
+  .hero h1,
+  .hero-copy h1{
+    font-size:clamp(2.25rem, 12vw, 3.55rem)!important;
+    line-height:1.14!important;
+    letter-spacing:-.045em!important;
+    max-width:100%!important;
+  }
+  .hero-copy,
+  .hero-content,
+  .hero-main{
+    text-align:center!important;
+    justify-items:center!important;
+    align-items:center!important;
+  }
+  .hero p,
+  .hero-copy p{
+    max-width:34rem!important;
+  }
+}
+
+/* Блоки 01/02/03: на 360px не должны обрезаться справа */
+.hero-stats,
+.stats-row,
+.stats{
+  max-width:100%;
+}
+@media(max-width:520px){
+  .hero-stats,
+  .stats-row,
+  .stats{
+    display:grid!important;
+    grid-template-columns:repeat(3, minmax(0, 1fr))!important;
+    gap:8px!important;
+    width:100%!important;
+    max-width:340px!important;
+    margin-inline:auto!important;
+    overflow:visible!important;
+  }
+  .hero-stats > *,
+  .stats-row > *,
+  .stats > *{
+    min-width:0!important;
+    padding:12px 8px!important;
+    text-align:center!important;
+  }
+  .hero-stats strong,
+  .stats-row strong,
+  .stats strong{
+    font-size:clamp(1.18rem, 7vw, 1.65rem)!important;
+    line-height:1!important;
+  }
+  .hero-stats span,
+  .stats-row span,
+  .stats span,
+  .hero-stats small,
+  .stats-row small,
+  .stats small{
+    font-size:.76rem!important;
+    line-height:1.18!important;
+  }
+}
+
+/* Для очень узких экранов, где три карточки всё равно тесные, делаем две строки аккуратно */
+@media(max-width:340px){
+  .hero-stats,
+  .stats-row,
+  .stats{
+    grid-template-columns:1fr!important;
+    max-width:260px!important;
+  }
+}
+
+/* КПМТ-анимация: сохраняем целостность сцены, а при горизонтальной прокрутке JS ставит фокус на блок "ПРОМЫВКА" */
+@media(max-width:680px){
+  .kpmt-home-demo{
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-behavior:smooth;
+    scrollbar-width:thin;
+    -webkit-overflow-scrolling:touch;
+  }
+  .kpmt-home-demo .kpmt-scene{
+    width:640px!important;
+    min-width:640px!important;
+    margin:0!important;
+  }
+}
+
+/* Мелкая коррекция: активный пункт подчёркнут, но не превращается в кнопку */
+.main-nav a[aria-current="page"]{
+  text-decoration:underline!important;
+  text-decoration-thickness:3px!important;
+  text-underline-offset:8px!important;
+}
+
+/* v42: mobile, products, about, KPMT and oven final fixes */
+
+/* Header: on 360px keep brand/icon, nav and CTA in one row */
+@media(max-width:520px){
+  .nav-wrap{
+    min-height:62px!important;
+    gap:7px!important;
+  }
+  .brand{
+    flex:0 0 auto!important;
+    gap:0!important;
+  }
+  .brand img{
+    width:42px!important;
+  }
+  .brand-name,
+  .brand b{
+    display:none!important;
+  }
+  .main-nav{
+    flex:1 1 auto!important;
+    justify-content:center!important;
+    gap:4px!important;
+    font-size:.78rem!important;
+    min-width:0!important;
+  }
+  .main-nav a{
+    padding:7px 4px!important;
+  }
+  .btn-small{
+    flex:0 0 auto!important;
+    padding:9px 9px!important;
+    font-size:.78rem!important;
+    box-shadow:0 4px 0 #00000022!important;
+  }
+}
+
+/* Hero hot cards: actual selector is .hero-side/.hot-card */
+@media(max-width:520px){
+  .hero-side{
+    width:100%!important;
+    max-width:340px!important;
+    margin-inline:auto!important;
+    gap:8px!important;
+  }
+  .hot-card{
+    padding:12px 12px!important;
+    border-width:3px!important;
+    border-radius:20px!important;
+  }
+  .hot-card span{
+    width:34px!important;
+    height:34px!important;
+    margin-bottom:6px!important;
+  }
+  .hot-card b{
+    font-size:1rem!important;
+  }
+  .hot-card small{
+    font-size:.76rem!important;
+    line-height:1.15!important;
+  }
+}
+
+/* Product links wording is in HTML; this keeps buttons compact on mobile */
+@media(max-width:520px){
+  .actions .btn,
+  .copy .btn,
+  .product-card .btn{
+    padding:12px 15px!important;
+  }
+}
+
+/* Desktop KPMT scene: centered inside its card, not glued to the left */
+.kpmt-home-demo{
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+}
+.kpmt-home-demo .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  margin-inline:auto!important;
+  flex:0 0 640px!important;
+  position:relative!important;
+}
+.kpmt-home-demo .kpmt-tank{
+  left:78px!important;
+  bottom:66px!important;
+}
+.kpmt-home-demo .cooling-unit{
+  right:78px!important;
+  bottom:82px!important;
+}
+
+/* Mobile KPMT: allow scroll, JS calculates controller/cooler centering for exact viewport */
+@media(max-width:680px){
+  .kpmt-home-demo{
+    display:block!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+  }
+  .kpmt-home-demo .kpmt-scene{
+    margin:0!important;
+  }
+}
+
+/* Product page KPMT visual reuses the same scene but cropped/scaled as card art */
+.product-kpmt-thumb{
+  position:relative!important;
+  height:250px!important;
+  min-height:250px!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.product-kpmt-thumb .kpmt-scene{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  transform:translate(-50%,-50%) scale(.66)!important;
+  transform-origin:center!important;
+  margin:0!important;
+}
+
+/* Product cards visuals */
+.product-card > img,
+.product-card > .product-kpmt-thumb{
+  height:250px;
+  width:100%;
+  object-fit:cover;
+}
+
+/* Mobile order: text first, graphic second for both product blocks */
+@media(max-width:760px){
+  .split-grid,
+  .split-grid.reverse{
+    grid-template-columns:1fr!important;
+  }
+  .split-grid > .copy{
+    order:1!important;
+  }
+  .split-grid > .image-link,
+  .split-grid > .big-illustration{
+    order:2!important;
+  }
+}
+
+/* Products page title area */
+.products-page .lead{
+  display:none!important;
+}
+
+/* About small service visuals replacing template images */
+.service-mini-art{
+  height:180px;
+  position:relative;
+  background:linear-gradient(180deg,#FFF3C4,#EAF8FF);
+  overflow:hidden;
+}
+.service-mini-art img{
+  position:absolute;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+}
+.mini-design img:nth-child(1){
+  width:150px;
+  left:24px;
+  top:28px;
+  transform:rotate(-3deg);
+}
+.mini-design img:nth-child(2){
+  width:150px;
+  right:22px;
+  top:58px;
+  transform:rotate(-22deg);
+}
+.mini-production img{
+  width:170px;
+  right:-34px;
+  top:-36px;
+}
+.mini-program img:nth-child(1){
+  width:210px;
+  right:14px;
+  top:16px;
+}
+.mini-program img:nth-child(2){
+  width:92px;
+  left:36px;
+  top:70px;
+  transform:rotate(-5deg);
+}
+
+/* Company info: six items = 3 columns x 2 rows on desktop */
+.registry-grid{
+  grid-template-columns:repeat(3,1fr)!important;
+}
+@media(max-width:760px){
+  .registry-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* Oven home SVG containment */
+.image-link[href="products/oven-control.html"]{
+  background:#FFF3DC!important;
+  overflow:hidden!important;
+}
+.image-link[href="products/oven-control.html"] img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  display:block!important;
+}
+
+/* v43: layout polish fixes */
+
+/* Центрирование заголовка в продукции */
+.center-title{
+  text-align:center!important;
+  margin-inline:auto!important;
+}
+
+/* Страница "Связаться": без лишнего верхнего ярлыка */
+body:has(.contact-card) .eyebrow:first-child{
+  display:none;
+}
+
+/* Карточки продукции: кнопки по нижней линии */
+.product-grid{
+  align-items:stretch!important;
+}
+.product-card{
+  display:flex!important;
+  flex-direction:column!important;
+  height:100%!important;
+}
+.product-card > div:last-child{
+  display:flex!important;
+  flex-direction:column!important;
+  flex:1 1 auto!important;
+}
+.product-card .btn,
+.product-card a.btn{
+  margin-top:auto!important;
+  align-self:flex-start!important;
+}
+
+/* В карточке продукции КПМТ используем отдельную компактную сцену, без наследования мобильного скролла главной */
+.product-card .product-kpmt-thumb.kpmt-home-demo{
+  display:block!important;
+  overflow:hidden!important;
+  height:250px!important;
+  min-height:250px!important;
+  border-radius:0!important;
+}
+.product-card .product-kpmt-thumb.kpmt-home-demo .kpmt-scene{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  flex:0 0 640px!important;
+  transform:translate(-50%,-50%) scale(.62)!important;
+  transform-origin:center!important;
+  margin:0!important;
+}
+.product-card .product-kpmt-thumb .kpmt-tank{
+  left:92px!important;
+  bottom:66px!important;
+}
+.product-card .product-kpmt-thumb .cooling-unit{
+  right:92px!important;
+  bottom:82px!important;
+}
+
+/* Главная КПМТ: на широких экранах вся сцена центрируется как единая картинка, без прокрутки и прилипания к краям */
+@media(min-width:681px){
+  .kpmt-home-demo{
+    overflow:hidden!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+  .kpmt-home-demo .kpmt-scene{
+    position:relative!important;
+    width:640px!important;
+    min-width:640px!important;
+    height:390px!important;
+    flex:0 0 640px!important;
+    margin-inline:auto!important;
+    transform:scale(.88)!important;
+    transform-origin:center!important;
+  }
+  .kpmt-home-demo .kpmt-tank{
+    left:92px!important;
+    bottom:66px!important;
+  }
+  .kpmt-home-demo .cooling-unit{
+    right:92px!important;
+    bottom:82px!important;
+  }
+}
+
+/* На мобильных главная КПМТ остается широкой сценой со скроллом, но без искажений элементов */
+@media(max-width:680px){
+  .kpmt-home-demo:not(.product-kpmt-thumb){
+    display:block!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+  }
+  .kpmt-home-demo:not(.product-kpmt-thumb) .kpmt-scene{
+    width:640px!important;
+    min-width:640px!important;
+    height:390px!important;
+    transform:none!important;
+    margin:0!important;
+  }
+  .kpmt-home-demo:not(.product-kpmt-thumb) .kpmt-tank{
+    left:92px!important;
+    bottom:66px!important;
+  }
+  .kpmt-home-demo:not(.product-kpmt-thumb) .cooling-unit{
+    right:92px!important;
+    bottom:82px!important;
+  }
+}
+
+/* Реквизиты / сведения */
+.registry-grid{
+  grid-template-columns:repeat(3,1fr)!important;
+}
+@media(max-width:760px){
+  .registry-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* v44: exact KPMT on products page */
+.product-card .product-kpmt-thumb,
+.product-card .product-kpmt-exact{
+  height:250px!important;
+  min-height:250px!important;
+  width:100%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+
+/* В карточке продукции используется та же внутренняя сцена КПМТ, что на главной.
+   Единственное отличие — масштаб всей сцены как единого блока, без правки отдельных деталей. */
+.product-card .product-kpmt-exact .kpmt-scene{
+  position:relative!important;
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  flex:0 0 640px!important;
+  margin:0!important;
+  transform:scale(.62)!important;
+  transform-origin:center!important;
+}
+
+/* Отменяем прежние точечные смещения, из-за которых карточка отличалась от главной */
+.product-card .product-kpmt-exact .kpmt-tank,
+.product-card .product-kpmt-exact .cooling-unit,
+.product-card .product-kpmt-exact .tank-ladder,
+.product-card .product-kpmt-exact .tank-leg,
+.product-card .product-kpmt-exact .tank-water,
+.product-card .product-kpmt-exact .tank-shine{
+  /* наследуются от общей КПМТ-сцены */
+}
+
+/* Старый класс больше не должен навязывать отдельную верстку */
+.product-card .product-kpmt-thumb .kpmt-scene{
+  transform:none;
+}
+
+/* v45: KPMT responsive equal spacing fix */
+
+/* Базовая геометрия самой сцены. Эти координаты одинаковы для главной и продукции. */
+.kpmt-home-demo .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  position:relative!important;
+  flex:0 0 640px!important;
+  margin:0!important;
+}
+
+.kpmt-home-demo .kpmt-tank{
+  left:76px!important;
+  bottom:66px!important;
+}
+
+.kpmt-home-demo .cooling-unit{
+  right:76px!important;
+  bottom:82px!important;
+}
+
+/* Главная, десктоп: сцена масштабируется целиком и стоит строго по центру карточки. */
+@media(min-width:681px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+    min-height:390px!important;
+    height:100%!important;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:scale(.84)!important;
+    transform-origin:center center!important;
+  }
+}
+
+/* На больших карточках, где места больше, масштаб можно чуть поднять, но центр не меняется. */
+@media(min-width:1180px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:scale(.90)!important;
+  }
+}
+
+/* Телефон: не масштабируем элементы, а оставляем единую широкую сцену и центрируем ее скроллом. */
+@media(max-width:680px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+    display:block!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    min-height:390px!important;
+    scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:none!important;
+    transform-origin:center center!important;
+  }
+}
+
+/* Продукция: точно тот же внутренний код, но сцена уменьшена ЦЕЛИКОМ, без пересчета деталей. */
+.product-card .product-kpmt-exact{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:250px!important;
+  min-height:250px!important;
+  width:100%!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+.product-card .product-kpmt-exact .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  flex:0 0 640px!important;
+  transform:scale(.62)!important;
+  transform-origin:center center!important;
+}
+
+/* Отменяем старые правки именно для карточки продукции, которые могли двигать бочку/холодильник иначе. */
+.product-card .product-kpmt-exact .kpmt-tank{
+  left:76px!important;
+  bottom:66px!important;
+}
+
+.product-card .product-kpmt-exact .cooling-unit{
+  right:76px!important;
+  bottom:82px!important;
+}
+
+/* В карточке продукции никакого горизонтального скролла. */
+@media(max-width:680px){
+  .product-card .product-kpmt-exact{
+    overflow:hidden!important;
+  }
+  .product-card .product-kpmt-exact .kpmt-scene{
+    transform:scale(.58)!important;
+  }
+}
+
+/* Страховка от старых правил: мобильный автоскролл применяется только к главной КПМТ-сцене. */
+.product-card .product-kpmt-exact{
+  scroll-behavior:auto!important;
+}
+
+/* v46: KPMT desktop and mobile alignment fix */
+
+/* Убираем декоративную пунктирную рамку именно у КПМТ-сцены: она визуально съезжала при масштабировании. */
+.kpmt-home-demo .kpmt-scene::after{
+  display:none!important;
+  content:none!important;
+}
+
+/* Единая геометрия КПМТ: одинаковые боковые поля и нормальный зазор между бочкой и холодильной установкой. */
+.kpmt-home-demo .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  position:relative!important;
+  flex:0 0 640px!important;
+  margin:0!important;
+}
+
+.kpmt-home-demo .kpmt-tank{
+  left:44px!important;
+  bottom:66px!important;
+  transform:none!important;
+}
+
+.kpmt-home-demo .cooling-unit{
+  right:44px!important;
+  bottom:82px!important;
+  transform:none!important;
+  transform-origin:center center!important;
+}
+
+/* Главная, компьютер: вся сцена масштабируется одним блоком и центрируется в карточке. */
+@media(min-width:681px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+    min-height:390px!important;
+    height:100%!important;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:scale(.82)!important;
+    transform-origin:center center!important;
+  }
+}
+
+@media(min-width:1180px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:scale(.86)!important;
+  }
+}
+
+@media(min-width:1440px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:scale(.90)!important;
+  }
+}
+
+/* Телефон: не сжимаем детали, а центрируем область промывки скроллом. */
+@media(max-width:680px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+    display:block!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    min-height:390px!important;
+    scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:none!important;
+    transform-origin:center center!important;
+  }
+}
+
+/* Страница продукции: та же геометрия, только уменьшена целиком внутри карточки. */
+.product-card .product-kpmt-exact{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:250px!important;
+  min-height:250px!important;
+  width:100%!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+.product-card .product-kpmt-exact .kpmt-scene{
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  flex:0 0 640px!important;
+  transform:scale(.62)!important;
+  transform-origin:center center!important;
+}
+
+.product-card .product-kpmt-exact .kpmt-tank{
+  left:44px!important;
+  bottom:66px!important;
+  transform:none!important;
+}
+
+.product-card .product-kpmt-exact .cooling-unit{
+  right:44px!important;
+  bottom:82px!important;
+  transform:none!important;
+}
+
+@media(max-width:680px){
+  .product-card .product-kpmt-exact{
+    overflow:hidden!important;
+  }
+  .product-card .product-kpmt-exact .kpmt-scene{
+    transform:scale(.58)!important;
+  }
+}
+
+/* v47: KPMT frame geometry final */
+
+/*
+  КПМТ на главной:
+  - одна стабильная внутренняя сцена 640x390;
+  - на компьютере она НЕ скроллится и НЕ съезжает, а стоит по центру рамки;
+  - расстояние от бочки до левой границы сцены = расстоянию от холодильной установки до правой границы сцены;
+  - декоративный пунктирный прямоугольник убран, чтобы не было второго "съехавшего" блока.
+*/
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  min-height:390px!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+}
+
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+  position:relative!important;
+  width:640px!important;
+  min-width:640px!important;
+  max-width:640px!important;
+  height:390px!important;
+  min-height:390px!important;
+  flex:0 0 640px!important;
+  margin:0 auto!important;
+  transform:none!important;
+  transform-origin:center center!important;
+  overflow:hidden!important;
+  border-radius:28px!important;
+}
+
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene:after{
+  display:none!important;
+  content:none!important;
+}
+
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene:before{
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  width:auto!important;
+}
+
+/* Симметричная геометрия: 92px слева до корпуса бочки и 92px справа после холодильной установки */
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-tank{
+  left:92px!important;
+  bottom:66px!important;
+}
+
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .cooling-unit{
+  right:92px!important;
+  bottom:82px!important;
+}
+
+/* Компенсация лестницы: она остается читаемой, но не считается "съехавшей" внешней границей бочки */
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .tank-ladder,
+.section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .ladder-svg{
+  right:-27px!important;
+  top:48px!important;
+}
+
+/* На широких компьютерных карточках не увеличиваем сцену до слипания элементов. */
+@media(min-width:681px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+    overflow:hidden!important;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:none!important;
+  }
+}
+
+/* Если карточка чуть уже 640px, масштабируем всю сцену целиком, сохраняя пропорции и зазоры. */
+@media(min-width:681px) and (max-width:760px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    transform:scale(.88)!important;
+  }
+}
+
+/* Телефон: оставляем широкую сцену и центрируем блок промывки программно. */
+@media(max-width:680px){
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb){
+    display:block!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    min-height:390px!important;
+    -webkit-overflow-scrolling:touch;
+    scroll-behavior:smooth;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-scene{
+    width:640px!important;
+    min-width:640px!important;
+    max-width:none!important;
+    transform:none!important;
+    margin:0!important;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .kpmt-tank{
+    left:92px!important;
+    bottom:66px!important;
+  }
+
+  .section.split .image-link.kpmt-home-demo:not(.product-kpmt-exact):not(.product-kpmt-thumb) .cooling-unit{
+    right:92px!important;
+    bottom:82px!important;
+  }
+}
+
+/* Страница продукции: тот же внутренний код, уменьшенный целиком как иллюстрация карточки. */
+.product-card .product-kpmt-exact{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:250px!important;
+  min-height:250px!important;
+  width:100%!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+.product-card .product-kpmt-exact .kpmt-scene{
+  position:relative!important;
+  width:640px!important;
+  min-width:640px!important;
+  max-width:640px!important;
+  height:390px!important;
+  min-height:390px!important;
+  flex:0 0 640px!important;
+  margin:0!important;
+  transform:scale(.62)!important;
+  transform-origin:center center!important;
+  overflow:hidden!important;
+}
+
+.product-card .product-kpmt-exact .kpmt-scene:after{
+  display:none!important;
+  content:none!important;
+}
+
+.product-card .product-kpmt-exact .kpmt-tank{
+  left:92px!important;
+  bottom:66px!important;
+}
+
+.product-card .product-kpmt-exact .cooling-unit{
+  right:92px!important;
+  bottom:82px!important;
+}
+
+/* v49: cycle controls and detail KPMT fixes */
+
+/* Страница КПМТ: справа стоит та же HTML-анимация, что на главной. */
+.product-hero .kpmt-detail-visual{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  min-height:390px!important;
+  height:100%!important;
+  background:linear-gradient(180deg,#EAF8FF 0%,#F5FFE7 100%)!important;
+  border-radius:var(--radius)!important;
+}
+
+.product-hero .kpmt-detail-visual .kpmt-scene{
+  position:relative!important;
+  width:640px!important;
+  min-width:640px!important;
+  height:390px!important;
+  flex:0 0 640px!important;
+  margin:0 auto!important;
+  overflow:hidden!important;
+  border-radius:28px!important;
+}
+
+.product-hero .kpmt-detail-visual .kpmt-scene:after{
+  display:none!important;
+  content:none!important;
+}
+
+.product-hero .kpmt-detail-visual .kpmt-tank{
+  left:92px!important;
+  bottom:66px!important;
+}
+
+.product-hero .kpmt-detail-visual .cooling-unit{
+  right:92px!important;
+  bottom:82px!important;
+}
+
+@media(min-width:681px){
+  .product-hero .kpmt-detail-visual .kpmt-scene{
+    transform:none!important;
+    transform-origin:center center!important;
+  }
+}
+
+@media(max-width:680px){
+  .product-hero .kpmt-detail-visual{
+    display:block!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    min-height:390px!important;
+    -webkit-overflow-scrolling:touch;
+    scroll-behavior:smooth;
+  }
+  .product-hero .kpmt-detail-visual .kpmt-scene{
+    width:640px!important;
+    min-width:640px!important;
+    transform:none!important;
+    margin:0!important;
+  }
+}
+
+/* Циклограмма КПМТ: убираем серые трубы за блоками "П" и "СЛ". */
+.cip-stage .pipe-return,
+.cip-stage .pipe-drain{
+  display:none!important;
+}
+
+/* Помпа и слив — одинаковые карточки, выровнены по горизонтали. */
+.cip-stage .pump-unit,
+.cip-stage .drain-box{
+  bottom:54px!important;
+  height:94px!important;
+  width:128px!important;
+  min-width:128px!important;
+  box-sizing:border-box!important;
+  display:grid!important;
+  align-items:center!important;
+  z-index:6!important;
+}
+
+.cip-stage .pump-unit{
+  right:80px!important;
+  grid-template-columns:58px 1fr!important;
+}
+
+.cip-stage .drain-box{
+  right:228px!important;
+  left:auto!important;
+  grid-template-columns:1fr!important;
+  grid-template-rows:auto auto auto!important;
+  justify-items:center!important;
+  padding:10px!important;
+  text-align:center!important;
+}
+
+.cip-stage .drain-box b{
+  font-size:1.45rem!important;
+  line-height:1.05!important;
+}
+
+.cip-stage .drain-box small{
+  line-height:1.05!important;
+}
+
+.cip-stage .drain-water{
+  margin-top:6px!important;
+}
+
+/* Адаптив для циклограммы: на планшете/телефоне карточки тоже стоят на одной нижней линии. */
+@media(max-width:980px){
+  .cip-stage .pump-unit{
+    right:38px!important;
+    bottom:58px!important;
+  }
+  .cip-stage .drain-box{
+    left:38px!important;
+    right:auto!important;
+    bottom:58px!important;
+  }
+}
+
+@media(max-width:620px){
+  .cip-stage .pump-unit{
+    right:22px!important;
+    bottom:60px!important;
+  }
+  .cip-stage .drain-box{
+    left:22px!important;
+    bottom:60px!important;
+  }
+}

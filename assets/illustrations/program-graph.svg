@@ -1,0 +1,12 @@
+<svg viewBox="0 0 260 130" xmlns="http://www.w3.org/2000/svg" aria-label="Граф программы">
+  <rect width="260" height="130" fill="none"/>
+  <g stroke="#203248" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M38 100 88 62 136 82 190 38 224 58" fill="none"/>
+    <circle cx="38" cy="100" r="14" fill="#54D4FF"/>
+    <circle cx="88" cy="62" r="14" fill="#55E6A5"/>
+    <circle cx="136" cy="82" r="14" fill="#FFD572"/>
+    <circle cx="190" cy="38" r="14" fill="#FFB457"/>
+    <circle cx="224" cy="58" r="14" fill="#54D4FF"/>
+    <path d="M28 116h208" opacity=".18"/>
+  </g>
+</svg>

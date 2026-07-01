@@ -1,0 +1,23 @@
+<svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="620" rx="42" fill="#EBF7FF"/>
+  <g transform="translate(82 96)">
+    <rect x="0" y="0" width="364" height="260" rx="32" fill="#102033"/>
+    <rect x="26" y="24" width="312" height="170" rx="18" fill="#BAEEFF"/>
+    <path d="M70 82h220M70 122h172M70 162h240" stroke="#4A7188" stroke-width="10" stroke-linecap="round"/>
+    <rect x="70" y="214" width="224" height="18" rx="9" fill="#5C7B91"/>
+    <path d="M98 260h250l44 80H42z" fill="#829EB0"/>
+  </g>
+  <g transform="translate(505 106)">
+    <rect x="0" y="0" width="270" height="320" rx="32" fill="#FFFFFF" stroke="#355874" stroke-width="8"/>
+    <rect x="38" y="50" width="86" height="54" rx="12" fill="#54D4FF"/>
+    <rect x="150" y="50" width="74" height="54" rx="12" fill="#55E6A5"/>
+    <rect x="38" y="134" width="186" height="44" rx="12" fill="#FFB457"/>
+    <rect x="38" y="212" width="74" height="54" rx="12" fill="#D9E9F2"/>
+    <rect x="150" y="212" width="74" height="54" rx="12" fill="#D9E9F2"/>
+    <path d="M81 104v30M187 104v30M81 178v34M187 178v34" stroke="#355874" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g stroke="#355874" stroke-width="7" stroke-linecap="round" fill="none" opacity=".5">
+    <path d="M120 480h260M120 520h190M520 480h210M520 520h160"/>
+    <path d="M108 438c80-52 170-52 260 0M512 438c80-52 170-52 260 0"/>
+  </g>
+</svg>

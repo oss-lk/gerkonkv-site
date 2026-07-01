@@ -1,0 +1,11 @@
+<svg viewBox="0 0 220 150" xmlns="http://www.w3.org/2000/svg" aria-label="Чертёжный планшет">
+  <rect width="220" height="150" fill="none"/>
+  <g stroke="#203248" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="18" y="18" width="184" height="114" rx="22" fill="#EAF8FF"/>
+    <path d="M50 50h118M50 78h78M50 106h132" opacity=".28"/>
+    <path d="M142 44 170 72 142 100 114 72Z" fill="none" opacity=".38"/>
+    <circle cx="52" cy="50" r="4" fill="#55E6A5" stroke="none"/>
+    <circle cx="52" cy="78" r="4" fill="#FFB457" stroke="none"/>
+    <circle cx="52" cy="106" r="4" fill="#54D4FF" stroke="none"/>
+  </g>
+</svg>

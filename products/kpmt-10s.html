@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>КПМТ-10С — Геркон-КВ</title>
+  <meta name="description" content="Геркон-КВ — проектирование, производство и программирование ПЛК-контроллеров." />
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body id="top">
+  
+<header class="site-header" id="top">
+  <div class="container nav-wrap">
+    <a class="brand" href="../index.html" aria-label="Геркон-КВ">
+      <img src="../assets/logo.svg" alt="" />
+      <span class="brand-name"><b>Геркон-КВ</b></span>
+    </a>
+    <nav class="main-nav"><a href="../index.html">Главная</a><a href="../products.html" aria-current="page">Продукция</a><a href="../about.html">О нас</a></nav>
+    <a class="btn btn-small" href="../contacts.html">Связаться</a>
+  </div>
+</header>
+
+  <main>
+<section class="page-hero product-hero">
+  <div class="container split-grid">
+    <div class="copy reveal">
+      <p class="eyebrow">Контроллер промывки молочного танка</p>
+      <h1>КПМТ-10С</h1>
+      <p class="lead">Автоматический запуск и последовательное выполнение этапов промывки, соблюдение временных интервалов и отображение текущего шага на панели оператора.</p>
+      <div class="spec-row">
+        <span>220 В / 50 Гц</span><span>3 входа</span><span>6 симисторных выходов</span><span>1 реле</span>
+      </div>
+    </div>
+    <a class="image-link kpmt-home-demo kpmt-detail-visual reveal delay" href="kpmt-10s.html" aria-label="Открыть страницу КПМТ-10С">
+      <div class="kpmt-scene" aria-hidden="true">
+        <div class="kpmt-tank">
+<img class="tank-ladder ladder-svg" src="../assets/illustrations/kpmt-ladder.svg" alt="" />
+          <div class="tank-neck"></div>
+          <div class="spray-head"></div>
+          <div class="spray-rays">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="tank-water"></div>
+          <div class="tank-shine"></div>
+          <div class="tank-leg leg-a"></div>
+          <div class="tank-leg leg-b"></div>
+        </div>
+
+        <div class="cooling-unit">
+          <div class="fan fan-a"><i></i><i></i><i></i></div>
+          <div class="fan fan-b"><i></i><i></i><i></i></div>
+          <div class="kpmt-controller">
+            <div class="ctrl-screen">
+              <span>ПРОМЫВКА</span>
+              <i></i><i></i><i></i><i></i>
+            </div>
+            <div class="ctrl-lamps">
+              <b></b><b></b><b></b>
+            </div>
+            <div class="ctrl-buttons">
+              <b></b><b></b>
+            </div>
+          </div>
+          <div class="cooling-grille"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container cycle-shell reveal">
+    <div class="cycle-top">
+      <div>
+        <p class="eyebrow">Циклограмма из программы</p>
+        <h2>25 шагов промывки</h2>
+        <p>Анимация ускорена для восприятия. Финальной анимации фермы больше нет: последний шаг просто отключает выходы и возвращает процесс в режим ожидания.</p>
+      </div>
+      <div class="cycle-buttons">
+        <button class="round-btn" data-wash-prev>←</button>
+        <button class="btn" data-wash-run>Запустить</button>
+        <button class="round-btn" data-wash-next>→</button>
+      </div>
+    </div>
+    <div class="wash-widget" data-wash-widget></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container detail-grid">
+    <article class="panel reveal">
+      <h2>Что показывает прибор</h2>
+      <ul class="check-list">
+        <li>Номер текущего шага</li>
+        <li>Оставшееся время этапа</li>
+        <li>Активные выходы: ХВ, ГВ, Щ, К, СЛ, П</li>
+        <li>Состояние завершения «мойка завершена»</li>
+      </ul>
+    </article>
+    <article class="panel reveal delay">
+      <h2>Характеристики</h2>
+      <dl class="spec-list">
+        <div><dt>Питание</dt><dd>220 В, 50 Гц</dd></div>
+        <div><dt>Мощность</dt><dd>не более 5 ВА</dd></div>
+        <div><dt>Входы</dt><dd>3 канала, замыкание на корпус</dd></div>
+        <div><dt>Выходы</dt><dd>6 нормально разомкнутых симисторных + 1 переключающее реле</dd></div>
+        <div><dt>Нагрузка выхода</dt><dd>до 2 А, 240 В перем. тока</dd></div>
+        <div><dt>Корпус</dt><dd>DIN-рейка 35 мм, IP20</dd></div>
+      </dl>
+    </article>
+  </div>
+</section>
+</main>
+  
+<footer class="site-footer">
+  <div class="container footer-layout">
+    <div>
+      <a class="brand footer-brand" href="../index.html">
+        <img src="../assets/logo.svg" alt="" />
+        <span><b>Геркон-КВ</b></span>
+      </a>
+      
+    </div>
+    <div><h4>Разделы</h4><div class="footer-links"><a href="../index.html">Главная</a><a href="../products.html">Продукция</a><a href="../about.html">О нас</a></div></div>
+    <div><h4>Контакты</h4><p>+7 (904) 592-77-06<br>ela.suzdal@mail.ru<br>Ковров, ул. Шмидта 14а, оф. 55</p></div>
+  </div>
+  <div class="container footer-bottom"><span>© 2026 Геркон-КВ</span><a href="#top">Наверх ↑</a></div>
+</footer>
+
+  <script src="../assets/script.js"></script>
+</body>
+</html>

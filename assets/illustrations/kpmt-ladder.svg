@@ -1,0 +1,14 @@
+<svg viewBox="0 0 72 236" xmlns="http://www.w3.org/2000/svg" aria-label="Лестница танка">
+  <rect width="72" height="236" fill="none"/>
+  <g stroke="#203248" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="18" y="18" width="12" height="194" rx="6" fill="#EAF8FF"/>
+    <rect x="42" y="18" width="12" height="194" rx="6" fill="#EAF8FF"/>
+    <rect x="24" y="40" width="24" height="8" rx="4" fill="#FFF9EA"/>
+    <rect x="24" y="74" width="24" height="8" rx="4" fill="#FFF9EA"/>
+    <rect x="24" y="108" width="24" height="8" rx="4" fill="#FFF9EA"/>
+    <rect x="24" y="142" width="24" height="8" rx="4" fill="#FFF9EA"/>
+    <rect x="24" y="176" width="24" height="8" rx="4" fill="#FFF9EA"/>
+    <path d="M18 26H8M18 84H8M18 142H8" fill="none"/>
+    <path d="M54 26h8" fill="none"/>
+  </g>
+</svg>

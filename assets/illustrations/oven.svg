@@ -1,0 +1,147 @@
+<svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .heater{animation:heaterGlow 4.2s ease-in-out infinite alternate}
+    .chart-line{stroke-dasharray:100;stroke-dashoffset:100;animation:chartDraw 8.1s linear infinite}
+    .chart-dot{animation:dotVisible 8.1s linear infinite}
+    .done-check{animation:checkVisible 8.1s linear infinite;transform-origin:148px 104px}
+    .vase-body,.vase-mouth,.vase-rim{animation:vaseFire 8.1s linear infinite}
+    .heat-haze{animation:haze 3.4s ease-in-out infinite alternate}
+    .chart-pulse-1{animation:ledPulse 2.2s ease-in-out infinite}
+    .chart-pulse-2{animation:ledPulse 2.2s ease-in-out .45s infinite}
+    .chart-pulse-3{animation:ledPulse 2.2s ease-in-out .9s infinite}
+    @keyframes heaterGlow{
+      0%{stroke:#B84A3D;opacity:.50}
+      50%{stroke:#FF8A3D;opacity:.76}
+      100%{stroke:#FFD572;opacity:1}
+    }
+    @keyframes chartDraw{
+      0%{stroke-dashoffset:100;opacity:1}
+      76%{stroke-dashoffset:0;opacity:1}
+      82%,96%{stroke-dashoffset:0;opacity:0}
+      100%{stroke-dashoffset:100;opacity:1}
+    }
+    @keyframes dotVisible{
+      0%,76%{opacity:1}
+      82%,96%{opacity:0}
+      100%{opacity:1}
+    }
+    @keyframes checkVisible{
+      0%,78%{opacity:0;transform:scale(.72)}
+      84%,96%{opacity:1;transform:scale(1)}
+      100%{opacity:0;transform:scale(.72)}
+    }
+    @keyframes vaseFire{
+      0%{fill:#F7FBFF}
+      35%{fill:#F0E2D1}
+      62%{fill:#C9864A}
+      76%,96%{fill:#8A6246}
+      100%{fill:#F7FBFF}
+    }
+    @keyframes ledPulse{
+      0%,100%{opacity:.45}
+      50%{opacity:1}
+    }
+    @keyframes haze{
+      0%{opacity:.16;transform:translateY(0)}
+      100%{opacity:.32;transform:translateY(-7px)}
+    }
+  </style>
+
+  <rect width="900" height="620" rx="42" fill="#FFF3DC"/>
+  <path d="M0 442c156-44 282-12 414-48 156-42 312 14 486-46v272H0z" fill="#F6D6A7"/>
+
+  <g transform="translate(72 86)">
+    <ellipse cx="252" cy="420" rx="226" ry="34" fill="#8F6A41" opacity=".22"/>
+
+    <rect x="20" y="40" width="408" height="364" rx="46" fill="#53677A" stroke="#203248" stroke-width="7"/>
+    <rect x="56" y="78" width="336" height="270" rx="32" fill="#FFF4D4" stroke="#203248" stroke-width="6"/>
+
+    <path class="heater" d="
+      M88 124
+      C116 94 146 154 176 124
+      S236 154 266 124
+      S324 154 354 124
+      M88 172
+      C116 142 146 202 176 172
+      S236 202 266 172
+      S324 202 354 172
+      M88 220
+      C116 190 146 250 176 220
+      S236 250 266 220
+      S324 250 354 220
+      M88 268
+      C116 238 146 298 176 268
+      S236 298 266 268
+      S324 298 354 268"
+      fill="none" stroke="#D85645" stroke-width="12" stroke-linecap="round"/>
+
+    <g class="heat-haze" fill="none" stroke="#FFB457" stroke-width="5" stroke-linecap="round" opacity=".26">
+      <path d="M134 286c-14-22 14-30 0-52"/>
+      <path d="M224 286c-14-22 14-30 0-52"/>
+      <path d="M314 286c-14-22 14-30 0-52"/>
+    </g>
+
+    <!-- Белая ваза: дно на кромке белой камеры, цвет плавно темнеет к концу программы -->
+    <g transform="translate(224 214)">
+      <ellipse cx="0" cy="134" rx="76" ry="11" fill="#8F6A41" opacity=".16"/>
+      <path class="vase-body" d="M-45 12
+               C-28 2 -18 -18 0 -18
+               C18 -18 28 2 45 12
+               C30 34 30 58 42 92
+               C48 118 28 134 0 136
+               C-28 134 -48 118 -42 92
+               C-30 58 -30 34 -45 12Z"
+            fill="#F7FBFF" stroke="#203248" stroke-width="7" stroke-linejoin="round"/>
+      <ellipse class="vase-mouth" cx="0" cy="10" rx="44" ry="18" fill="#F7FBFF" stroke="#203248" stroke-width="7"/>
+      <ellipse cx="0" cy="10" rx="22" ry="7" fill="#9FB6C4" opacity=".38"/>
+      <path d="M-30 50c18 12 42 12 60 0" fill="none" stroke="#AEEAFF" stroke-width="8" stroke-linecap="round" opacity=".65"/>
+      <path d="M-24 88c16 9 32 9 48 0" fill="none" stroke="#D5EAF3" stroke-width="7" stroke-linecap="round"/>
+      <path d="M-17 -4c8-8 26-8 34 0" fill="none" stroke="#203248" stroke-width="5" stroke-linecap="round" opacity=".35"/>
+    </g>
+
+    <rect x="72" y="360" width="306" height="22" rx="11" fill="#34495E" opacity=".86"/>
+
+    <path d="M428 196h46" stroke="#203248" stroke-width="12" stroke-linecap="round"/>
+
+    <g transform="translate(474 84)">
+      <rect x="0" y="0" width="292" height="236" rx="30" fill="#162D45" stroke="#203248" stroke-width="7"/>
+      <rect x="24" y="24" width="244" height="166" rx="18" fill="#8BE3FF" stroke="#203248" stroke-width="5"/>
+
+      <g stroke="#203248" stroke-width="3" opacity=".15">
+        <path d="M50 158h190M50 122h190M50 86h190M50 50h190"/>
+        <path d="M50 48v112M98 48v112M146 48v112M194 48v112M240 48v112"/>
+      </g>
+
+      <path id="tempPath" pathLength="100"
+            d="M52 158 L92 122 L140 122 L178 78 L218 78 L244 48"
+            fill="none" stroke="#203248" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".18"/>
+      <path class="chart-line" pathLength="100"
+            d="M52 158 L92 122 L140 122 L178 78 L218 78 L244 48"
+            fill="none" stroke="#FF8A3D" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <circle class="chart-dot" r="9" fill="#FFD572" stroke="#203248" stroke-width="4">
+        <animateMotion dur="8.1s" repeatCount="indefinite" rotate="0" keyTimes="0;0.76;1" keyPoints="0;1;1" calcMode="linear">
+          <mpath href="#tempPath"/>
+        </animateMotion>
+      </circle>
+
+      <g class="done-check" opacity="0">
+        <circle cx="148" cy="104" r="48" fill="#FFF9EA" stroke="#203248" stroke-width="6"/>
+        <path d="M124 105 L141 122 L176 82" fill="none" stroke="#55E6A5" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <g fill="#203248" opacity=".46" font-family="Arial, sans-serif" font-weight="900" font-size="13">
+        <text x="52" y="178">t</text>
+        <text x="224" y="178">мин</text>
+        <text x="38" y="55">°C</text>
+      </g>
+
+      <g transform="translate(40 206)">
+        <circle class="chart-pulse-1" cx="0" cy="0" r="8" fill="#55E6A5"/>
+        <circle class="chart-pulse-2" cx="32" cy="0" r="8" fill="#FFB457"/>
+        <circle class="chart-pulse-3" cx="64" cy="0" r="8" fill="#54D4FF"/>
+        <rect x="92" y="-7" width="88" height="14" rx="7" fill="#FFF9EA"/>
+      </g>
+    </g>
+  </g>
+</svg>

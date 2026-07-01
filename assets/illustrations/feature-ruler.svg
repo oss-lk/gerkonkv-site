@@ -1,0 +1,8 @@
+<svg viewBox="0 0 220 72" xmlns="http://www.w3.org/2000/svg" aria-label="Линейка">
+  <rect width="220" height="72" fill="none"/>
+  <g stroke="#203248" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="14" y="18" width="192" height="36" rx="12" fill="#FFF9EA"/>
+    <path d="M34 25v16M54 25v10M74 25v20M94 25v10M114 25v16M134 25v10M154 25v20M174 25v10M194 25v16" fill="none"/>
+    <path d="M28 44h166" opacity=".18"/>
+  </g>
+</svg>

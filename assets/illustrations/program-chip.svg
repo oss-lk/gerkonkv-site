@@ -1,0 +1,8 @@
+<svg viewBox="0 0 150 120" xmlns="http://www.w3.org/2000/svg" aria-label="Программный модуль">
+  <rect width="150" height="120" fill="none"/>
+  <g stroke="#203248" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="30" y="24" width="90" height="72" rx="18" fill="#EAF8FF"/>
+    <path d="M54 62 66 50M54 62l12 12M96 50l-12 24" fill="none"/>
+    <path d="M20 42h10M20 62h10M20 82h10M120 42h10M120 62h10M120 82h10" opacity=".55"/>
+  </g>
+</svg>
