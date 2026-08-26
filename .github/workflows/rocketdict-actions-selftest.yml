@@ -1,12 +1,39 @@
-name: RocketDict Actions self-test
+name: RocketDict official OPUS gate
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/rocketdict-actions-selftest.yml'
 jobs:
-  selftest:
+  real-opus-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
-      - name: Self-test
-        run: echo ROCKETDICT_ACTIONS_OK
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install real translation runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1'
+      - name: Run real OPUS EN-RU gate
+        run: python rocketdict-ci/real_opus_gate.py
+      - name: Record runner resources
+        if: always()
+        run: |
+          mkdir -p work/evidence
+          df -h > work/evidence/disk.txt || true
+          free -h > work/evidence/memory.txt || true
+          python -VV > work/evidence/python.txt 2>&1 || true
+          python -m pip freeze | sort > work/evidence/pip-freeze.txt || true
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-real-opus-gate
+          path: |
+            work/evidence/**
+            work/output/**
+          if-no-files-found: warn
+          retention-days: 14
