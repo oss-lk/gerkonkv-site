@@ -1,0 +1,2 @@
+RocketDict real OPUS gate trigger
+commit intent: official OPUS EN-RU + CTranslate2 float32 + Opticks >= 90000 words
