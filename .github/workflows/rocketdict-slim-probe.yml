@@ -1,0 +1,33 @@
+name: RocketDict slim runner probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rocketdict-slim-probe.yml'
+      - 'rocketdict-ci/slim-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    steps:
+      - name: Runner and OPUS network probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          uname -a
+          python3 -VV
+          python3 - <<'PY'
+          import json, socket, urllib.request
+          host='object.pouta.csc.fi'
+          ip=socket.gethostbyname(host)
+          req=urllib.request.Request('https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip', method='HEAD')
+          with urllib.request.urlopen(req, timeout=30) as r:
+              out={'dns_ip':ip,'status':r.status,'content_length':r.headers.get('Content-Length'),'content_type':r.headers.get('Content-Type')}
+          print(json.dumps(out, sort_keys=True))
+          PY
