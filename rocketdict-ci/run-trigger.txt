@@ -1,3 +1,3 @@
 RocketDict real OPUS gate trigger
-run: decoder-aware locator v3
+run: decoder-aware locator v3 + cp313 offline supply
 intent: official OPUS EN-RU + CTranslate2 float32 + Opticks >= 90000 words
