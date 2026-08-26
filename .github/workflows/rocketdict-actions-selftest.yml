@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/rocketdict-actions-selftest.yml'
+      - 'rocketdict-ci/run-trigger.txt'
 jobs:
   real-opus-gate:
     runs-on: ubuntu-latest
