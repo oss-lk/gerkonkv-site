@@ -1,2 +1,3 @@
 RocketDict real OPUS gate trigger
-commit intent: official OPUS EN-RU + CTranslate2 float32 + Opticks >= 90000 words
+run: decoder-aware locator v3
+intent: official OPUS EN-RU + CTranslate2 float32 + Opticks >= 90000 words
