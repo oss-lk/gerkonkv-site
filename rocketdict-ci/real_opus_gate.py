@@ -37,7 +37,7 @@ def download(url: str, dest: Path, attempts: int = 5) -> None:
     last = None
     for attempt in range(1, attempts + 1):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "RocketDict-GitHub-Gate/2"})
+            req = urllib.request.Request(url, headers={"User-Agent": "RocketDict-GitHub-Gate/3"})
             with urllib.request.urlopen(req, timeout=60) as src, dest.open("wb") as out:
                 shutil.copyfileobj(src, out, length=1024 * 1024)
             if dest.stat().st_size == 0:
@@ -71,11 +71,12 @@ def _safe_relative_file(base: Path, relative: str) -> Path:
 
 
 def locate_model(root: Path) -> tuple[Path, dict, list[Path], list[Path]]:
-    """Locate one self-consistent OPUS Marian root from decoder.yml references."""
+    """Locate exactly one self-consistent OPUS Marian root from decoder.yml references."""
+    root_resolved = root.resolve()
     valid: list[tuple[Path, dict, list[Path], list[Path]]] = []
     diagnostics: list[str] = []
     for decoder in sorted(root.rglob("decoder.yml")):
-        model_dir = decoder.parent
+        model_dir = decoder.parent.resolve()
         try:
             config = yaml.safe_load(decoder.read_text(encoding="utf-8"))
             if not isinstance(config, dict):
@@ -88,6 +89,10 @@ def locate_model(root: Path) -> tuple[Path, dict, list[Path], list[Path]]:
                 raise RuntimeError("decoder vocabs[] is missing or invalid")
             model_files = [_safe_relative_file(model_dir, x) for x in models]
             vocab_files = [_safe_relative_file(model_dir, x) for x in vocabs]
+            # Strong invariant: every referenced payload remains below the same decoder root.
+            for payload in model_files + vocab_files:
+                payload.relative_to(model_dir)
+            model_dir.relative_to(root_resolved)
             valid.append((model_dir, config, model_files, vocab_files))
         except Exception as exc:
             diagnostics.append(f"{decoder.relative_to(root)}: {exc}")
@@ -100,6 +105,7 @@ def locate_model(root: Path) -> tuple[Path, dict, list[Path], list[Path]]:
 
 
 def locate_sentencepiece(root: Path) -> tuple[Path, Path]:
+    root = root.resolve()
     files = sorted(root.rglob("*.spm"))
     if len(files) < 2:
         raise RuntimeError(f"expected >=2 SentencePiece model files, found {files}")
@@ -111,6 +117,8 @@ def locate_sentencepiece(root: Path) -> tuple[Path, Path]:
         target = next((p for p in files if "target" in p.name.lower() and p != source), None)
     if target is None:
         target = next(p for p in files if p != source)
+    source = source.resolve(); target = target.resolve()
+    source.relative_to(root); target.relative_to(root)
     if source == target:
         raise RuntimeError("source and target SentencePiece models resolved to the same file")
     return source, target
@@ -146,8 +154,9 @@ def main() -> None:
 
     model_dir, decoder_config, model_files, vocab_files = locate_model(SRC)
     source_spm, target_spm = locate_sentencepiece(model_dir)
+    src_root = SRC.resolve()
     model_layout = {
-        "model_dir": str(model_dir.relative_to(SRC)) if model_dir != SRC else ".",
+        "model_dir": str(model_dir.relative_to(src_root)) if model_dir != src_root else ".",
         "decoder": decoder_config,
         "model_files": [
             {"path": str(p.relative_to(model_dir)), "size": p.stat().st_size, "sha256": sha256(p)}
@@ -221,7 +230,7 @@ def main() -> None:
         raise RuntimeError("representative real-model pilot incomplete")
 
     payload = {
-        "schema": "rocketdict-github-real-opus-gate/3",
+        "schema": "rocketdict-github-real-opus-gate/4",
         "real_model": True,
         "fake_or_identity_translation": False,
         "official_opus_url": OPUS_URL,
