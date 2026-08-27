@@ -1,0 +1,54 @@
+{
+  "schema": "rocketdict-stage8-whole-context-structural-result/1",
+  "date_utc": "2026-08-27",
+  "status": "POSITIVE_MECHANISM_NON_PROMOTIONAL",
+  "parent": "O-v2 + P-v1/P-v2 occurrence 444",
+  "github": {
+    "run_id": 33095764749,
+    "head_sha": "1f301c500cb626a41c3cc4d72a426cac70cc024f",
+    "artifact_id": 9656334142,
+    "artifact_digest": "sha256:99b2edec17641ea439718defee4cd44d1dec24bfcc1ef5b82006ffaa91067391",
+    "conclusion": "success"
+  },
+  "mechanism": {
+    "name": "Q-v1 whole-context source-planned structural canonicalization",
+    "source_case_signal": "mixed Porter stem surfaces Refraction/refracting",
+    "whole_sentence_context": true,
+    "structure_parsed_before_mt": true,
+    "preparsed_node": "_3p 3t_",
+    "allowed_surface_canonicalization": "only surrounding Gutenberg underscores/whitespace around a uniquely preserved exact symbolic payload",
+    "glossary_used": false,
+    "missing_number_append": false,
+    "arbitrary_target_prose_editing": false
+  },
+  "selected": {
+    "rank": 0,
+    "raw_target": "И когда рефракция второй Призма была равна рефракции первой, рефлексирующие углы обоих из них были примерно 60 градусов, ось Спектрума 3p 3t_, сделанная этим рефракцией, сделала, когда производилась также через середину того же белого круглого изображения S.",
+    "canonical_target": "И когда рефракция второй Призма была равна рефракции первой, рефлексирующие углы обоих из них были примерно 60 градусов, ось Спектрума _3p 3t_, сделанная этим рефракцией, сделала, когда производилась также через середину того же белого круглого изображения S.",
+    "forward_integrity_passed": true,
+    "ordinary_latin_residue": [],
+    "structure_render": {
+      "source_text": "_3p 3t_",
+      "payload": "3p 3t",
+      "target_before": "3p 3t_",
+      "target_after": "_3p 3t_",
+      "unique_payload_match": true
+    }
+  },
+  "o2_term_retention": {
+    "clean_v8_refract_retained": 1,
+    "q1_refract_retained": 3,
+    "source_refract_count": 4,
+    "baseline_refract_retained": 3,
+    "q1_high_confidence_collapse": false,
+    "q1_retention_warnings": []
+  },
+  "hypothesis_summary": {
+    "beam": 16,
+    "nbest": 16,
+    "forward_eligible_after_source_planned_structure": 16,
+    "o2_passing_among_forward_eligible": 16
+  },
+  "next_action": "Build v9 on the identical frozen 5044-word selection. Reproduce clean v8; use pinned O-v2 round-trip only to detect high-confidence term collapse; invoke generic Q-v1 rescue only for such units and only when source supplies the mixed-case stem signal; require final zero objective integrity/language failures and zero O-v2 high-confidence collapses.",
+  "promotion_allowed": false
+}
