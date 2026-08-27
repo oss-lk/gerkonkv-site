@@ -15,18 +15,19 @@ independent validation runner and must never be changed in response to model
 results.
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 import json
 from pathlib import Path
 import re
 import sys
+
+from nltk.stem import PorterStemmer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from real_opus_gate import OPTICKS_URL, download  # noqa: E402
 import stage8_ghi_reconstruction_gate as base  # noqa: E402
 import stage8_ghi_reconstruction_v5 as v5  # noqa: E402
-import stage8_term_case_consistency_p1 as p1  # noqa: E402
 
 ROOT = Path("work-stage8-validation-r1")
 CORPUS = ROOT / "corpus" / "opticks.txt"
@@ -49,6 +50,57 @@ QUOTAS = {
 
 TABLE_RULE_RE = re.compile(r"(?m)^[\-+]{12,}\s*$")
 STRUCTURAL_ID_RE = re.compile(r"(?ms)(?:^|\n)\d+(?:\.[A-Za-z]+)+\.\d+\.\s*$")
+WORD_RE = re.compile(r"(?<![A-Za-z])([A-Za-z]+)(?![A-Za-z])")
+STEMMER = PorterStemmer()
+
+
+def protected_mask(text: str) -> list[bool]:
+    """Source-only mask copied from P-v1 semantics without importing O-v1/O-v2."""
+    mask = [False] * len(text)
+    square = 0
+    emphasis = False
+    for i, ch in enumerate(text):
+        if ch == "_" and square == 0:
+            emphasis = not emphasis
+            mask[i] = True
+            continue
+        if ch == "[" and not emphasis:
+            square += 1
+        if square or emphasis:
+            mask[i] = True
+        if ch == "]" and square and not emphasis:
+            square -= 1
+    return mask
+
+
+def mixed_case_stems(source: str) -> dict[str, dict]:
+    """Exact P-v1 source-only mixed-case stem signal, implemented locally."""
+    mask = protected_mask(source)
+    by_stem: dict[str, list[dict]] = defaultdict(list)
+    for m in WORD_RE.finditer(source):
+        if any(mask[m.start():m.end()]):
+            continue
+        word = m.group(1)
+        if len(word) < 5:
+            continue
+        stem = STEMMER.stem(word.casefold())
+        by_stem[stem].append({
+            "surface": word,
+            "start": m.start(),
+            "end": m.end(),
+            "titlecase": word[0].isupper() and word[1:].islower(),
+            "lowercase": word.islower(),
+        })
+    eligible = {}
+    for stem, rows in by_stem.items():
+        if len(rows) < 2:
+            continue
+        if any(r["titlecase"] for r in rows) and any(r["lowercase"] for r in rows):
+            eligible[stem] = {
+                "surfaces": [r["surface"] for r in rows],
+                "occurrences": rows,
+            }
+    return eligible
 
 
 def is_technical(source: str) -> bool:
@@ -69,7 +121,7 @@ def source_category(source: str) -> str:
     numeric_count = sum(base.numeric_counter(source).values())
     if numeric_count >= 4:
         return "numeric_dense"
-    if p1.mixed_case_stems(source):
+    if mixed_case_stems(source):
         return "mixed_case_term"
     if numeric_count:
         return "numeric"
@@ -169,6 +221,7 @@ def main() -> None:
                 "general": "all other eligible source units",
             },
             "no_target_or_model_information_used": True,
+            "semantic_proxy_modules_imported": False,
         },
         "excluded_frozen_r0": {
             "selection_sha256": r0_meta["selection_sha256"],
