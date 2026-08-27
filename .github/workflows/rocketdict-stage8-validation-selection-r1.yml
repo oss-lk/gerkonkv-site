@@ -1,0 +1,38 @@
+name: RocketDict Stage 8 validation selection R1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rocketdict-stage8-validation-selection-r1.yml'
+      - 'rocketdict-ci/stage8_validation_selection_r1.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_gate.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v5.py'
+      - 'rocketdict-ci/stage8_term_case_consistency_p1.py'
+      - 'rocketdict-ci/real_opus_gate.py'
+      - 'rocketdict-ci/stage8-validation-selection-r1-trigger.txt'
+  workflow_dispatch:
+
+jobs:
+  source-only-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install selector runtime only
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'nltk>=3.9,<4'
+      - name: Freeze source-only independent validation selection
+        run: python rocketdict-ci/stage8_validation_selection_r1.py
+      - name: Upload selection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-validation-selection-r1
+          path: work-stage8-validation-r1/evidence/**
+          if-no-files-found: error
+          retention-days: 30
