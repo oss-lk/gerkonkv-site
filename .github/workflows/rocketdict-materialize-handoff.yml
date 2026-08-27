@@ -1,0 +1,42 @@
+name: RocketDict materialize public handoff
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict/payload/READY'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Materialize verified Stage 8 source and Research Vault
+        run: python rocketdict/materialize_handoff.py
+      - name: Verify privacy boundary and source syntax
+        run: |
+          set -euo pipefail
+          ! grep -RIEin --exclude='research-vault.sqlite' --exclude='*.sha256' '(Ковров|Гостюх|C:\\Users\\|/Users/|github_pat_|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9]{12,})' rocketdict/active_source rocketdict/research || false
+          python -m compileall -q rocketdict/active_source/src rocketdict/active_source/scripts
+      - name: Commit materialized handoff
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rocketdict/active_source rocketdict/research rocketdict/MATERIALIZED_CHECKSUMS.txt
+          if git diff --cached --quiet; then
+            echo 'Materialized handoff already current.'
+            exit 0
+          fi
+          git commit -m 'Materialize RocketDict Stage 8 public handoff'
+          git push
