@@ -1,0 +1,73 @@
+{
+  "schema": "rocketdict-stage8-v9-pinned-term-rescue-result/1",
+  "date_utc": "2026-08-27",
+  "status": "PASS_NON_PROMOTIONAL_FROZEN_RECONSTRUCTION",
+  "github": {
+    "run_id": 33096154141,
+    "head_sha": "e24155718596e4d95a35aa7804f5980a843ea188",
+    "artifact_id": 9656546120,
+    "artifact_digest": "sha256:c4945967e9a7ee223e39c5779950bf7bb0c6691d48d3b4f4e6c1e081d5eb0ac5",
+    "conclusion": "success"
+  },
+  "selection": {
+    "words": 5044,
+    "units": 80,
+    "sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "frozen": true
+  },
+  "parent_v8": {
+    "objective_gate_passed": true,
+    "changed_units": 10,
+    "pinned_o2_initial_failed_occurrences": [444]
+  },
+  "q_rescue": {
+    "count": 1,
+    "occurrences": [444],
+    "selected_rank": 0,
+    "candidate": "И когда рефракция второй Призма была равна рефракции первой, рефлексирующие углы обоих из них были примерно 60 градусов, ось Спектрума _3p 3t_, сделанная этим рефракцией, сделала, когда производилась также через середину того же белого круглого изображения S.",
+    "source_planned_structure": {
+      "source_text": "_3p 3t_",
+      "payload": "3p 3t",
+      "target_before": "3p 3t_",
+      "target_after": "_3p 3t_",
+      "unique_exact_payload_match": true,
+      "payload_modified": false
+    },
+    "o2_after_rescue": {
+      "high_confidence_collapses": [],
+      "passed": true
+    }
+  },
+  "final_candidate": {
+    "empty": 0,
+    "numeric_fail_units": 0,
+    "numeric_missing_values": 0,
+    "numeric_duplicate_values": 0,
+    "numeric_order_fail_units": 0,
+    "delimiter_fail_units": 0,
+    "critical_token_fail_units": 0,
+    "figure_fail_units": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "strong_intervention_failures": 0,
+    "latin_intervention_failures": 0,
+    "mean_cyrillic_alpha_share": 0.9632440623733534,
+    "final_o2_failed_occurrences": []
+  },
+  "intervention_counts": {
+    "Q-v1-pinned-O2-rescue": 1,
+    "M-v1-clause-first-integrity-translation": 6,
+    "H-table": 1,
+    "I-v2": 1,
+    "H-document-id": 1
+  },
+  "reverse_model": {
+    "family": "official OPUS-MT RU->EN",
+    "release": "opus-2020-02-11.zip",
+    "zip_sha256": "b4bad9451bc4c4a1e292a33568a41db88a6b3349d6feaec97c4cd748305de243",
+    "pinned": true
+  },
+  "interpretation": "v9 is the strongest currently reproduced candidate on the independent frozen 5044-word reconstruction screen: objective integrity/language checks are all zero-failure and the pinned high-confidence repeated-term-collapse gate has no failures after one data-triggered Q rescue. This does not prove general semantic quality and does not replace exact F96.",
+  "promotion_allowed": false,
+  "promotion_blocker": "Exact 0.30.40/F96 source overlay and rocketdict-numeric-integrity/3.2 cannot be materialized until the missing handoff payload chunks are restored."
+}
