@@ -1,0 +1,61 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/1",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_NON_PROMOTIONAL",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33081805252,
+    "head_sha": "e5e6c84486b71dd9aa006daff696f1419b88ac38",
+    "artifact_id": 9650424057,
+    "artifact_name": "rocketdict-stage8-ghi-reconstruction",
+    "artifact_digest": "sha256:33aefd54bae993efc402cfa32e9269836bd66825c323ae1953325755fe5c7122",
+    "workflow_conclusion": "failure"
+  },
+  "source": {
+    "corpus": "Project Gutenberg Opticks #33504",
+    "sha256": "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217",
+    "full_regex_words": 104275
+  },
+  "selection": {
+    "selector": "rocketdict-stage8-ghi-reconstruction-selection/1",
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "categories": {"general": 27, "H-figure": 13, "G-numeric": 39, "I-extreme": 1}
+  },
+  "baseline": {
+    "numeric_fail_units_under_v1_local_guard": 13,
+    "empty": 0,
+    "figure_fail_units": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9614073030172456
+  },
+  "candidate": {
+    "numeric_fail_units_under_v1_local_guard": 8,
+    "empty": 0,
+    "figure_fail_units": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9566124371380773,
+    "changed_units": 5,
+    "interventions": {"G-nbest-8x8": 4, "I-v2": 1}
+  },
+  "diagnosis_after_artifact_review": {
+    "local_evaluator_false_failures": [
+      "mixed fractions with ordinal suffixes such as 27-1/2th were split into 27 and 1 instead of canonical 27-1/2",
+      "mixed fractions rendered with spaces around '-' were treated as different from source mixed fractions",
+      "comma-grouped thousands such as 700,000 were treated as 700 and 000 while target 700 000 was canonicalized differently",
+      "digits adjacent to structural underscores such as S_pc_50 or _Prop._1 were missed in the target"
+    ],
+    "real_remaining_failure_classes_visible_in_run1": [
+      "dense refraction-number series around occurrence 743",
+      "numeric table duplication around occurrence 1313",
+      "large high-density scientific numeric sequence around occurrence 1797",
+      "Gutenberg structural section identifier 1.F.2 around occurrence 2508"
+    ],
+    "quality_regression_found": "occurrence 744 was changed by G because of a false local fraction mismatch; integrity became locally green but Cyrillic alpha share fell from 1.0 to about 0.617. This intervention is rejected and motivates a per-intervention language-quality guard plus evaluator canonicalization."
+  },
+  "decision": "Do not tune the selection to pass. Keep the same selection SHA for v2, fix the evaluator canonicalization, add quality fail-closed selection, generalize structural preservation for tables/document IDs/high-density numeric structures, and rerun baseline and candidate on the identical selected units.",
+  "promotion_allowed": false
+}
