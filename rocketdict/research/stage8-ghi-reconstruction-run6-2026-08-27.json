@@ -1,0 +1,83 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/6",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_NON_PROMOTIONAL_LANGUAGE_GATED",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33087161143,
+    "head_sha": "69dec960fefc891f06447363976c83865b34be40",
+    "artifact_id": 9652726999,
+    "artifact_digest": "sha256:a403a2121afc1f5a1b5c74cdfc3d9d57d2ff01558bc7caacc804dcfabc2fcece",
+    "conclusion": "failure"
+  },
+  "selection": {
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "frozen_since_run1": true
+  },
+  "v6_change": {
+    "prose_decoder": "beam8/n-best8, later rank only when ordinary unprotected Latin prose decreases without material Cyrillic/length regression",
+    "whole_unit_contract": "stage8-no-new-unprotected-latin/1",
+    "prose_nbest_calls": 48,
+    "non_top1_selected": 4
+  },
+  "baseline": {
+    "numeric_fail_units": 5,
+    "numeric_order_fail_units": 4,
+    "delimiter_fail_units": 3,
+    "critical_token_fail_units": 6,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9614073030172456
+  },
+  "candidate": {
+    "numeric_fail_units": 2,
+    "numeric_order_fail_units": 2,
+    "delimiter_fail_units": 1,
+    "critical_token_fail_units": 2,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9611927384542529,
+    "changed_units": 7,
+    "interventions": {
+      "L-v1-critical-structure-numeric-AST": 4,
+      "H-table": 1,
+      "I-v2": 1,
+      "H-document-id": 1
+    },
+    "whole_unit_new_latin_regressions_among_accepted_changes": 0
+  },
+  "positive_effect": {
+    "occurrence_444": "v6 n-best removes the v5 ordinary English word Image while keeping _3p 3t_ and numeric/structure integrity",
+    "other_accepted_integrity_fixes": [484, 1313, 1350, 1966, 2214, 2508]
+  },
+  "rejected_integrity_valid_ast_candidates": [
+    {
+      "occurrence": 743,
+      "all_integrity_checks_on_ast_candidate": true,
+      "baseline_unprotected_latin": ["Intervals"],
+      "ast_unprotected_latin": ["Intervals", "Spaces", "Line"],
+      "reason": "new_unprotected_latin_words"
+    },
+    {
+      "occurrence": 941,
+      "all_integrity_checks_on_ast_candidate": true,
+      "baseline_unprotected_latin": ["ABC"],
+      "ast_unprotected_latin": ["Rays", "Rays"],
+      "reason": "new_unprotected_latin_words"
+    },
+    {
+      "occurrence": 1797,
+      "all_integrity_checks_on_ast_candidate": true,
+      "baseline_unprotected_latin": ["file", "Inch", "Rad"],
+      "ast_unprotected_latin": ["Fits", "the", "Orique", "Rays"],
+      "reason": "new_unprotected_latin_words"
+    }
+  ],
+  "interpretation": "The source-side AST can restore objective numeric/order/delimiter/critical-token integrity for 743/941/1797, but v6 correctly refuses those candidates because fine-grained prose segmentation creates additional untranslated ordinary English. The next variable to test is segmentation/context, not integrity criteria.",
+  "next_hypothesis": "M-v1 clause-first integrity translation: at top-level semantic clause boundaries first try whole-clause n-best under local numeric/order/delimiter/critical-token checks; only clauses that cannot satisfy integrity fall back to the existing source-side AST. Keep the frozen selection and all v6 gates unchanged.",
+  "promotion_allowed": false
+}
