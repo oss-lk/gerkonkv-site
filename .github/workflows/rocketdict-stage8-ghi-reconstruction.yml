@@ -10,6 +10,7 @@ on:
       - 'rocketdict-ci/stage8_ghi_reconstruction_v4.py'
       - 'rocketdict-ci/stage8_ghi_reconstruction_v5.py'
       - 'rocketdict-ci/stage8_ghi_reconstruction_v6.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v7.py'
       - 'rocketdict-ci/stage8_g_nbest_probe.py'
       - 'rocketdict-ci/real_opus_gate.py'
       - 'rocketdict-ci/stage8-ghi-reconstruction-trigger.txt'
@@ -28,8 +29,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7'
-      - name: Run frozen 5044-word Stage 8 reconstruction v6
-        run: python rocketdict-ci/stage8_ghi_reconstruction_v6.py
+      - name: Run frozen 5044-word Stage 8 reconstruction v7
+        run: python rocketdict-ci/stage8_ghi_reconstruction_v7.py
       - name: Upload reconstruction evidence
         if: always()
         uses: actions/upload-artifact@v4
