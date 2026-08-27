@@ -1,0 +1,105 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/8",
+  "date_utc": "2026-08-27",
+  "status": "POSITIVE_NON_PROMOTIONAL_OBJECTIVE_GATES",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33088908923,
+    "head_sha": "edfa307a787d653cf9a15b086d97631a08820051",
+    "artifact_id": 9653493129,
+    "artifact_digest": "sha256:6bb4c8d8c2ddb6dc62b9a0357aadc6066ddd388aef421f033e0893a769dbca29",
+    "conclusion": "success"
+  },
+  "invalid_infrastructure_run": {
+    "run_id": 33088742124,
+    "reason": "v8 implementation accidentally monkey-patched v7.clause_nbest and recursively called itself",
+    "research_evidence": false
+  },
+  "selection": {
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "unchanged_since_run1": true
+  },
+  "baseline": {
+    "numeric_fail_units": 5,
+    "numeric_missing_values": 21,
+    "numeric_duplicate_values": 18,
+    "numeric_order_fail_units": 4,
+    "delimiter_fail_units": 3,
+    "critical_token_fail_units": 6,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9614073030172456
+  },
+  "candidate": {
+    "numeric_fail_units": 0,
+    "numeric_missing_values": 0,
+    "numeric_duplicate_values": 0,
+    "numeric_order_fail_units": 0,
+    "delimiter_fail_units": 0,
+    "critical_token_fail_units": 0,
+    "figure_fail_units": 0,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9632481763807256,
+    "cyrillic_share_delta_vs_baseline": 0.0018408733634799335,
+    "changed_units": 10,
+    "strong_intervention_failures": 0,
+    "interventions": {
+      "M-v1-clause-first-integrity-translation": 7,
+      "H-table": 1,
+      "I-v2": 1,
+      "H-document-id": 1
+    }
+  },
+  "N_v1_capitalization_retry": {
+    "attempts": 4,
+    "selected": 4,
+    "target_editing": false,
+    "glossary": false,
+    "source_normalization_scope": "only TitleCase source prose words that actually leaked into generated target as ordinary unprotected Latin; never []/_..._ technical payload",
+    "selected_changes": [
+      {"from": ["Intervals", "Spaces"], "to": ["intervals", "spaces"], "effect": "743 opening clause Latin residue 2 -> 0"},
+      {"from": ["Line", "Intervals"], "to": ["line", "intervals"], "effect": "743 numeric-list clause Latin residue 2 -> 0"},
+      {"from": ["Fits", "Rays"], "to": ["fits", "rays"], "effect": "1797 parenthetical prose fragment Latin residue 4 -> 0"},
+      {"from": ["Asymptote", "Hyperbola"], "to": ["asymptote", "hyperbola"], "effect": "1966 final clause Latin residue 2 -> 0"}
+    ]
+  },
+  "manual_high_risk_verification": {
+    "occurrence_743": {
+      "numeric_multiset": "exact",
+      "numeric_order": "exact",
+      "square_delimiters": "8/8 source and 8/8 target",
+      "round_delimiters": "1/1 source and 1/1 target",
+      "Greek_payload_sequence": ["a", "g", "e", "e", "i", "l"],
+      "illustration_payloads": ["FIG. 4.", "FIG. 5."],
+      "unprotected_latin_residue": 0
+    },
+    "occurrence_1797": {
+      "numeric_multiset": "exact",
+      "numeric_order": "exact",
+      "explicit_numeric_tokens": 28,
+      "both_100000000_occurrences_preserved": true,
+      "round_delimiters": "3/3 source and 3/3 target",
+      "unprotected_latin_residue": 0
+    },
+    "occurrence_1966": {
+      "symbolic_variable_sequence": "exact",
+      "unprotected_latin_residue": 0
+    }
+  },
+  "important_quality_caveat": {
+    "semantic_quality_proven": false,
+    "examples": [
+      "occurrence 444 still contains semantically suspicious Refraction -> отвращение / Отклонение wording",
+      "occurrence 743 is objective-integrity clean but contains awkward/possibly incorrect optical terminology",
+      "occurrence 1797 is objective-integrity clean but some prose terminology remains awkward"
+    ],
+    "decision": "Do not promote from this PASS. Add an independent semantic-regression proxy before any larger reconstruction screen."
+  },
+  "next_hypothesis": "O-v1 semantic regression audit: deterministic official OPUS RU->EN back-translation for changed units, compare baseline and candidate back-translations to the original English with an established chrF++-style metric plus lexical/character diagnostics. Use only as a regression proxy, not proof of semantic correctness; investigate material candidate-vs-baseline drops manually.",
+  "promotion_allowed": false
+}
