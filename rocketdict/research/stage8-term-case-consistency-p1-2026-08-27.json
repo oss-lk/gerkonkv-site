@@ -1,0 +1,34 @@
+{
+  "schema": "rocketdict-stage8-term-case-consistency-result/1",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_WRONG_INTEGRATION_LEVEL",
+  "parent": "O-v2 occurrence 444 term collapse",
+  "github": {
+    "run_id": 33095169270,
+    "head_sha": "c0eb8bb841e6effc0eb6d3514015c463a2577d0b",
+    "artifact_id": 9656077784,
+    "artifact_digest": "sha256:27a326a696e2fe73171860e896c0fd9e59e279ba2e318f69a825544bb8cba8e1",
+    "conclusion": "failure"
+  },
+  "source_signal": {
+    "eligible_stem": "refract",
+    "surfaces": ["Refraction", "Refraction", "refracting", "Refraction"],
+    "changes": [
+      "Refraction -> refraction",
+      "Refraction -> refraction",
+      "Refraction -> refraction"
+    ],
+    "glossary_used": false
+  },
+  "forward_probe": {
+    "decoder": "official OPUS EN->RU beam16/n-best16",
+    "hypotheses": 16,
+    "semantic_observation": "all 16 normalized-source hypotheses render the collapsed noun as рефракция rather than the clean-v8 отвращение/Отклонение pair; several also render refracting Angles as рефракционные углы",
+    "forward_eligible_hypotheses": 0,
+    "why_zero": "all 16 whole-source hypotheses lose the leading underscore of source technical token _3p 3t_, producing 3p 3t_; fail-closed critical-token integrity correctly rejects them",
+    "ordinary_latin_residue": 0
+  },
+  "interpretation": "The source case-consistency signal appears semantically useful, but whole-source translation is the wrong integration layer because it reintroduces the exact technical-token corruption already solved by the clause/source-AST pipeline.",
+  "next_hypothesis": "P-v2 apply the same source-derived mixed-case stem normalization inside M/N clause-first + structural AST translation, preserving _3p 3t_ through the existing source-side technical-token mechanism; then require forward integrity plus pinned O-v2 term-retention pass.",
+  "promotion_allowed": false
+}
