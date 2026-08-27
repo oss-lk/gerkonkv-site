@@ -1,0 +1,87 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/7",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_NON_PROMOTIONAL_TWO_FAILURES",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33088220725,
+    "head_sha": "23646e7729d494d977e39b36fc0896a11d721917",
+    "artifact_id": 9653198295,
+    "artifact_digest": "sha256:d7d2abc3c81ff57b05ef8393b59c8a51d732f862768d067e475c6616689cac0f",
+    "conclusion": "failure"
+  },
+  "selection": {
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "unchanged": true
+  },
+  "variable_tested": "M-v1 clause-first context/segmentation",
+  "clause_execution": {
+    "clauses": 28,
+    "whole_clause_nbest": 22,
+    "source_ast_fallback": 6
+  },
+  "baseline": {
+    "numeric_fail_units": 5,
+    "numeric_order_fail_units": 4,
+    "delimiter_fail_units": 3,
+    "critical_token_fail_units": 6,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9614073030172456
+  },
+  "candidate": {
+    "numeric_fail_units": 2,
+    "numeric_order_fail_units": 2,
+    "delimiter_fail_units": 1,
+    "critical_token_fail_units": 1,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.962042574156315,
+    "cyrillic_delta_vs_baseline": 0.00063527113906936,
+    "changed_units": 8,
+    "accepted_interventions": {
+      "M-v1-clause-first-integrity-translation": 5,
+      "H-table": 1,
+      "I-v2": 1,
+      "H-document-id": 1
+    },
+    "new_unprotected_latin_regression_units": 0
+  },
+  "new_positive_results": [
+    {
+      "occurrence": 941,
+      "result": "PASS",
+      "effect": "clause-first translation preserves all Greek/technical structure and reduces unprotected Latin residue from baseline ABC to zero"
+    },
+    {
+      "occurrence": 1966,
+      "result": "PASS",
+      "effect": "technical variable sequence remains exact while ordinary Latin residue drops from 4 words to 2"
+    }
+  ],
+  "remaining": [
+    {
+      "occurrence": 743,
+      "candidate_ast_integrity": "all numeric/order/delimiter/critical checks pass",
+      "why_rejected": "whole-unit no-new-Latin gate",
+      "baseline_unprotected_latin": ["Intervals"],
+      "M_candidate_unprotected_latin": ["Intervals", "Spaces", "Line", "Intervals"],
+      "diagnostic": "all 8 whole-clause hypotheses for the opening clause retain Intervals+Spaces; all integrity-valid hypotheses for the numeric-list clause retain Line+Intervals"
+    },
+    {
+      "occurrence": 1797,
+      "candidate_ast_integrity": "all numeric/order/delimiter/critical checks pass",
+      "why_rejected": "whole-unit no-new-Latin gate",
+      "baseline_unprotected_latin": ["file", "Inch", "Rad"],
+      "M_candidate_unprotected_latin": ["Fits", "the", "Orique", "Rays"],
+      "diagnostic": "the problematic parenthesized clause has no integrity-valid whole-clause hypothesis in beam8/n-best8; every hypothesis drops the parenthetical and corrupts 100000000, so source-AST fallback remains necessary"
+    }
+  ],
+  "interpretation": "Clause-first context materially improved the branch and solved the previous 941 class, but 743/1797 expose a model/source-normalization issue rather than a numeric-AST issue. Newton's archaic sentence-internal noun capitalization correlates with untranslated English residue (Intervals/Spaces/Line/Fits/Rays).",
+  "next_hypothesis": "N-v1 conservative archaic-capitalization retry: generate an additional model-input variant that lowercases sentence-internal TitleCase prose words outside protected technical structures, never editing target text. Use it only when it reduces unprotected Latin residue and the generated hypothesis passes the unchanged numeric/order/delimiter/critical/no-new-Latin/length/Cyrillic gates.",
+  "promotion_allowed": false
+}
