@@ -1,0 +1,81 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/5",
+  "date_utc": "2026-08-27",
+  "status": "INTEGRITY_PASS_SEMANTIC_QUALITY_NOT_PROVEN_NON_PROMOTIONAL",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33086396955,
+    "head_sha": "3c41a5979ec2c079196ffc8b0b4e4c785d4ecb0a",
+    "artifact_id": 9652410542,
+    "artifact_digest": "sha256:4ea8e3ea7e6021ef0c42d6464f279ec5f0b998e90dac704c5d42280712645cce",
+    "workflow_conclusion": "success"
+  },
+  "selection": {
+    "selector": "rocketdict-stage8-ghi-reconstruction-selection/1",
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "same_as_runs_1_2_3_4": true
+  },
+  "baseline": {
+    "empty": 0,
+    "numeric_fail_units": 5,
+    "numeric_missing_values": 21,
+    "numeric_duplicate_values": 18,
+    "numeric_order_fail_units": 4,
+    "delimiter_fail_units": 3,
+    "critical_token_fail_units": 6,
+    "figure_fail_units": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9614073030172456
+  },
+  "candidate": {
+    "empty": 0,
+    "numeric_fail_units": 0,
+    "numeric_missing_values": 0,
+    "numeric_duplicate_values": 0,
+    "numeric_order_fail_units": 0,
+    "delimiter_fail_units": 0,
+    "critical_token_fail_units": 0,
+    "figure_fail_units": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.960487729565887,
+    "changed_units": 10,
+    "interventions": {
+      "L-v1-critical-structure-numeric-AST": 7,
+      "H-table": 1,
+      "I-v2": 1,
+      "H-document-id": 1
+    },
+    "strong_intervention_failures": 0,
+    "local_gate_passed": true
+  },
+  "contracts": {
+    "numeric_multiset": "stage8-ghi-reconstruction-explicit-numeric/2",
+    "numeric_order": "stage8-explicit-numeric-order/1",
+    "balanced_delimiters": "stage8-balanced-delimiter-integrity/1",
+    "critical_tokens": "stage8-critical-technical-token-integrity/1",
+    "important_limitation": "none of these reconstruction contracts is rocketdict-numeric-integrity/3.2"
+  },
+  "manual_post_artifact_audit": {
+    "objective_integrity": "passed on all 80 frozen units under the reconstruction contracts",
+    "semantic_fluency": "not proven",
+    "language_regression_examples": [
+      "occurrence 444: candidate restores _3p 3t_ but newly leaves English Image",
+      "occurrence 743: candidate restores all numbers/brackets/Greek payloads but leaves more English Intervals/Spaces/Line tokens than baseline",
+      "occurrence 941: candidate restores Greek payload integrity but leaves additional Rays/Space tokens",
+      "occurrence 1797: candidate restores the long numeric relation but leaves Fits/the/Oblique/Rays/Secants fragments"
+    ],
+    "positive_examples": [
+      "occurrence 1313 numeric table is preserved without the baseline duplication/garbling",
+      "occurrence 1350 restores _A[Greek: a]_ as _A[греч.: a]_ and exact numeric order",
+      "occurrence 1966 restores the complete technical variable sequence and improves Cyrillic share",
+      "occurrence 2214 I-v2 restores the extreme scientific numeric sequence",
+      "occurrence 2508 restores structural identifier 1.F.2."
+    ]
+  },
+  "decision": "Treat v5 as positive integrity-mechanism evidence only. Do not promote. Add an explicit no-new-unprotected-Latin regression guard and improve AST prose decoding so integrity fixes cannot buy correctness by degrading translation fluency. Keep the frozen selection unchanged. Exact F96 + rocketdict-numeric-integrity/3.2 remain mandatory before any 10k screen.",
+  "promotion_allowed": false
+}
