@@ -1,0 +1,139 @@
+{
+  "schema": "rocketdict-public-handoff/1",
+  "generated_utc": "2026-08-27T10:00:00Z",
+  "privacy": {
+    "public": true,
+    "contains_personal_user_profile": false,
+    "policy": "project-only technical/research information"
+  },
+  "project": {
+    "name": "RocketDict",
+    "development_version": "0.30.40",
+    "release_status": "active-research-not-complete",
+    "last_complete_release": "0.30.39 / LAB Stage 7D",
+    "last_complete_archive_sha256": "5220ec9960680539b185997785455b35a0c1e0f4e9461366a0e73348b9ead5b8",
+    "current_stage": "Stage 8 experimental-research / integrity DOE / Research Vault"
+  },
+  "heavy_corpus": {
+    "title": "Opticks",
+    "author": "Isaac Newton",
+    "license_status": "public-domain",
+    "canonical_historical_regex_words": 104257,
+    "github_gate_regex_words": 104275,
+    "canonical_immutable_sqlite_sha256": "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274",
+    "lexical_candidates": 216351,
+    "lexical_entries": 35743,
+    "wordforms": 43073,
+    "word_occurrences": 104078,
+    "lost_tokens": 0
+  },
+  "real_mt": {
+    "family": "OPUS-MT Marian EN-RU",
+    "release": "opus-2020-02-11.zip",
+    "url": "https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip",
+    "zip_sha256": "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677",
+    "model_npz_sha256": "c92e6575c8ca7816926ca045149e8376758d39b24d6c228d2c685cc9a623226b",
+    "vocab_sha256": "884159dda0857b7b3dd92d6b6ac1d000ee7d34cdf728c1a4c6c1e92a457d9f6d",
+    "backend": "CTranslate2 Marian",
+    "compute_type": "float32",
+    "ctranslate2": "4.8.1",
+    "sentencepiece": "0.2.2",
+    "python": "3.13",
+    "github_real_gate_run_id": 32991296384,
+    "github_real_gate_conclusion": "success",
+    "github_gate_representative_sentences": 120,
+    "github_gate_representative_words": 4488,
+    "offline_supply_artifact_id": 9614728610,
+    "evidence_artifact_id": 9614725980
+  },
+  "stage8_contracts": {
+    "numeric_integrity": "rocketdict-numeric-integrity/3.2",
+    "doe": "rocketdict-integrity-doe/1.1",
+    "structural_table_mode": "table-cells-v1",
+    "research_vault": "append-only independent SQLite",
+    "preflight": "non-persisting inspect_profile() for NLP and MT"
+  },
+  "research_vault": {
+    "current_raw_sqlite_sha256": "106fc9d7bee42a53b34412267923d17b3331019d2eef16300b539de8929927a1",
+    "compressed_xz_sha256": "394ffcfe399deb1f83ad445cc3ac2e727c8f684a29fd06c757eee16612cfe4ab",
+    "compressed_xz_bytes": 122052
+  },
+  "source_snapshot": {
+    "format": "tar.xz reconstructed from payload or materialized under rocketdict/source",
+    "archive_sha256": "a879ccbadae6babc9c706ced0a7bbda08ad5364e869640fae30b458654bc8cc1",
+    "archive_bytes": 939264,
+    "includes": ["pyproject.toml", "alembic.ini", "README.md", "src", "migrations", "scripts", "tests", "tools"]
+  },
+  "doe_frontier": {
+    "challenge_target_words": 5000,
+    "latest_selection_occurrences": 109,
+    "variants": {
+      "A-baseline": {
+        "source_words": 5051,
+        "duration_seconds": 208.9106091010001,
+        "numeric_mismatch_count_pre_rescore": 11,
+        "length_ratio_mismatch_count": 4,
+        "empty_output_count": 0,
+        "backend_error_unit_count": 0,
+        "gate_passed": false
+      },
+      "B-preferred-split": {
+        "source_words": 5051,
+        "duration_seconds": 289.9424822000001,
+        "numeric_mismatch_count_pre_rescore": 11,
+        "length_ratio_mismatch_count": 1,
+        "gate_passed": false
+      },
+      "C-numeric-islands": {
+        "source_words": 5051,
+        "duration_seconds": 708.5854573409997,
+        "empty_output_count": 13,
+        "backend_error_unit_count": 13,
+        "numeric_mismatch_count_pre_rescore": 13,
+        "length_ratio_mismatch_count": 13,
+        "gate_passed": false,
+        "interpretation": "negative branch; marker preservation not robust"
+      },
+      "E-split-table-cells": {
+        "source_words": 5000,
+        "source_occurrences": 109,
+        "chunk_count": 150,
+        "duration_seconds": 109.96977602100014,
+        "peak_rss_bytes": 1043566592,
+        "numeric_mismatch_count": 5,
+        "critical_symbol_mismatch_count": 0,
+        "length_ratio_mismatch_count": 0,
+        "empty_output_count": 0,
+        "backend_error_unit_count": 0,
+        "cyrillic_rate": 0.99,
+        "gate_passed": false
+      },
+      "F96": {
+        "design": "E table-aware structural translation with smaller preferred token budget",
+        "source_words": 5000,
+        "source_occurrences": 109,
+        "chunk_count": 168,
+        "duration_seconds": 141.05517511799917,
+        "peak_rss_bytes": 906489856,
+        "target_words": 3794,
+        "numeric_mismatch_count": 3,
+        "critical_symbol_mismatch_count": 0,
+        "length_ratio_mismatch_count": 0,
+        "empty_output_count": 0,
+        "backend_error_unit_count": 0,
+        "identity_rate": 0.06422018348623854,
+        "cyrillic_rate": 0.99,
+        "cyrillic_alpha_share": 0.9796639134149815,
+        "gate_passed": false,
+        "only_gate_reason": "numeric_mismatch_count:3"
+      }
+    },
+    "next": "classify the 3 F96 numeric failures; test integrity-aware n-best selection and separate structural/literal strategy; rerun identical 5k set; require zero critical failures before 10k screening"
+  },
+  "next_action": {
+    "do_not_restart": true,
+    "start_from": "F96 + saved n-best/critical probes + numeric-integrity/3.2",
+    "promote_to_10k_when": "numeric=0, critical=0, length=0, empty=0, backend_errors=0 on identical challenge selection",
+    "full_confirmation": "only Pareto survivors on full 104k+ Opticks, followed by downstream dictionary stages"
+  }
+}
