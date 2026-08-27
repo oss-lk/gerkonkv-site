@@ -1,10 +1,11 @@
-name: RocketDict Stage 8 P-v2 term case probe
+name: RocketDict Stage 8 Q-v1 whole-context structural probe
 
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/rocketdict-stage8-term-case-p1.yml'
+      - 'rocketdict-ci/stage8_whole_context_structural_q1.py'
       - 'rocketdict-ci/stage8_term_case_consistency_p1.py'
       - 'rocketdict-ci/stage8_term_case_consistency_p2.py'
       - 'rocketdict-ci/stage8_semantic_term_retention_o2.py'
@@ -19,7 +20,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  p2-source-case-consistency-clause-ast:
+  q1-whole-context-structural:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -31,13 +32,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3' 'nltk>=3.9,<4'
-      - name: Run P-v2 source case-consistency inside clause-AST probe
-        run: python rocketdict-ci/stage8_term_case_consistency_p2.py
-      - name: Upload P-v2 evidence
+      - name: Run Q-v1 whole-context source-planned structural probe
+        run: python rocketdict-ci/stage8_whole_context_structural_q1.py
+      - name: Upload Q-v1 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-stage8-term-case-p2
-          path: work-stage8-p2/evidence/**
+          name: rocketdict-stage8-whole-context-structural-q1
+          path: work-stage8-q1/evidence/**
           if-no-files-found: warn
           retention-days: 14
