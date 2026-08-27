@@ -21,7 +21,6 @@ is lowercased or synthesized. The frozen selection is unchanged. This remains
 reconstruction evidence only, not exact F96 promotion evidence.
 """
 
-from collections import Counter
 import json
 import re
 import sys
@@ -33,12 +32,12 @@ import stage8_ghi_reconstruction_v6 as v6
 import stage8_ghi_reconstruction_v7 as v7
 
 CASE_RETRY_DECISIONS: list[dict] = []
-
 TITLE_WORD_RE = re.compile(r"(?<![A-Za-z])([A-Z][a-z]{2,})(?![A-Za-z])")
+# Capture before v8 monkey-patches v7.clause_nbest. This avoids self-recursion.
+BASE_CLAUSE_NBEST = v7.clause_nbest
 
 
 def protected_mask(text: str) -> list[bool]:
-    """Mask bracket and Gutenberg emphasis payloads from source normalization."""
     mask = [False] * len(text)
     square = 0
     emphasis = False
@@ -87,14 +86,10 @@ def residual_case_variant(source: str, generated_target: str) -> tuple[str, list
     return "".join(pieces), changes
 
 
-def _decode_hypotheses(translator, source_tok, target_tok, text: str) -> tuple[list[str], list[float | None]]:
+def decode_hypotheses(translator, source_tok, target_tok, text: str) -> tuple[list[str], list[float | None]]:
     tokens = source_tok.encode(text, out_type=str)
     result = translator.translate_batch(
-        [tokens],
-        beam_size=8,
-        num_hypotheses=8,
-        return_scores=True,
-        max_batch_size=1,
+        [tokens], beam_size=8, num_hypotheses=8, return_scores=True, max_batch_size=1
     )[0]
     hypotheses = [target_tok.decode(h).strip() for h in result.hypotheses]
     scores = [result.scores[i] if i < len(result.scores) else None for i in range(len(hypotheses))]
@@ -102,16 +97,16 @@ def _decode_hypotheses(translator, source_tok, target_tok, text: str) -> tuple[l
 
 
 def translate_prose_case_retry(translator, source_tok, target_tok, text: str) -> str:
-    """v6 prose decoder plus a residue-driven source-case retry."""
     original = v6.translate_prose_nbest(translator, source_tok, target_tok, text)
     original_latin = v6.unprotected_latin_words(original)
     variant, changes = residual_case_variant(text, original)
     if not changes:
         return original
 
-    hypotheses, scores = _decode_hypotheses(translator, source_tok, target_tok, variant)
+    hypotheses, scores = decode_hypotheses(translator, source_tok, target_tok, variant)
     src_words = max(1, v6.prose_word_count(text))
-    candidates = []
+    passing = []
+    rows = []
     for rank, candidate in enumerate(hypotheses):
         ratio = v6.prose_word_count(candidate) / src_words
         latin = v6.unprotected_latin_words(candidate)
@@ -122,7 +117,7 @@ def translate_prose_case_retry(translator, source_tok, target_tok, text: str) ->
             and cyr >= v6.cyrillic_share(original) - 0.02
             and 0.20 <= ratio <= 2.5
         )
-        candidates.append({
+        row = {
             "rank": rank,
             "score": scores[rank],
             "target": candidate,
@@ -130,42 +125,38 @@ def translate_prose_case_retry(translator, source_tok, target_tok, text: str) ->
             "cyrillic_share": cyr,
             "word_ratio": ratio,
             "passed": passed,
-        })
+        }
+        rows.append(row)
+        if passed:
+            passing.append(row)
 
-    passing = [c for c in candidates if c["passed"]]
-    if not passing:
-        CASE_RETRY_DECISIONS.append({
-            "scope": "prose-fragment",
-            "source": text,
-            "original_target": original,
-            "original_unprotected_latin": original_latin,
-            "normalized_source": variant,
-            "source_changes": changes,
-            "selected": False,
-            "candidates": candidates,
-        })
-        return original
-
-    selected = min(passing, key=lambda c: (len(c["unprotected_latin"]), c["rank"]))
-    CASE_RETRY_DECISIONS.append({
+    decision = {
         "scope": "prose-fragment",
         "source": text,
         "original_target": original,
         "original_unprotected_latin": original_latin,
         "normalized_source": variant,
         "source_changes": changes,
+        "selected": False,
+        "candidates": rows,
+    }
+    if not passing:
+        CASE_RETRY_DECISIONS.append(decision)
+        return original
+
+    selected = min(passing, key=lambda r: (len(r["unprotected_latin"]), r["rank"]))
+    decision.update({
         "selected": True,
         "selected_rank": selected["rank"],
         "selected_target": selected["target"],
         "selected_unprotected_latin": selected["unprotected_latin"],
-        "candidates": candidates,
     })
+    CASE_RETRY_DECISIONS.append(decision)
     return selected["target"]
 
 
 def clause_nbest_case_retry(translator, source_tok, target_tok, clause: str) -> dict:
-    """v7 whole-clause search plus the same conservative source-case variant."""
-    original = v7.clause_nbest(translator, source_tok, target_tok, clause)
+    original = BASE_CLAUSE_NBEST(translator, source_tok, target_tok, clause)
     reference_target = original.get("target") or original.get("top1")
     if not reference_target:
         return original
@@ -174,9 +165,7 @@ def clause_nbest_case_retry(translator, source_tok, target_tok, clause: str) -> 
     if not changes:
         return original
 
-    hypotheses, scores = _decode_hypotheses(translator, source_tok, target_tok, variant)
-    # Gate normalized-source outputs against the *original* source semantics and
-    # original generated top1, never against the normalized spelling itself.
+    hypotheses, scores = decode_hypotheses(translator, source_tok, target_tok, variant)
     baseline_for_gate = original.get("top1") or reference_target
     rows = []
     passing = []
@@ -208,10 +197,8 @@ def clause_nbest_case_retry(translator, source_tok, target_tok, clause: str) -> 
         "selected": False,
         "candidates": rows,
     }
-
     if not better:
         CASE_RETRY_DECISIONS.append(decision)
-        # Preserve v7 evidence and append normalized hypotheses for audit.
         out = dict(original)
         out["normalized_case_retry"] = decision
         return out
@@ -235,7 +222,6 @@ def clause_nbest_case_retry(translator, source_tok, target_tok, clause: str) -> 
 
 
 def postprocess(old_error: BaseException | None) -> bool:
-    # Reuse v7 mechanism relabelling/audit first.
     base_passed = v7.postprocess(old_error)
     evidence = v5.EVIDENCE / "stage8-ghi-reconstruction.json"
     payload = json.loads(evidence.read_text(encoding="utf-8"))
@@ -267,7 +253,6 @@ def main() -> None:
     v7.CLAUSE_DECISIONS.clear()
     CASE_RETRY_DECISIONS.clear()
 
-    # Keep every v7/v6 gate; change only model-input casing on conservative retry.
     v5.translate_one = translate_prose_case_retry
     v5.strong_quality_gate = v6.strong_quality_gate
     v7.clause_nbest = clause_nbest_case_retry
