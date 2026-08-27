@@ -1,0 +1,63 @@
+{
+  "schema": "rocketdict-stage8-hi-probe-result/1",
+  "date_utc": "2026-08-27",
+  "parent": "F96",
+  "scope": "standalone mechanism evidence only; not the full deterministic ~5k Stage 8 promotion gate",
+  "model": {
+    "family": "official OPUS-MT Marian EN-RU",
+    "release": "opus-2020-02-11.zip",
+    "zip_sha256": "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677",
+    "compute_type": "float32"
+  },
+  "H": {
+    "branch": "H-structural-reference-preservation",
+    "case": "F96 occurrence 15697 / [in _Fig._ 2.]",
+    "run_id": 33077965671,
+    "artifact_id": 9648716848,
+    "artifact_digest": "sha256:118ceab38aef586c647aafbdadd0abd1b4a70e4ceee24f2571dc83e170bb8964",
+    "result": "mechanism-pass",
+    "parsed_node": "figure-reference",
+    "rendered_structure": "[на рис. 2]",
+    "source_to_target_provenance": true,
+    "post_hoc_literal_append": false,
+    "local_numeric_guard_passed": true,
+    "interpretation": "A source-side structural node can deterministically preserve the figure reference. This is not yet production-promoted because the isolated split changes surrounding MT wording; the identical F96 challenge must prove no aggregate quality regression."
+  },
+  "I_v1_negative": {
+    "branch": "I-extreme-enumeration-v1",
+    "run_id": 33077653753,
+    "artifact_id": 9648579957,
+    "artifact_digest": "sha256:0d1f2d5e3e3422f679268bcd125ba7758877f1457bd94290b16b49780d3cfa48",
+    "result": "negative",
+    "what_worked": "the three extreme literals 1000000 / 1000000000000 / 1000000000000000000 were preserved",
+    "why_rejected": "the structural boundary was too narrow and the translated neighbour introduced duplicated/garbled 76/152/228 context; a locally-green extreme-literal check was insufficient",
+    "lesson": "protect the semantic numeric construction, not only the last three literals"
+  },
+  "I_v2": {
+    "branch": "I-coupled-height-rarity-structure-v2",
+    "commit": "f185fc59907695b4f9c3b58a4116f5f227d38ade",
+    "run_id": 33077965671,
+    "artifact_id": 9648716848,
+    "artifact_digest": "sha256:118ceab38aef586c647aafbdadd0abd1b4a70e4ceee24f2571dc83e170bb8964",
+    "result": "mechanism-pass",
+    "parsed_node": "height-rarity-series",
+    "protected_source_values": ["76", "152", "228", "1000000", "1000000000000", "1000000000000000000"],
+    "whole_passage_required_explicit_values": ["15", "22-1/2", "30", "38", "64", "256", "1024", "76", "152", "228", "1000000", "1000000000000", "1000000000000000000"],
+    "whole_passage_missing_required": [],
+    "whole_passage_unlicensed_or_duplicate": [],
+    "local_numeric_guard_passed": true,
+    "post_hoc_literal_append": false,
+    "structured_target_excerpt": "... на высоте 76, 152, 228 миль он примерно в 1000000, 1000000000000 или 1000000000000000000 раз разреженнее ...",
+    "interpretation": "Widening the structural AST boundary removed the I-v1 neighbour regression while preserving the complete explicit numeric multiset of the tested passage. Baseline OPUS failed that same local numeric guard."
+  },
+  "G_reference": {
+    "result_file": "rocketdict/research/stage8-g-probe-2026-08-27.json",
+    "mechanism_status": "pass for occurrence-16200 class; ordinary n-best remains negative for extreme sequence"
+  },
+  "promotion_allowed": false,
+  "promotion_blockers": [
+    "public handoff payload is incomplete: only stage8-overlay part-000 of 8 is present and Research Vault payload parts are absent",
+    "G/H/I must be integrated into the exact RocketDict 0.30.40 Stage 8 source snapshot",
+    "the identical deterministic ~5k F96 challenge must pass rocketdict-numeric-integrity/3.2 with numeric=0, critical=0, length=0, empty=0 and backend_errors=0 without language/identity quality regression"
+  ]
+}
