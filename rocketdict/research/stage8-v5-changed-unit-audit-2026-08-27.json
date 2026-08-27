@@ -1,0 +1,130 @@
+{
+  "schema": "rocketdict-stage8-v5-changed-unit-audit/1",
+  "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+  "run_id": 33086396955,
+  "purpose": "Durable manual/heuristic audit of every unit changed by reconstruction v5. Objective integrity pass is recorded separately from translation-language quality.",
+  "unprotected_latin_heuristic": {
+    "definition": "count Latin alphabet words of length >=3 after removing square-bracket and Gutenberg-emphasis nodes",
+    "role": "regression diagnostic only; not a semantic quality score",
+    "promotion_use": false
+  },
+  "units": [
+    {
+      "occurrence": 444,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": [],
+      "candidate_unprotected_latin_words": ["Image"],
+      "cyrillic_share_baseline": 0.985781990521327,
+      "cyrillic_share_candidate": 0.9572192513368984,
+      "review": "language regression suspected; technical _3p 3t_ repair is valid but Image is newly untranslated",
+      "semantic_review_status": "needs_improvement"
+    },
+    {
+      "occurrence": 484,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": [],
+      "candidate_unprotected_latin_words": [],
+      "cyrillic_share_baseline": 1.0,
+      "cyrillic_share_candidate": 0.9972972972972973,
+      "review": "[G] and numeric structure repaired; wording remains OPUS-quality/awkward but no new Latin-word regression detected",
+      "semantic_review_status": "no_obvious_new_latin_regression"
+    },
+    {
+      "occurrence": 743,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": ["Intervals"],
+      "candidate_unprotected_latin_words": ["Intervals", "Spaces", "Line", "Intervals"],
+      "cyrillic_share_baseline": 0.9563318777292577,
+      "cyrillic_share_candidate": 0.9238754325259516,
+      "review": "major integrity repair succeeds, but AST fragmentation leaves additional English prose; quality improvement required before accepting mechanism",
+      "semantic_review_status": "needs_improvement"
+    },
+    {
+      "occurrence": 941,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": ["ABC"],
+      "candidate_unprotected_latin_words": ["ABC", "Rays", "Space"],
+      "cyrillic_share_baseline": 0.9481641468682506,
+      "cyrillic_share_candidate": 0.9530864197530864,
+      "review": "Greek structural payloads are repaired; added Rays/Space show residual-English regression not captured by aggregate Cyrillic share",
+      "semantic_review_status": "needs_improvement"
+    },
+    {
+      "occurrence": 1313,
+      "mechanism": "H-table",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": [],
+      "candidate_unprotected_latin_words": [],
+      "cyrillic_share_baseline": 1.0,
+      "cyrillic_share_candidate": 1.0,
+      "review": "source numeric table preserved instead of baseline duplication/garbling; no obvious language regression",
+      "semantic_review_status": "acceptable_diagnostic"
+    },
+    {
+      "occurrence": 1350,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": [],
+      "candidate_unprotected_latin_words": [],
+      "cyrillic_share_baseline": 0.9857142857142858,
+      "cyrillic_share_candidate": 0.9565217391304348,
+      "review": "combined _A[Greek: a]_ and numeric list are restored; no new unprotected Latin word detected",
+      "semantic_review_status": "acceptable_diagnostic"
+    },
+    {
+      "occurrence": 1797,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": ["file", "Inch", "Rad"],
+      "candidate_unprotected_latin_words": ["Fits", "the", "Oblique", "Rays", "Secants"],
+      "cyrillic_share_baseline": 0.96,
+      "cyrillic_share_candidate": 0.9338235294117647,
+      "review": "long numeric sequence is repaired but multiple new English prose fragments remain; mechanism is not quality-ready",
+      "semantic_review_status": "needs_improvement"
+    },
+    {
+      "occurrence": 1966,
+      "mechanism": "L-v1-critical-structure-numeric-AST",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": ["Asymptote", "Asymptote", "Hyperbola", "Hyperbola"],
+      "candidate_unprotected_latin_words": ["Asymptote", "Hyperbola", "Hyperbola"],
+      "cyrillic_share_baseline": 0.8166666666666667,
+      "cyrillic_share_candidate": 0.8597701149425288,
+      "review": "complete technical variable sequence restored and residual-Latin count improves; still stylistically weak but no detected regression",
+      "semantic_review_status": "acceptable_diagnostic"
+    },
+    {
+      "occurrence": 2214,
+      "mechanism": "I-v2",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": [],
+      "candidate_unprotected_latin_words": [],
+      "cyrillic_share_baseline": 1.0,
+      "cyrillic_share_candidate": 1.0,
+      "review": "extreme scientific relation repaired with no unprotected-Latin regression",
+      "semantic_review_status": "acceptable_diagnostic"
+    },
+    {
+      "occurrence": 2508,
+      "mechanism": "H-document-id",
+      "objective_integrity": "pass",
+      "baseline_unprotected_latin_words": [],
+      "candidate_unprotected_latin_words": [],
+      "cyrillic_share_baseline": 1.0,
+      "cyrillic_share_candidate": 0.9974874371859297,
+      "review": "1.F.2. restored while prose stays essentially baseline-equivalent",
+      "semantic_review_status": "acceptable_diagnostic"
+    }
+  ],
+  "summary": {
+    "changed_units": 10,
+    "objective_integrity_pass": 10,
+    "needs_improvement": 4,
+    "needs_improvement_occurrences": [444, 743, 941, 1797],
+    "decision": "v5 is not accepted as a quality-complete candidate. Build a no-new-unprotected-Latin regression guard and improve prose decoding for the four flagged AST units without changing the frozen selection."
+  }
+}
