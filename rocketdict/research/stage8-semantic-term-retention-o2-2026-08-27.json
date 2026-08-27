@@ -1,0 +1,57 @@
+{
+  "schema": "rocketdict-stage8-semantic-term-retention-result/2",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_NON_PROMOTIONAL_TERM_COLLAPSE",
+  "parent": "clean v8 + O-v1",
+  "github": {
+    "run_id": 33094686405,
+    "head_sha": "37d8a833d5b4a2b44d704fc9fad3cf80bbeab4a0",
+    "artifact_id": 9655951613,
+    "artifact_digest": "sha256:f3e7e121db4beafd3ca9773aa0cdb5bfea3e945a35f4d17b998664d368748446",
+    "workflow_research_step": "failure_by_design"
+  },
+  "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+  "reverse_model": {
+    "family": "official OPUS-MT RU->EN",
+    "release": "opus-2020-02-11.zip",
+    "zip_sha256": "b4bad9451bc4c4a1e292a33568a41db88a6b3349d6feaec97c4cd748305de243",
+    "hash_pin_passed": true
+  },
+  "contract": {
+    "name": "stage8-high-confidence-term-collapse/1",
+    "stemmer": "NLTK PorterStemmer",
+    "min_source_count": 2,
+    "min_baseline_retention_ratio": 0.75,
+    "max_candidate_retention_ratio": 0.25,
+    "min_absolute_retention_loss": 2,
+    "translation_glossary_used": false,
+    "semantic_correctness_claimed": false
+  },
+  "aggregate": {
+    "changed_units": 10,
+    "failed_units": 1,
+    "failed_occurrences": [444],
+    "high_confidence_collapses": 1,
+    "warning_units": 4
+  },
+  "failure": {
+    "occurrence": 444,
+    "stem": "refract",
+    "source_surfaces": ["Refraction", "Refraction", "refracting", "Refraction"],
+    "source_count": 4,
+    "baseline_roundtrip_retained": 3,
+    "candidate_roundtrip_retained": 1,
+    "baseline_retention_ratio": 0.75,
+    "candidate_retention_ratio": 0.25,
+    "absolute_retention_loss": 2,
+    "interpretation": "sentence-level O-v1 masked a local repeated-term semantic collapse; O-v2 catches it without prescribing any Russian translation"
+  },
+  "non_failing_warnings": {
+    "743": ["common", "glass"],
+    "941": ["greek", "light", "prism"],
+    "2214": ["earth", "rarer"],
+    "interpretation": "these do not satisfy the frozen high-confidence collapse thresholds and therefore do not fail O-v2"
+  },
+  "next_hypothesis": "P-v1 source case-consistency retry: when one lexical Porter stem appears both as archaic TitleCase and as a lowercase morphological form inside the same source unit, lowercase only the TitleCase occurrences for a model-generated retry. For occurrence 444 the source itself supplies Refraction/refracting, so no glossary or target patch is required.",
+  "promotion_allowed": false
+}
