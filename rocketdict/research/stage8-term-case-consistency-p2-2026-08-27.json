@@ -1,0 +1,32 @@
+{
+  "schema": "rocketdict-stage8-term-case-consistency-result/2",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_SEGMENTATION_SEMANTIC_COLLAPSE",
+  "parent": "P-v1 + O-v2 occurrence 444",
+  "github": {
+    "run_id": 33095451279,
+    "head_sha": "550cfdc5658f494fb3e966a612902e07e6e61075",
+    "artifact_id": 9656195443,
+    "artifact_digest": "sha256:ada8ffdf2a8b3281fee62835cb723ca5f16c7b9229786dbbc85dd40e88c8f28c",
+    "conclusion": "failure"
+  },
+  "mechanism": "same P-v1 mixed-case source normalization integrated inside v8 M/N clause-first + source-AST stack",
+  "candidate_ru": "И когда отвлечение второй Призма было равно отвлечению первой, Рефлексирующие углы обоих из них составляют около 60 градусов, ось Спектрума_3p 3t_, сделанная этим рефракцией, сделала, когда производилась также через середину того же белого круглого изображения S.",
+  "forward_integrity": {
+    "passed": true,
+    "reasons": [],
+    "ordinary_latin_residue": [],
+    "technical_token": "_3p 3t_ preserved"
+  },
+  "o2_term_retention": {
+    "passed": false,
+    "stem": "refract",
+    "source_count": 4,
+    "baseline_retained": 3,
+    "candidate_retained": 1,
+    "interpretation": "shorter clause context changes lowercased refraction to отвлечение; the source casing signal alone is insufficient when applied after clause segmentation"
+  },
+  "combined_lesson": "P-v1 whole-sentence normalized source produced semantically preferable рефракция but corrupted the technical emphasis delimiter; P-v2 preserves the technical token but loses the whole-sentence semantic context. The next mechanism must retain whole-sentence MT context while rendering pre-parsed technical structure deterministically from source.",
+  "next_hypothesis": "Q-v1 pre-parse symbolic emphasis nodes before MT, translate the normalized whole sentence, then perform fail-closed source-planned structural canonicalization of only the recognized technical node surface when its payload is uniquely preserved. This is structural rendering, not missing-number append or glossary translation.",
+  "promotion_allowed": false
+}
