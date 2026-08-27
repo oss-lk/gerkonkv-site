@@ -1,0 +1,66 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/4",
+  "date_utc": "2026-08-27",
+  "status": "NEGATIVE_NON_PROMOTIONAL_STRONGER_GATE",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33085726783,
+    "head_sha": "8c17a9232baac7682a02ba671468fd0c543601a1",
+    "artifact_id": 9652095960,
+    "artifact_digest": "sha256:912318a9cc20464ff26a00f295075ac8f1cca5898e2acfb76748324d9101e32d",
+    "workflow_conclusion": "failure"
+  },
+  "selection": {
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "same_as_runs_1_2_3": true
+  },
+  "baseline": {
+    "numeric_fail_units": 5,
+    "numeric_order_fail_units": 4,
+    "delimiter_fail_units": 3
+  },
+  "candidate": {
+    "numeric_fail_units": 0,
+    "numeric_order_fail_units": 0,
+    "delimiter_fail_units": 1,
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "mean_cyrillic_alpha_share": 0.9606088217235055,
+    "baseline_mean_cyrillic_alpha_share": 0.9614073030172456,
+    "delta": -0.0007984812937401609
+  },
+  "interventions": {
+    "I-v4-structure-numeric-AST": 3,
+    "H-table": 1,
+    "I-v2": 1,
+    "H-document-id": 1
+  },
+  "resolved_by_v4": [
+    "occurrence 484: lost [G] footnote marker restored with numeric integrity retained",
+    "occurrence 743: numeric multiset/order restored and 8/8 square brackets plus 1/1 parentheses preserved",
+    "occurrence 1797: large scientific numeric sequence restored in source order with all 3 parenthesis pairs preserved"
+  ],
+  "remaining_gate_failure": {
+    "occurrence": 1350,
+    "source_structure": "_A[Greek: a]_",
+    "baseline": "drops the structure entirely",
+    "v4_candidate": "restores _A[Greek: a]_ and all numeric order, but is correctly rejected because Cyrillic alpha share drops from 0.9857 to 0.8857",
+    "root_cause": "v4 preserves the English word Greek inside the source emphasis node instead of localizing the structural label"
+  },
+  "additional_critical_token_audit": {
+    "finding": "delimiter counts alone are insufficient; technical payload identity can be corrupted while [] remain balanced",
+    "baseline_failure_examples": [
+      "444: emphasized technical token _3p 3t_ loses its opening structural marker",
+      "743: [Greek: a/g/e/e/i/l] payloads are altered by baseline MT",
+      "941: [Greek: ph] -> fh and [Greek: ch] loses its payload",
+      "1350: _A[Greek: a]_ is dropped",
+      "1966: emphasized variable sequence duplicates _t_ and loses/corrupts later variable tokens"
+    ],
+    "decision": "add a fail-closed critical technical-token identity/order guard and use the source-side AST when that guard fails"
+  },
+  "next_action": "v5: localize structural labels inside emphasis nodes instead of preserving English prose; preserve short symbolic emphasis tokens exactly; translate long emphasized prose recursively; add Greek-payload, combined Greek-variable, footnote and emphasized-symbol sequence integrity; rerun identical frozen selection.",
+  "promotion_allowed": false
+}
