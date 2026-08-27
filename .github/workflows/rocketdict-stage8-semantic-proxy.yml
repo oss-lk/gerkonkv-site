@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/rocketdict-stage8-semantic-proxy.yml'
       - 'rocketdict-ci/stage8_semantic_regression_proxy.py'
+      - 'rocketdict-ci/stage8_semantic_term_retention_o2.py'
       - 'rocketdict-ci/stage8_ghi_reconstruction_v8.py'
       - 'rocketdict-ci/stage8_ghi_reconstruction_v7.py'
       - 'rocketdict-ci/stage8_ghi_reconstruction_v6.py'
@@ -19,7 +20,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  diagnostic-semantic-proxy:
+  semantic-term-retention:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -30,9 +31,9 @@ jobs:
       - name: Install real OPUS and metric runtime
         run: |
           python -m pip install --upgrade pip
-          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3'
-      - name: Run O-v1 paired semantic regression proxy
-        run: python rocketdict-ci/stage8_semantic_regression_proxy.py
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3' 'nltk>=3.9,<4'
+      - name: Run O-v2 high-confidence term retention gate
+        run: python rocketdict-ci/stage8_semantic_term_retention_o2.py
       - name: Upload semantic proxy evidence
         if: always()
         uses: actions/upload-artifact@v4
