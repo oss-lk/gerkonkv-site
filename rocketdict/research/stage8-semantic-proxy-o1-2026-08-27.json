@@ -1,0 +1,56 @@
+{
+  "schema": "rocketdict-stage8-semantic-regression-proxy-result/1",
+  "date_utc": "2026-08-27",
+  "status": "DIAGNOSTIC_COMPLETE_PROXY_INSUFFICIENT_ALONE",
+  "parent_candidate": "clean v8 / run 33088908923",
+  "github": {
+    "run_id": 33089447807,
+    "head_sha": "0171eeadd227b13c4895b103658e4b1e0662f4ed",
+    "artifact_id": 9653795260,
+    "artifact_digest": "sha256:5bc9e922890dc8b24b50b90a9fb98238686a5f35d185c1ddeae394b83f902726",
+    "conclusion": "success"
+  },
+  "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+  "changed_units": 10,
+  "reverse_model": {
+    "family": "official OPUS-MT Marian RU->EN",
+    "release": "opus-2020-02-11.zip",
+    "observed_zip_sha256": "b4bad9451bc4c4a1e292a33568a41db88a6b3349d6feaec97c4cd748305de243",
+    "compute_type": "float32",
+    "hash_pinned_in_O1": false
+  },
+  "method": {
+    "back_translation": "beam4 top1",
+    "metrics": ["sentence chrF++", "casefold token multiset F1", "character trigram multiset Dice"],
+    "composite": "0.50*chrF++ + 0.25*token_F1 + 0.25*char3_Dice after 0..1 normalization",
+    "threshold": null,
+    "purpose": "paired regression proxy only"
+  },
+  "aggregate": {
+    "mean_composite_delta_candidate_minus_baseline": 0.03291331865102167,
+    "min_composite_delta": -0.048094463137946186,
+    "max_composite_delta": 0.218234090336418,
+    "mean_chrfpp_delta": 3.3737367521837056,
+    "candidate_better_units": 6,
+    "candidate_worse_units": 4
+  },
+  "ranked_composite_deltas": [
+    {"occurrence": 941, "delta": -0.048094463137946186, "chrfpp_delta": -3.649102473247744},
+    {"occurrence": 1313, "delta": -0.035005882766751706, "chrfpp_delta": -3.273956049608838, "note": "H-table; reverse-MT is especially noisy on preserved ASCII tables"},
+    {"occurrence": 1966, "delta": -0.014874124203801298, "chrfpp_delta": -3.325912516590307},
+    {"occurrence": 1350, "delta": -0.0026629194306503345, "chrfpp_delta": 0.7052205872222999},
+    {"occurrence": 2508, "delta": 0.006267972221914886},
+    {"occurrence": 444, "delta": 0.024834810017319353, "chrfpp_delta": 3.5692059301653245},
+    {"occurrence": 484, "delta": 0.03178214939426671},
+    {"occurrence": 743, "delta": 0.06819812961234517},
+    {"occurrence": 1797, "delta": 0.08045342446710213},
+    {"occurrence": 2214, "delta": 0.218234090336418}
+  ],
+  "manual_validation_of_proxy": {
+    "useful_signal": "941 is ranked worst and requires manual semantic review; 743/1797/2214 move strongly toward the source after integrity repair",
+    "critical_false_negative": "444 receives a positive paired score even though manual inspection finds Refraction translated as отвращение / Отклонение in the candidate",
+    "conclusion": "sentence-level round-trip similarity cannot be a standalone semantic gate because local technical-term errors can be masked by improvements elsewhere in the sentence"
+  },
+  "decision": "Keep O-v1 immutable as diagnostic evidence. Pin the RU->EN artifact hash in subsequent runs. Add an independent local source-term retention/alignment proxy before defining any semantic regression acceptance rule.",
+  "promotion_allowed": false
+}
