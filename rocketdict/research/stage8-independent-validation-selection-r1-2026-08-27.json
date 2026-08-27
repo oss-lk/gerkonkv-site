@@ -1,0 +1,59 @@
+{
+  "schema": "rocketdict-stage8-independent-validation-selection-result/1",
+  "date_utc": "2026-08-27",
+  "status": "FROZEN_BEFORE_MT",
+  "github": {
+    "run_id": 33099928110,
+    "head_sha": "232ba64d318ab332c5a47179455211bf291df08d",
+    "artifact_id": 9657985931,
+    "artifact_name": "rocketdict-stage8-validation-selection-r1",
+    "artifact_digest": "sha256:b47304fc1db96b5a1ecc64cbfb3d021064489333336f96d18b61bd6f8fb19376",
+    "conclusion": "success"
+  },
+  "source": {
+    "corpus": "Isaac Newton, Opticks, Project Gutenberg #33504",
+    "sha256": "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217",
+    "regex_words_full_corpus": 104275
+  },
+  "selector": {
+    "salt": "rocketdict-stage8-independent-validation-r1-2026-08-27",
+    "target_words": 5000,
+    "quotas_words": {
+      "technical": 1200,
+      "numeric_dense": 1200,
+      "mixed_case_term": 1200,
+      "numeric": 700,
+      "general": 700
+    },
+    "source_only": true,
+    "target_or_model_information_used": false,
+    "semantic_proxy_modules_imported": false
+  },
+  "excluded_frozen_r0": {
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "units": 80,
+    "occurrences_sha256": "489edf8d8c9733a0f13594fec00fc2fe0d639642c9f27511b9f84df0d38685ef"
+  },
+  "validation_selection": {
+    "selection_sha256": "665f1ee5ad1778ac8ab1b1b2ae0da7e17a05a0321b8a25cb6d47d74294f4af32",
+    "actual_words": 5143,
+    "units": 103,
+    "overlap_with_r0": [],
+    "category_unit_counts": {
+      "technical": 26,
+      "numeric_dense": 18,
+      "mixed_case_term": 22,
+      "numeric": 13,
+      "general": 24
+    },
+    "category_word_counts": {
+      "technical": 1246,
+      "numeric_dense": 1228,
+      "mixed_case_term": 1239,
+      "numeric": 700,
+      "general": 730
+    }
+  },
+  "freeze_rule": "This selection identity was produced in a source-only workflow before any EN->RU inference on these units. Do not change salt, quotas, category definitions, selected units, or SHA in response to validation results.",
+  "promotion_allowed": false
+}
