@@ -1,0 +1,45 @@
+name: RocketDict Stage 8 semantic regression proxy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rocketdict-stage8-semantic-proxy.yml'
+      - 'rocketdict-ci/stage8_semantic_regression_proxy.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v8.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v7.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v6.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v5.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v4.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_v3.py'
+      - 'rocketdict-ci/stage8_ghi_reconstruction_gate.py'
+      - 'rocketdict-ci/stage8_g_nbest_probe.py'
+      - 'rocketdict-ci/real_opus_gate.py'
+      - 'rocketdict-ci/stage8-semantic-trigger.txt'
+  workflow_dispatch:
+
+jobs:
+  diagnostic-semantic-proxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install real OPUS and metric runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3'
+      - name: Run O-v1 paired semantic regression proxy
+        run: python rocketdict-ci/stage8_semantic_regression_proxy.py
+      - name: Upload semantic proxy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-semantic-proxy
+          path: |
+            work-stage8-semantic-proxy/evidence/**
+            work-stage8-ghi-reconstruction/evidence/**
+          if-no-files-found: warn
+          retention-days: 14
