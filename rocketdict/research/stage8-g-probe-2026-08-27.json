@@ -1,0 +1,67 @@
+{
+  "schema": "rocketdict-stage8-g-probe-result/1",
+  "date_utc": "2026-08-27",
+  "parent": "F96",
+  "branch": "G-integrity-aware-nbest-selector",
+  "github": {
+    "run_id": 33077361613,
+    "head_sha": "8657ba902c0c1a463f27a1fe5a620ca82b548143",
+    "artifact_id": 9648449421,
+    "artifact_name": "rocketdict-stage8-g-nbest-probe",
+    "artifact_digest": "sha256:f0d022aa25edd3fee360848ee82a402c3604783f0b6f98f1ea0f432580b1b1b7",
+    "conclusion": "success"
+  },
+  "model": {
+    "family": "official OPUS-MT Marian EN-RU",
+    "release": "opus-2020-02-11.zip",
+    "zip_sha256": "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677",
+    "compute_type": "float32"
+  },
+  "scope": "mechanism probe only; not the full deterministic ~5k Stage 8 promotion gate",
+  "target_case": {
+    "id": "f96-occurrence-16200",
+    "source": "15 Min. that of the exterior 3 Degr.",
+    "f96_failure_target_from_prior_evidence": "15 Мин. внешней части.",
+    "required_literals": ["15", "3"]
+  },
+  "cells": [
+    {
+      "beam_size": 4,
+      "num_hypotheses": 4,
+      "selected_rank": 0,
+      "selected_text": "15 Мин. внешней части 3 дегр.",
+      "integrity_passed": true
+    },
+    {
+      "beam_size": 8,
+      "num_hypotheses": 8,
+      "selected_rank": 0,
+      "selected_text": "15 Мин. внешней части 3 дегр.",
+      "integrity_passed": true
+    },
+    {
+      "beam_size": 16,
+      "num_hypotheses": 8,
+      "selected_rank": 0,
+      "selected_text": "15 Мин. внешней части 3 дегр.",
+      "integrity_passed": true
+    },
+    {
+      "beam_size": 16,
+      "num_hypotheses": 16,
+      "selected_rank": 0,
+      "selected_text": "15 Мин. внешней части 3 дегр.",
+      "integrity_passed": true
+    }
+  ],
+  "extreme_sequence_diagnostic": {
+    "source_fragment": "1000000, 1000000000000, or 1000000000000000000 times rarer.",
+    "max_tested": {"beam_size": 16, "num_hypotheses": 16},
+    "any_integrity_valid_hypothesis": false,
+    "typical_model_transformation": "1000000, 1000000000, или 1000000000000 ...",
+    "interpretation": "ordinary n-best cannot be relied on for F96 occurrence 17795 class; retain separate I branch"
+  },
+  "mechanism_conclusion": "G is empirically viable for the occurrence-16200 class. The isolated exact-source probe is stronger than the prior saved probe because rank 0 itself preserves both literals under all tested cells.",
+  "important_caveat": "This does not prove the full F96 pipeline is fixed. The earlier F96 selected output lost 3, so segmentation/context/planner/generation-contract differences must be reconciled when the source overlay is restored. Full promotion still requires identical ~5k rerun under rocketdict-numeric-integrity/3.2 with zero critical failures.",
+  "promotion_allowed": false
+}
