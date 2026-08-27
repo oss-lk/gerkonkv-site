@@ -1,0 +1,60 @@
+{
+  "schema": "rocketdict-stage8-ghi-reconstruction-result/3",
+  "date_utc": "2026-08-27",
+  "status": "NUMERIC_PASS_STRUCTURAL_REJECTION_NON_PROMOTIONAL",
+  "parent_full_gate": "F96",
+  "github": {
+    "run_id": 33084970510,
+    "head_sha": "db606e7d99e2b5676104bd9362fe2efb1927e3ac",
+    "artifact_id": 9651780675,
+    "artifact_digest": "sha256:fda072c38d488b2a9bc43575087c45099ddbf0c3df9fc68a4433ec85068fa494",
+    "workflow_conclusion": "success"
+  },
+  "selection": {
+    "selection_sha256": "ea193d5f589dd053b768536c9f8bb4bac90316eed79f5244592357607e02b3fe",
+    "actual_words": 5044,
+    "units": 80,
+    "same_as_runs_1_2": true
+  },
+  "numeric_result": {
+    "baseline_fail_units": 5,
+    "candidate_fail_units": 0,
+    "candidate_missing_values": 0,
+    "candidate_duplicate_values": 0,
+    "ordered_explicit_numeric_review": "I-v3 source-derived numeric nodes preserve source numeric order for the two rescued cases"
+  },
+  "aggregate_quality": {
+    "empty": 0,
+    "length_anomaly_units": 0,
+    "identity_units": 0,
+    "per_intervention_quality_failures_under_v2_contract": 0,
+    "baseline_mean_cyrillic_alpha_share": 0.9614073030172456,
+    "candidate_mean_cyrillic_alpha_share": 0.9611347686351319,
+    "delta": -0.0002725343821137205
+  },
+  "interventions": {
+    "I-v3-numeric-list-AST": 2,
+    "H-table": 1,
+    "I-v2": 1,
+    "H-document-id": 1
+  },
+  "post_artifact_structural_audit": {
+    "occurrence_743": {
+      "source_square_brackets": {"open": 8, "close": 8},
+      "candidate_square_brackets": {"open": 7, "close": 6},
+      "source_parentheses": {"open": 1, "close": 1},
+      "candidate_parentheses": {"open": 0, "close": 0},
+      "example": "the two [Illustration: FIG. ...] structures were merged/damaged by MT segmentation",
+      "decision": "reject I-v3 as production candidate despite numeric=0"
+    },
+    "occurrence_1797": {
+      "numeric_integrity": "pass",
+      "numeric_order": "pass",
+      "square_bracket_balance": "not applicable",
+      "parenthesis_balance": "3/3 source and 3/3 candidate"
+    }
+  },
+  "gate_defect_found": "v3 local gate checked numeric/figure/length/identity/Cyrillic metrics but did not require preservation of balanced generic structural delimiters. Therefore workflow success is not sufficient evidence of overall integrity.",
+  "next_action": "Add explicit-numeric-order and generic delimiter/structural guards; replace I-v3 with a recursive source-side structure+numeric AST that preserves square-bracket and parenthesized nodes while translating lexical spans. Rerun the identical frozen selection SHA.",
+  "promotion_allowed": false
+}
