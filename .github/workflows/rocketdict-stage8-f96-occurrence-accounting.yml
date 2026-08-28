@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'rocketdict-ci/stage8_f96_occurrence_accounting.py'
+      - 'rocketdict-ci/stage8_f96_occurrence_accounting_v2.py'
       - '.github/workflows/rocketdict-stage8-f96-occurrence-accounting.yml'
   workflow_dispatch:
 
@@ -22,11 +23,11 @@ jobs:
           python-version: '3.13'
       - name: Install exact tokenizer runtime
         run: python -m pip install --disable-pip-version-check 'sentencepiece==0.2.2'
-      - name: Recount Stage12 selected units at fragment-occurrence level
-        run: python rocketdict-ci/stage8_f96_occurrence_accounting.py
+      - name: Recount frozen-v5 Stage12 units at fragment-occurrence level
+        run: python rocketdict-ci/stage8_f96_occurrence_accounting_v2.py
       - name: Upload accounting evidence
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-stage8-f96-occurrence-accounting
+          name: rocketdict-stage8-f96-occurrence-accounting-v2
           path: work-stage8-f96-occurrence-accounting/output
           if-no-files-found: error
