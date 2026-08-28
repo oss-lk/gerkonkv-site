@@ -1,0 +1,20 @@
+{
+  "schema": "rocketdict-stage8-f96-recovery-evidence/1",
+  "date_utc": "2026-08-28",
+  "channel": "github-repository-events",
+  "purpose": "Attempt to recover deleted or force-pushed refs/commit SHAs that might contain the lost exact 0.30.40 Stage8 overlay, Research Vault, source snapshot, or F96 plan.",
+  "workflow_run_id": 33166869350,
+  "artifact_id": 9683937820,
+  "artifact_digest": "sha256:c2fff73c403cbbc5ab6b25620fcf2915097283bddb3f5d6a2eca00ff045b83ee",
+  "result": {
+    "events_fetched": 79,
+    "matching_push_create_delete_events": 75,
+    "historical_sha_probes": 99,
+    "unresolved_sha_probes": 0,
+    "research_delete_event_found": false,
+    "lost_source_of_truth_sha_6e85604bf85ce8725bf8a7477485898c6a91c57b_present": false
+  },
+  "conclusion": "NEGATIVE_CHANNEL_EXHAUSTED",
+  "interpretation": "The public repository Events API did not retain the deleted/re-written research ref or the lost source-of-truth SHA. Do not repeat this recovery channel unless new provider-side history becomes available.",
+  "promotion_allowed": false
+}
