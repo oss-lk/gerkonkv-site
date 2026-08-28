@@ -1,0 +1,87 @@
+{
+  "schema": "rocketdict-stage8-canonical-heavy-recovery/1",
+  "promotion_allowed": false,
+  "claim": "exact canonical pre-Stage8 heavy/source-stream recovery; Stage8 F96 selector/evaluator identity still missing",
+  "sqlite": {
+    "sha256": "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274",
+    "quick_check": "ok"
+  },
+  "final_segmentation_stage": {
+    "id": 11,
+    "stage_name": "punctuation_and_segmentation",
+    "stage_version": "1.4",
+    "input_hash": "9d92c6df27247a07d019076a8a6897fe2f3a718a45658c4660091f5ae6afe4f8",
+    "settings_hash": "229849dafb65c7828dfc02702b0de432c0e8d800689ad17d5fcd487a95dbbfbf",
+    "output_hash": "81aee8f4762745856251d619a6cfc90935d5437816562023a80651797f24b851",
+    "paragraph_count": 717,
+    "sentence_count": 2914,
+    "heading_count": 47,
+    "section_count": 47,
+    "versions": {
+      "rule_auditor": "1.0",
+      "heading": "heading-rules/1.1",
+      "paragraph": "paragraph-finalizer/1.0",
+      "sentences": "sentence-rules/1.3"
+    }
+  },
+  "sentence_occurrence_stream": {
+    "count": 2914,
+    "manifest_sha256": "4cc87876a99f84419fc2598a895469eb1e5e4d8c5a7136659c6536b9db30e063",
+    "ordering": [
+      "fragment_occurrences.sequence_number",
+      "fragment_occurrences.id"
+    ],
+    "fragment_type": "sentence"
+  },
+  "historical_f96_failures": {
+    "15697": {
+      "sequence_number": 990,
+      "canonical_fragment_id": 935,
+      "structural_node_id": 16584,
+      "normalized_sha256": "96053922950eaf0362861123bad3da9ddf0f0d183ba2275c61897c7dcb35899a",
+      "source_start_line": 2636,
+      "source_end_line": 2651,
+      "characters": 385,
+      "regex_words": 76
+    },
+    "16200": {
+      "sequence_number": 1493,
+      "canonical_fragment_id": 1344,
+      "structural_node_id": 17089,
+      "normalized_sha256": "fb2a07b2c240c49e7ce548cce308b1227e6ff270387ab490a72ffe7381fdb2ca",
+      "source_start_line": 3878,
+      "source_end_line": 3912,
+      "characters": 36,
+      "regex_words": 8
+    },
+    "17795": {
+      "sequence_number": 3088,
+      "canonical_fragment_id": 2818,
+      "structural_node_id": 18726,
+      "normalized_sha256": "4f08151eafe21717d59371b6ab1c5feeff76cd11bc609c83dcb4efb0aa307200",
+      "source_start_line": 8356,
+      "source_end_line": 8400,
+      "characters": 638,
+      "regex_words": 122
+    }
+  },
+  "older_selector_diagnostic": {
+    "contract": "coverage-stratified-v1 applied directly to sentence occurrences (diagnostic only)",
+    "target_words": 5000,
+    "selected_occurrences": 100,
+    "selected_words": 5025,
+    "contains_historical_f96_failure_ids": {
+      "15697": true,
+      "16200": true,
+      "17795": true
+    },
+    "all_historical_failure_ids_present": true,
+    "selected_occurrence_ids_sha256": "ab4cd71c3b2dc97d3c3c43ef49e272f51e766c9925d49284bf1b7745e2a7e71a"
+  },
+  "interpretation": [
+    "The canonical Stage7/final segmentation input stream no longer needs reconstruction from the public Gutenberg text.",
+    "The earlier spaCy-based Stage7 recovery DOE is superseded for F96 source-stream recovery.",
+    "The older coverage-stratified-v1 policy is related evidence only: on exact occurrences it selects all three historical failure IDs but yields 100 occurrences / 5025 words, not historical F96 109 / 5000.",
+    "Remaining exact-handoff blockers are the late Stage8 challenge selector, numeric-integrity/3.2 evaluator, and missing 0.30.40 overlay/Research Vault bytes."
+  ]
+}
