@@ -1,0 +1,31 @@
+name: RocketDict deleted ref events recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/recover_deleted_refs_events.py'
+      - '.github/workflows/rocketdict-deleted-ref-events-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-events:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Recover recent deleted/force-pushed refs from repository events
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python rocketdict-ci/recover_deleted_refs_events.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-deleted-ref-events-recovery
+          path: rocketdict-deleted-ref-events-recovery
+          if-no-files-found: error
