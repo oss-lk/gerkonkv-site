@@ -1,0 +1,75 @@
+{
+  "schema": "rocketdict-stage8-overlay-prefix-exact-recovery/1",
+  "date_utc": "2026-08-28",
+  "promotion_allowed": false,
+  "source": {
+    "workflow_run_id": 33183643328,
+    "artifact_id": 9690741914,
+    "artifact_digest": "sha256:78d8414641cf70465427d9a09671510050579aec7dd640a6c3be9c969fb49ea9",
+    "surviving_payload_part": "rocketdict/payload/stage8-overlay/part-000.b64",
+    "decoded_part_bytes": 11250,
+    "decoded_part_sha256": "123f552ba73da62cff427d5978ec3f50a8250d88c11819e1b4496a3c1e91f5e4",
+    "decompressed_tar_prefix_bytes": 51590,
+    "decompressed_tar_prefix_sha256": "a6af982f442fdedadc6ba6bb9e91d7ca3b519e6d0f893b21537498741f7bf67a"
+  },
+  "recovered_members": {
+    "complete": [
+      {
+        "path": "src/rocketdict/__init__.py",
+        "bytes": 502,
+        "sha256": "7bf417eb88b9779fc2793841c5f2bddebe7dbb9498f8d2b2d5d19bf1d851b0dc"
+      },
+      {
+        "path": "src/rocketdict/nlp/registry.py",
+        "bytes": 29072,
+        "sha256": "02cfbbfe7d238b324250502d31da491134625052c7c23b96849c2ac3d4ee889d"
+      }
+    ],
+    "partial": {
+      "path": "src/rocketdict/lab/stage12_pilot.py",
+      "intended_member_bytes": 51356,
+      "available_prefix_bytes": 20358,
+      "available_prefix_sha256": "caeb7d371d9a0add51c4154709628f46404023107bd1a9de8d9f68b5d2762b5d"
+    }
+  },
+  "comparison_parent": {
+    "source": "RocketDict 0.30.34 installed wheel recovered from project File Library",
+    "stage12_pilot_bytes": 51377,
+    "stage12_pilot_sha256": "b5784081913849d51e0eeea8c7556125024ac86bf6bf8eecddfc13ae01b17f9d"
+  },
+  "exact_0_30_40_findings_in_available_prefix": {
+    "new_import": "from rocketdict.translation.integrity import compare_numeric_integrity, contains_numeric_literal",
+    "pilot_format": "rocketdict-lab-stage12-pilot/7.0",
+    "pilot_journal_format": "rocketdict-lab-stage12-pilot-journal/5.0",
+    "sampling_defaults": {
+      "strategy": "coverage-stratified-v1",
+      "document_position_buckets": 8,
+      "min_numeric_units": 8,
+      "min_critical_symbol_units": 8,
+      "min_long_units": 8,
+      "long_unit_min_words": 24
+    },
+    "selector_algorithm_changed_in_visible_prefix": false,
+    "numeric_classification_changed": {
+      "old": "_NUMBER_RE.search(unit.source_text)",
+      "new": "contains_numeric_literal(unit.source_text)",
+      "locations": [
+        "numeric_units eligibility",
+        "selected_numeric coverage accounting"
+      ]
+    }
+  },
+  "interpretation": [
+    "The earlier 4/4/0/4 sampling-parameter match is diagnostic only and is not the recovered 0.30.40 default policy.",
+    "The exact visible 0.30.40 Stage12 selector keeps coverage-stratified-v1 with 8/8/8/8 defaults.",
+    "The first source-proven selector-semantic change is numeric eligibility through translation.integrity.contains_numeric_literal().",
+    "Therefore the next exact-recovery dependency is src/rocketdict/translation/integrity.py; research/integrity_doe.py remains required to recover the later Stage8 challenge clipping/execution layer.",
+    "Do not infer the historical 109 occurrence IDs from parameter fitting while those source files remain missing."
+  ],
+  "remaining_exact_blockers": [
+    "7 missing Stage8 overlay payload chunks, including translation/integrity.py and research/integrity_doe.py",
+    "all 11 missing Research Vault payload chunks",
+    "exact 0.30.40 numeric-integrity/3.2 implementation",
+    "exact historical Stage8 budget-clipped 109-occurrence selector identity"
+  ]
+}
