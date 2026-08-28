@@ -1,0 +1,33 @@
+name: RocketDict Stage 8 R1 occurrence 24 phase probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rocketdict-stage8-r1-occ24-phase-probe.yml'
+      - 'rocketdict-ci/stage8_r1_occ24_phase_probe.py'
+  workflow_dispatch:
+
+jobs:
+  occ24-phase-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install exact runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3' 'nltk>=3.9,<4'
+      - name: Replay occurrence 24 with phase checkpoints
+        run: python rocketdict-ci/stage8_r1_occ24_phase_probe.py
+      - name: Upload phase checkpoints
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-r1-occ24-phase-probe
+          path: work-stage8-r1-occ24-probe/**
+          if-no-files-found: warn
+          retention-days: 7
