@@ -1,0 +1,62 @@
+{
+  "schema": "rocketdict-stage8-contract-derived-numeric-predicate-diagnostic/1",
+  "date_utc": "2026-08-28",
+  "promotion_allowed": false,
+  "exact_numeric_integrity_3_2_claimed": false,
+  "input": {
+    "canonical_sqlite_sha256": "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274",
+    "sentence_occurrence_stream_count": 2914,
+    "stream_manifest_sha256": "4cc87876a99f84419fc2598a895469eb1e5e4d8c5a7136659c6536b9db30e063"
+  },
+  "source_proven_sampling_defaults": {
+    "strategy": "coverage-stratified-v1",
+    "document_position_buckets": 8,
+    "min_numeric_units": 8,
+    "min_critical_symbol_units": 8,
+    "min_long_units": 8,
+    "long_unit_min_words": 24
+  },
+  "probe_basis": [
+    "mixed/simple fractions and ordinal suffixes",
+    "old ordinal notation such as 42d",
+    "grouped thousands",
+    "decimal comma",
+    "Newton apostrophe decimal notation"
+  ],
+  "old_regex_direct_occurrence_diagnostic": {
+    "numeric_available": 617,
+    "selected_occurrences": 100,
+    "selected_words": 5025,
+    "numeric_seed_ids": [14939,15444,15801,16187,16546,17238,17633,18214]
+  },
+  "contract_derived_predicate_direct_occurrence_diagnostic": {
+    "numeric_available": 694,
+    "selected_occurrences": 102,
+    "selected_words": 5005,
+    "numeric_seed_ids": [14987,15457,15867,16216,16679,17219,17550,18204]
+  },
+  "numeric_eligibility_delta": {
+    "added_count": 77,
+    "added_id_manifest_sha256": "478d3d0f09678ffe200725a94ab135b96b409aa810abf24295effafe8c301d5e",
+    "classes": {
+      "digit_letter_or_variable": 7,
+      "other_structural": 2,
+      "ordinal_suffix_or_old_d": 68
+    }
+  },
+  "selection_delta": {
+    "symmetric_difference_ids": [14939,14987,15444,15457,15801,15867,15959,16187,16216,16546,16679,17219,17238,17550,18204,18214],
+    "symmetric_difference_count": 16
+  },
+  "historical_f96_failure_presence": {
+    "15697": {"old": true, "diagnostic": true},
+    "16200": {"old": true, "diagnostic": true},
+    "17795": {"old": true, "diagnostic": true}
+  },
+  "interpretation": [
+    "The 0.30.40 source-proven 8/8/8/8 sampling defaults are preserved; no quota fitting is performed.",
+    "A detector derived only from recorded numeric-integrity/3.2 feature requirements materially changes numeric eligibility and all eight numeric seed positions on the exact canonical occurrence stream.",
+    "This probe does not recover or claim the exact translation/integrity.py implementation and does not recover the historical 5051/111 or budget-clipped 5000/109 Stage8 challenge selector.",
+    "The result strengthens the dependency ordering: recover exact translation/integrity.py semantics before inferring integrity_doe.py challenge clipping."
+  ]
+}
