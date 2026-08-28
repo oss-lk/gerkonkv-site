@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'rocketdict-ci/stage7_structural_recovery.py'
+      - 'rocketdict-ci/stage7_structural_recovery_v2.py'
       - '.github/workflows/rocketdict-stage7-structural-recovery.yml'
   workflow_dispatch:
 
@@ -22,8 +23,8 @@ jobs:
           python-version: '3.13'
       - name: Install historical Stage7 sentence runtime
         run: python -m pip install --disable-pip-version-check 'spacy==3.8.11' 'click==8.1.8'
-      - name: Recover Stage7 from independent 90k invariants
-        run: python rocketdict-ci/stage7_structural_recovery.py
+      - name: Recover Stage7 from independent 90k invariants v2
+        run: python rocketdict-ci/stage7_structural_recovery_v2.py
       - uses: actions/upload-artifact@v4
         with:
           name: rocketdict-stage7-structural-recovery
