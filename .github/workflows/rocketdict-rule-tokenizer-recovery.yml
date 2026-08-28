@@ -1,0 +1,29 @@
+name: RocketDict RuleTokenizer recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/recover_rule_tokenizer.py'
+      - '.github/workflows/rocketdict-rule-tokenizer-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Recover RuleTokenizer from independent historical invariants
+        run: python rocketdict-ci/recover_rule_tokenizer.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-rule-tokenizer-recovery
+          path: work-rule-tokenizer-recovery/report.json
+          if-no-files-found: error
