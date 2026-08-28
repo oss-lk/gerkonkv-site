@@ -1,0 +1,101 @@
+{
+  "schema": "rocketdict-stage8-independent-validation-r1-partial-decisive-fail/1",
+  "date_utc": "2026-08-28",
+  "status": "DECISIVE_FAIL_FROM_COMPLETED_SUBSET",
+  "scope": "NON_PROMOTIONAL independent source-only-frozen validation of the frozen v9 mechanism stack",
+  "selection": {
+    "full_selection_sha256": "665f1ee5ad1778ac8ab1b1b2ae0da7e17a05a0321b8a25cb6d47d74294f4af32",
+    "full_words": 5143,
+    "full_units": 103,
+    "overlap_with_r0": 0,
+    "selection_frozen_before_first_mt": true,
+    "selection_tuning_after_results_allowed": false
+  },
+  "why_decisive": "The global R1 acceptance contract requires zero objective hard-gate failures. Occurrence 25 is a member of the pre-frozen 103-unit set and independently exhibits a critical-token hard failure under unchanged v9. Therefore the full current-v9 R1 result cannot be PASS regardless of the uncompleted units. This file does not claim that all 103 units have been evaluated.",
+  "execution_history": {
+    "monolithic_run": {
+      "run_id": 33100205346,
+      "result": "CANCELLED_TIMEOUT",
+      "timeout_minutes": 180,
+      "quality_verdict": null,
+      "artifact": null
+    },
+    "parallel_run": {
+      "run_id": 33155519286,
+      "commit": "aa879755aaabc658ea8b5f4741b05ca75dd00a0f",
+      "execution_topology_only_change": true,
+      "mechanism_or_threshold_change": false,
+      "completed_shards_in_this_checkpoint": [1, 2, 3, 4, 5, 6, 7],
+      "pending_shards_in_this_checkpoint": [0]
+    }
+  },
+  "completed_subset": {
+    "units": 90,
+    "full_units": 103,
+    "baseline": {
+      "empty": 0,
+      "numeric_fail_units": 10,
+      "numeric_order_fail_units": 8,
+      "delimiter_fail_units": 2,
+      "critical_token_fail_units": 8,
+      "figure_fail_units": 0,
+      "length_anomaly_units": 0,
+      "identity_units": 0,
+      "mean_cyrillic_alpha_share": 0.967475200167163
+    },
+    "candidate": {
+      "empty": 0,
+      "numeric_fail_units": 0,
+      "numeric_order_fail_units": 0,
+      "delimiter_fail_units": 0,
+      "critical_token_fail_units": 1,
+      "figure_fail_units": 0,
+      "length_anomaly_units": 0,
+      "identity_units": 0,
+      "mean_cyrillic_alpha_share": 0.9752263190804592
+    },
+    "changed_units": 17,
+    "intervention_counts": {
+      "M-v1-clause-first-integrity-translation": 10,
+      "G-nbest-8x8-critical-gated": 4,
+      "H-document-id": 3
+    },
+    "new_unprotected_latin_intervention_regressions": 0,
+    "hard_failure_occurrences": [25]
+  },
+  "failure_occurrence_25": {
+    "category": "technical",
+    "source": "They are signified by [Greek:\nletter].",
+    "baseline": "Они обозначены [греческим письмом].",
+    "final_current_v9_candidate": "Они обозначены [греческим письмом].",
+    "final_mechanism": "baseline-unchanged",
+    "failed_contract": "stage8-critical-technical-token-integrity/1",
+    "failed_check": "greek_payloads",
+    "source_greek_payloads": ["letter"],
+    "candidate_greek_payloads": [],
+    "attempted_M_v1_candidate": "Они обозначаются: [греч.: letter].",
+    "attempted_M_v1_structural_result": "critical token payload is source-derived and preserved exactly",
+    "M_v1_reject_reasons": ["cyrillic_share_regression"],
+    "classification": "frozen-gate integration conflict: exact protected technical payload preservation is penalized by a language-share gate that counts protected Latin payload characters",
+    "manual_translation_glossary_used": false,
+    "target_patch_used": false
+  },
+  "parallel_shard_artifacts_observed": [
+    {"shard": 1, "artifact_id": 9679442950, "digest": "sha256:7eadeead8d5d22fe2586055fade1f2157f5a037b97aa56863164d0c05841912f"},
+    {"shard": 2, "artifact_id": 9679435860, "digest": "sha256:0ec1576d87bd193c6fe1931eade6f16575a1daf6b511772d120922ae09e6ecc0"},
+    {"shard": 3, "artifact_id": 9679435092, "digest": "sha256:3f5acee4908984648c9f39cda4041d202fd3c9e8a590a7d67cde5d4dfb9ec139"},
+    {"shard": 4, "artifact_id": 9679446694, "digest": "sha256:0e0cb7e7465f4f3ecebf7b92cabf2fd6c949ca64238838ee8b05926555565835"},
+    {"shard": 5, "artifact_id": 9679450103, "digest": "sha256:35abf5cdb2783eb0b1ef3faf9c8ee9bb6577e233b56bf26c21daf30ef5aba7b5"},
+    {"shard": 6, "artifact_id": 9679436700, "digest": "sha256:0bec8a264610d9a2eeef1c46000f46c9cacc1f57733152597f09023d3486ad88"},
+    {"shard": 7, "artifact_id": 9679435670, "digest": "sha256:3ef3a601d0d18159e81ff6d6955a22934c3ff761951915f7e0f1233584201aae"}
+  ],
+  "research_rule": {
+    "preserve_this_negative_result": true,
+    "do_not_change_R1_selection": true,
+    "do_not_relabel_as_full_103_unit_result": true,
+    "next_DOE_may_address_occurrence_25_only_after_this_failure_is_preserved": true,
+    "exact_F96_replaced": false,
+    "promotion_allowed": false
+  },
+  "promotion_blocker": "missing exact 0.30.40/F96 payload and rocketdict-numeric-integrity/3.2"
+}
