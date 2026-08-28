@@ -41,8 +41,6 @@ def prose_cyrillic_share(text: str) -> float:
 
 
 def protected_intervention_gate(source: str, baseline: str, candidate: str) -> dict:
-    # Retain every pre-existing base decision except the two raw Cyrillic-share
-    # reasons, then recompute only those reasons on unprotected prose.
     old = base.intervention_quality_gate(source, baseline, candidate)
     reasons = [
         r for r in old["reasons"]
@@ -119,13 +117,9 @@ def protected_v6_strong_gate(source: str, baseline: str, candidate: str) -> dict
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     translator, source_tok, target_tok, model_identity = prepare_model()
-
-    # Generate the unchanged official top-1 baseline first.
     baseline = v5.translate_batch(translator, source_tok, target_tok, [SOURCE])[0]
     baseline_quality = v5.extended_row(SOURCE, baseline)
 
-    # Configure exact v8 decoder/AST but replace only the v6 strong gate used for
-    # acceptance with the predeclared protected-aware variant above.
     v6.PROSE_DECISIONS.clear()
     v7.CLAUSE_DECISIONS.clear()
     v8.CASE_RETRY_DECISIONS.clear()
@@ -138,8 +132,6 @@ def main() -> None:
     probe = v5.ast_candidate(translator, source_tok, target_tok, SOURCE)
     candidate = probe["target"]
     old_gate = v6.BASE_STRONG_GATE(SOURCE, baseline, candidate)
-    # v6.BASE_STRONG_GATE is the imported old v5 strong gate captured before our
-    # patch, useful as immutable comparison evidence.
     old_v6_gate = {
         **old_gate,
         "unprotected_latin_regression": {
@@ -167,20 +159,20 @@ def main() -> None:
             "changed_variable": "Cyrillic-share measurement surface only",
             "old_surface": "entire target including protected []/_..._ payloads",
             "new_surface": "ordinary target prose after existing v6.strip_protected",
-            "regression_threshold_changed": false,
-            "absolute_floor_changed": false,
-            "numeric_rules_changed": false,
-            "technical_token_rules_changed": false,
-            "no_new_latin_rule_changed": false,
-            "decoder_changed": false,
-            "source_AST_changed": false,
-            "occurrence_or_word_exception": false,
-            "glossary_used": false,
-            "target_patch_used": false,
-            "original_R1_result_rewritten": false,
-            "exact_F96_replaced": false
+            "regression_threshold_changed": False,
+            "absolute_floor_changed": False,
+            "numeric_rules_changed": False,
+            "technical_token_rules_changed": False,
+            "no_new_latin_rule_changed": False,
+            "decoder_changed": False,
+            "source_AST_changed": False,
+            "occurrence_or_word_exception": False,
+            "glossary_used": False,
+            "target_patch_used": False,
+            "original_R1_result_rewritten": False,
+            "exact_F96_replaced": False
         },
-        "promotion_allowed": false
+        "promotion_allowed": False
     }
     (OUT / "stage8-protected-aware-language-share-probe.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
