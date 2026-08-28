@@ -1,0 +1,32 @@
+{
+  "schema": "rocketdict-stage8-f96-recovery-evidence/1",
+  "date_utc": "2026-08-28",
+  "channel": "historical-rule-tokenizer-contract",
+  "purpose": "Recover the deterministic RuleTokenizer used by the historical Stage12 demo/heavy planning line from independent demo token counts and the immutable 90k corpus.",
+  "workflow_run_id": 33167083231,
+  "artifact_id": 9684008559,
+  "artifact_digest": "sha256:7cbdf5f93d42fd81c4bd5caa85f7af945af308e2190f2bac8883dd9e57483881",
+  "historical_invariants": {
+    "demo_counts": {
+      "Hello world.": 4,
+      "The sensor works.": 5,
+      "It is stable.": 5,
+      "Second sentence.": 4
+    },
+    "heavy_translation_units": 461,
+    "heavy_source_token_count": 107423,
+    "historical_excerpt_sha256": "9c7ad0cbf391ca31a8861c2b6d88f59aa0c85c12f1f935cb0bc340a9d2abd144"
+  },
+  "best_recovered_contract": {
+    "regex": "(?u)\\w+|[^\\w\\s]",
+    "overhead_per_translation_unit": 1,
+    "demo_counts_exact": true,
+    "raw_90k_token_count": 106990,
+    "predicted_heavy_total_for_461_units": 107451,
+    "difference_from_historical_heavy_total": 28,
+    "relative_difference": 0.000260651
+  },
+  "conclusion": "STRONGLY_LOCALIZED_NOT_BYTE_EXACT",
+  "interpretation": "The natural word-or-single-punctuation tokenizer plus one service token per TranslationUnit is uniquely consistent with all recovered demo counts and misses the historical heavy total by only 28 tokens out of 107423. The remaining delta can arise from Stage7 prepared-text/layout differences or a small tokenizer nuance. Do not label this contract exact until source/test bytes or an exact heavy plan reproduce 107423.",
+  "promotion_allowed": false
+}
