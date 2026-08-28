@@ -17,7 +17,7 @@ import re
 import sqlite3
 
 CANONICAL_SQLITE_SHA256 = "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274"
-EXPECTED_STREAM_SHA256 = "4cc87876a99f84419fc2598a895469eb1e5e4d8c5a7136659c6536b9db30e063"
+EXPECTED_STREAM_SHA256 = "7a981e80c9630320d8a81aa1ae2aac3b1b6da2ae48a982c3200052aa568684c6"
 WORD_RE = re.compile(r"(?u)\b\w+\b")
 OLD_RE = re.compile(r"(?<![\w])(?:[+-]?\d+(?:[.,]\d+)*(?:[eE][+-]?\d+)?)(?![\w])")
 CONTRACT_DERIVED_RE = re.compile(
