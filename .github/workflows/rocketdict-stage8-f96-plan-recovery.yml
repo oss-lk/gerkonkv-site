@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'rocketdict-ci/stage8_f96_plan_recovery.py'
+      - 'rocketdict-ci/stage8_f96_plan_recovery_v2.py'
       - '.github/workflows/rocketdict-stage8-f96-plan-recovery.yml'
   workflow_dispatch:
 
@@ -22,8 +23,8 @@ jobs:
           python-version: '3.13'
       - name: Install exact tokenizer runtime
         run: python -m pip install --disable-pip-version-check 'sentencepiece==0.2.2'
-      - name: Run fail-closed F96 planning recovery DOE
-        run: python rocketdict-ci/stage8_f96_plan_recovery.py
+      - name: Run fail-closed F96 planning recovery DOE v2
+        run: python rocketdict-ci/stage8_f96_plan_recovery_v2.py
       - name: Upload recovery evidence
         uses: actions/upload-artifact@v4
         with:
