@@ -31,3 +31,5 @@ jobs:
           name: rocketdict-stage8-overlay-prefix-recovery
           path: rocketdict-recovery-prefix
           if-no-files-found: error
+
+# trigger: 2026-08-28 canonical-prefix recovery
