@@ -1,0 +1,57 @@
+{
+  "schema": "rocketdict-stage8-exact-stage12-plan-selector-separation/1",
+  "promotion_allowed": false,
+  "claim": "diagnostic separation of ordinary Stage12 pilot sampling from the historical Stage8 F96 challenge selector",
+  "inputs": {
+    "canonical_sqlite_sha256": "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274",
+    "final_sentence_occurrences": 2914,
+    "sentence_occurrence_manifest_sha256": "4cc87876a99f84419fc2598a895469eb1e5e4d8c5a7136659c6536b9db30e063",
+    "planner_parent_sha256": "30d12f3a7e4a7f402bb602ba92da4dcf68d87dbbf83feccc756feb7437c481ec",
+    "planner_parent_version": "RocketDict 0.30.34; planner byte-identical across recovered 0.30.30/0.30.34 parent evidence",
+    "official_opus_source_spm_sha256": "16bebef1389a0b8ab452772c4e35b9e605e5713f8ac7baa71ca701394eaa086d",
+    "hard_source_tokens": 504,
+    "respect_structural_boundaries": true,
+    "source_occurrence_separator_semantics": "exact 0.30.34 TranslationService._source_occurrences"
+  },
+  "source_proven_stage12_selector": {
+    "origin": "exact surviving 0.30.40 stage12_pilot.py prefix",
+    "strategy": "coverage-stratified-v1",
+    "document_position_buckets": 8,
+    "min_numeric_units": 8,
+    "min_critical_symbol_units": 8,
+    "min_long_units": 8,
+    "long_unit_min_words": 24,
+    "target_words": 5000,
+    "note": "exact 0.30.40 numeric predicate is still missing; rows compare the old parent regex and the explicitly non-exact contract-derived diagnostic predicate"
+  },
+  "historical_f96_required_occurrences": [15697, 16200, 17795],
+  "tested_preferred_token_budgets": [96,112,128,144,160,192,224,256,288,320],
+  "rows": [
+    {"preferred":96,"plan_units":1808,"numeric_predicate":"old-parent-regex","selected_units":63,"selected_words":5024,"source_occurrences":101,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":96,"plan_units":1808,"numeric_predicate":"contract-derived-diagnostic","selected_units":64,"selected_words":5007,"source_occurrences":100,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":112,"plan_units":1605,"numeric_predicate":"old-parent-regex","selected_units":56,"selected_words":5026,"source_occurrences":110,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":112,"plan_units":1605,"numeric_predicate":"contract-derived-diagnostic","selected_units":57,"selected_words":5105,"source_occurrences":111,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":128,"plan_units":1444,"numeric_predicate":"old-parent-regex","selected_units":53,"selected_words":5017,"source_occurrences":117,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":128,"plan_units":1444,"numeric_predicate":"contract-derived-diagnostic","selected_units":54,"selected_words":5086,"source_occurrences":115,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":144,"plan_units":1298,"numeric_predicate":"old-parent-regex","selected_units":51,"selected_words":5015,"source_occurrences":121,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":144,"plan_units":1298,"numeric_predicate":"contract-derived-diagnostic","selected_units":50,"selected_words":5008,"source_occurrences":124,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":160,"plan_units":1181,"numeric_predicate":"old-parent-regex","selected_units":44,"selected_words":5001,"source_occurrences":98,"f96_presence":{"15697":false,"16200":true,"17795":false}},
+    {"preferred":160,"plan_units":1181,"numeric_predicate":"contract-derived-diagnostic","selected_units":44,"selected_words":5024,"source_occurrences":90,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":192,"plan_units":985,"numeric_predicate":"old-parent-regex","selected_units":39,"selected_words":5103,"source_occurrences":120,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":192,"plan_units":985,"numeric_predicate":"contract-derived-diagnostic","selected_units":36,"selected_words":5019,"source_occurrences":101,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":224,"plan_units":841,"numeric_predicate":"old-parent-regex","selected_units":33,"selected_words":5109,"source_occurrences":128,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":224,"plan_units":841,"numeric_predicate":"contract-derived-diagnostic","selected_units":33,"selected_words":5090,"source_occurrences":119,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":256,"plan_units":735,"numeric_predicate":"old-parent-regex","selected_units":30,"selected_words":5071,"source_occurrences":126,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":256,"plan_units":735,"numeric_predicate":"contract-derived-diagnostic","selected_units":30,"selected_words":5090,"source_occurrences":125,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":288,"plan_units":643,"numeric_predicate":"old-parent-regex","selected_units":26,"selected_words":5076,"source_occurrences":140,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":288,"plan_units":643,"numeric_predicate":"contract-derived-diagnostic","selected_units":25,"selected_words":5007,"source_occurrences":145,"f96_presence":{"15697":false,"16200":false,"17795":false}},
+    {"preferred":320,"plan_units":581,"numeric_predicate":"old-parent-regex","selected_units":25,"selected_words":5263,"source_occurrences":162,"f96_presence":{"15697":false,"16200":true,"17795":false}},
+    {"preferred":320,"plan_units":581,"numeric_predicate":"contract-derived-diagnostic","selected_units":25,"selected_words":5358,"source_occurrences":161,"f96_presence":{"15697":false,"16200":false,"17795":false}}
+  ],
+  "key_observations": [
+    "A normal Stage12 plan can coincidentally produce an aggregate near 109 occurrences (for example preferred=112 old regex gives 110; preferred=104 was separately observed at 109), but aggregate count does not recover F96 identity.",
+    "None of the tested source-proven Stage12 selector cells contains all three historical F96 failure occurrence IDs; most contain none, and the old regex at preferred 160/320 contains only occurrence 16200.",
+    "Therefore aggregate 5000/109 matching is insufficient and must not be used as proof of F96 selector recovery.",
+    "The late Stage8 research/integrity_doe.py challenge-selection/clipping layer remains an independent exact dependency."
+  ]
+}
