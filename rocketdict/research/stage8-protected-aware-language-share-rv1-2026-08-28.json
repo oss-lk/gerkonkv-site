@@ -1,0 +1,64 @@
+{
+  "schema": "rocketdict-stage8-protected-aware-language-share-probe/1",
+  "date_utc": "2026-08-28",
+  "status": "PASS",
+  "scope": "NON_PROMOTIONAL post-R1 evaluator/mechanism probe",
+  "failure_class_source": "independent R1 occurrence 25",
+  "run_id": 33156496594,
+  "artifact_id": 9679815579,
+  "artifact_digest": "sha256:ac681c26962794e792e5f9f4cd6ea2998295b0ef4e99cd75e155f30fc3e9f015",
+  "forward_model": {
+    "official_opus_url": "https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip",
+    "opus_zip_sha256": "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677",
+    "compute_type": "float32",
+    "ctranslate2_version_observed": "4.8.1",
+    "sentencepiece_version_observed": "0.2.2"
+  },
+  "source": "They are signified by [Greek:\nletter].",
+  "baseline": "Они обозначены [греческим письмом].",
+  "candidate": "Они обозначаются: [греч.: letter].",
+  "candidate_mechanism": "M-v1-clause-first-integrity-translation",
+  "critical_token_result": {
+    "contract": "stage8-critical-technical-token-integrity/1",
+    "source_greek_payloads": ["letter"],
+    "target_greek_payloads": ["letter"],
+    "failed_checks": [],
+    "passed": true
+  },
+  "old_raw_gate": {
+    "passed": false,
+    "reasons": ["cyrillic_share_regression"],
+    "baseline_raw_cyrillic_share": 1.0,
+    "candidate_raw_cyrillic_share": 0.76
+  },
+  "new_protected_gate": {
+    "contract": "stage8-protected-aware-language-share/1",
+    "passed": true,
+    "reasons": [],
+    "baseline_prose_cyrillic_share": 1.0,
+    "candidate_prose_cyrillic_share": 1.0,
+    "strip_function": "existing v6.strip_protected ([] and _..._)",
+    "regression_threshold": 0.08,
+    "absolute_floor": 0.60
+  },
+  "contract": {
+    "changed_variable": "Cyrillic-share measurement surface only",
+    "old_surface": "entire target including protected []/_..._ payloads",
+    "new_surface": "ordinary target prose after existing v6.strip_protected",
+    "regression_threshold_changed": false,
+    "absolute_floor_changed": false,
+    "numeric_rules_changed": false,
+    "technical_token_rules_changed": false,
+    "no_new_latin_rule_changed": false,
+    "decoder_changed": false,
+    "source_AST_changed": false,
+    "occurrence_or_word_exception": false,
+    "glossary_used": false,
+    "target_patch_used": false,
+    "original_R1_result_rewritten": false,
+    "exact_F96_replaced": false
+  },
+  "interpretation": "R-v1 closes the independently observed occurrence-25 gate-conflict class without changing any threshold or translation mechanism. This local PASS does not authorize integration. Required next step is a frozen-R0 regression proving that protected-aware language measurement does not disturb the previously accepted v9/R0 candidate, followed by R1 re-evaluation under a separately labelled post-failure branch.",
+  "promotion_allowed": false,
+  "promotion_blocker": "missing exact 0.30.40/F96 payload and rocketdict-numeric-integrity/3.2"
+}
