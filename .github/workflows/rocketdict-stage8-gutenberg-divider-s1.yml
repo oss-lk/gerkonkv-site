@@ -1,0 +1,33 @@
+name: RocketDict Stage 8 Gutenberg divider S-v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rocketdict-stage8-gutenberg-divider-s1.yml'
+      - 'rocketdict-ci/stage8_gutenberg_divider_s1_probe.py'
+  workflow_dispatch:
+
+jobs:
+  divider-s1-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install exact OPUS runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3' 'nltk>=3.9,<4'
+      - name: Probe pre-MT Gutenberg divider structural split
+        run: python rocketdict-ci/stage8_gutenberg_divider_s1_probe.py
+      - name: Upload S-v1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-gutenberg-divider-s1
+          path: work-stage8-gutenberg-divider-s1/evidence/**
+          if-no-files-found: warn
+          retention-days: 14
