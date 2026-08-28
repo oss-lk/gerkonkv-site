@@ -1,0 +1,31 @@
+name: RocketDict Stage 8 recovery prefix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/recover_stage8_overlay_prefix.py'
+      - 'rocketdict/payload/stage8-overlay/part-000.b64'
+      - '.github/workflows/rocketdict-stage8-recovery-prefix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-prefix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Recover exact gzip/tar prefix
+        run: python rocketdict-ci/recover_stage8_overlay_prefix.py
+      - name: Upload recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-overlay-prefix-recovery
+          path: rocketdict-recovery-prefix
+          if-no-files-found: error
