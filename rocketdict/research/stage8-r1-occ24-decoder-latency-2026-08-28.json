@@ -1,0 +1,59 @@
+{
+  "schema": "rocketdict-stage8-r1-occ24-decoder-latency/1",
+  "date_utc": "2026-08-28",
+  "status": "PERFORMANCE_FAILURE_CLASS_ISOLATED",
+  "scope": "NON_PROMOTIONAL independent R1 diagnostic",
+  "selection_sha256": "665f1ee5ad1778ac8ab1b1b2ae0da7e17a05a0321b8a25cb6d47d74294f4af32",
+  "occurrence": 24,
+  "source_words": 68,
+  "source_feature": "Project Gutenberg five-star divider embedded between two prose blocks",
+  "observed_full_unit_behavior": {
+    "parallel_R1_run": 33155519286,
+    "parallel_shard": 0,
+    "single_unit_latency_probe_run": 33155961346,
+    "single_unit_position": 0,
+    "checkpointed_phase_probe_run": 33156246017,
+    "result_at_evidence_freeze": "full-unit frozen-v8 inference still in progress while all other 12 units from shard0 completed",
+    "quality_verdict": null
+  },
+  "segment_isolation_run": 33156749106,
+  "segment_artifacts": [
+    {
+      "mode": "divider",
+      "artifact_id": 9679909899,
+      "digest": "sha256:2b9b4e2cfd92daf6a675b00949b34f3e0ea1156a786b11b313372629c084bafc",
+      "beam4_seconds": 0.09283814500008702,
+      "target": "* * * *"
+    },
+    {
+      "mode": "before",
+      "artifact_id": 9679911811,
+      "digest": "sha256:c736ec2cda775b5c0571e7df4d043592f57e21fd03c72ea0333481a76a64cc51",
+      "beam4_seconds": 0.9574224979999997
+    },
+    {
+      "mode": "after",
+      "artifact_id": 9679915804,
+      "digest": "sha256:563d653414cf409fb5358ecdb629e3d6303ad441c1e397ad5a73592c52162351",
+      "beam4_seconds": 0.2367031940000004,
+      "target": "Примечание: В описаниях иллюстраций используется несколько греческих букв."
+    },
+    {
+      "mode": "without-divider",
+      "artifact_id": 9679917050,
+      "digest": "sha256:f234c7d4c76708bcab581bb4c95800629aac89cfa842756ad4961325aa132772",
+      "beam4_seconds": 1.3216606499999983
+    }
+  ],
+  "isolation_result": {
+    "divider_alone_slow": false,
+    "pre_divider_prose_slow": false,
+    "post_divider_prose_slow": false,
+    "same_combined_prose_without_divider_slow": false,
+    "full_original_with_embedded_divider_pathological": true,
+    "classification": "decoder/context interaction with an embedded Gutenberg divider inside one MT input, not source length or either prose block alone"
+  },
+  "research_consequence": "Do not increase the global timeout or delete the source unit. Test a generic source-side Gutenberg-divider structural split: pre-parse divider lines before MT, translate prose blocks separately with the unchanged model, preserve the divider as source structure, then re-run all source-based integrity/language gates. This must be a separately labelled post-R1 mechanism and must not rewrite the original R1 result.",
+  "promotion_allowed": false,
+  "exact_F96_replaced": false
+}
