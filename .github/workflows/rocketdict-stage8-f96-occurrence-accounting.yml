@@ -1,0 +1,32 @@
+name: RocketDict Stage 8 F96 occurrence accounting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/stage8_f96_occurrence_accounting.py'
+      - '.github/workflows/rocketdict-stage8-f96-occurrence-accounting.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  account:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install exact tokenizer runtime
+        run: python -m pip install --disable-pip-version-check 'sentencepiece==0.2.2'
+      - name: Recount Stage12 selected units at fragment-occurrence level
+        run: python rocketdict-ci/stage8_f96_occurrence_accounting.py
+      - name: Upload accounting evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-f96-occurrence-accounting
+          path: work-stage8-f96-occurrence-accounting/output
+          if-no-files-found: error
