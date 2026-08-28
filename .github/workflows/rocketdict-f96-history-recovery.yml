@@ -1,0 +1,36 @@
+name: RocketDict F96 history recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/recover_f96_history.py'
+      - '.github/workflows/rocketdict-f96-history-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Exhaustively scan reachable Git history and Actions metadata/logs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python rocketdict-ci/recover_f96_history.py
+      - name: Upload F96 recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-f96-history-recovery
+          path: rocketdict-f96-history-recovery
+          if-no-files-found: error
