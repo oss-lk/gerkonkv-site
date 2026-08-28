@@ -1,0 +1,37 @@
+name: RocketDict Stage 8 protected language R0 regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rocketdict-stage8-protected-language-r0-regression.yml'
+      - 'rocketdict-ci/stage8_protected_language_r0_regression.py'
+      - 'rocketdict-ci/stage8_protected_language_gate_r1_probe.py'
+  workflow_dispatch:
+
+jobs:
+  frozen-r0-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install exact v9 runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2>=4.5,<5' 'sentencepiece>=0.2,<1' 'PyYAML>=6,<7' 'sacrebleu>=2.4,<3' 'nltk>=3.9,<4'
+      - name: Require exact frozen R0 v9 behavioural identity
+        run: python rocketdict-ci/stage8_protected_language_r0_regression.py
+      - name: Upload R0 regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-protected-language-r0-regression
+          path: |
+            work-stage8-protected-language-r0/evidence/**
+            work-stage8-v9/evidence/**
+            work-stage8-ghi-reconstruction/evidence/**
+          if-no-files-found: warn
+          retention-days: 14
