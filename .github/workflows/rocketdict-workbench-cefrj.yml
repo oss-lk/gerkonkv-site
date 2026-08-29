@@ -1,0 +1,35 @@
+name: RocketDict Workbench CEFR-J asset
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/verify_workbench_cefrj_asset.py'
+      - '.github/workflows/rocketdict-workbench-cefrj.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-cefrj:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Download CEFR-J Vocabulary Profile 1.5 from declared upstream
+        run: |
+          curl --fail --location --retry 3 \
+            https://raw.githubusercontent.com/openlanguageprofiles/olp-en-cefrj/master/cefrj-vocabulary-profile-1.5.csv \
+            --output /tmp/cefrj-vocabulary-profile-1.5.csv
+      - name: Verify structure, known rows and emit manifest
+        run: python rocketdict-ci/verify_workbench_cefrj_asset.py /tmp/cefrj-vocabulary-profile-1.5.csv
+      - name: Upload manifest only
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-workbench-cefrj-verification
+          path: rocketdict-workbench-cefrj-verification/manifest.json
+          if-no-files-found: error
