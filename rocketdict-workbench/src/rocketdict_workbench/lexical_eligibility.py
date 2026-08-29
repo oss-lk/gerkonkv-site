@@ -6,23 +6,32 @@ from typing import Any
 
 from .core import RocketDictCore
 
-POLICY_KEY = "workbench-content-pos-v1"
+POLICY_KEY = "workbench-content-pos-v2"
 CONTENT_POS = {"NOUN", "PROPN", "VERB", "ADJ", "ADV"}
 FUNCTION_POS = {"DET", "AUX", "ADP", "PRON", "PART", "CCONJ", "SCONJ", "PUNCT", "SPACE", "SYM", "NUM"}
+PRODUCT_MWE_TYPES = {
+    "phrasal_verb",
+    "prepositional_verb",
+    "grammar_expression",
+    "compound_term",
+    "collocation",
+}
 
 
 def candidate_is_product_eligible(candidate: dict[str, Any]) -> tuple[bool, str]:
     tokens = list(candidate.get("tokens") or [])
     if not tokens:
         return False, "no_token_evidence"
+    ctype = str(candidate.get("type") or "")
     if len(tokens) > 1:
+        if ctype not in PRODUCT_MWE_TYPES:
+            return False, f"non_dictionary_mwe_type:{ctype or 'unknown'}"
         if any(str(t.get("pos") or "X") in CONTENT_POS for t in tokens):
-            return True, "multiword_has_content_head"
+            return True, "dictionary_mwe_with_content_head"
         return False, "multiword_without_content_pos"
     token = tokens[0]
     pos = str(token.get("pos") or "X")
     text = str(token.get("text") or "")
-    ctype = str(candidate.get("type") or "")
     if pos in CONTENT_POS:
         return True, "content_pos"
     if ctype == "abbreviation" and text.isalpha() and text.upper() == text and 2 <= len(text) <= 8:
@@ -44,13 +53,19 @@ from rocketdict.extraction.source_service import SourceLexicalExtractionService
 
 CONTENT={"NOUN","PROPN","VERB","ADJ","ADV"}
 FUNCTION={"DET","AUX","ADP","PRON","PART","CCONJ","SCONJ","PUNCT","SPACE","SYM","NUM"}
-POLICY="workbench-content-pos-v1"
+PRODUCT_MWE={"phrasal_verb","prepositional_verb","grammar_expression","compound_term","collocation"}
+POLICY="workbench-content-pos-v2"
 
 class ProductSourceLexicalExtractionService(SourceLexicalExtractionService):
     @classmethod
     def _settings(cls,supplied):
         out=super()._settings(supplied)
         out["workbench_lexical_eligibility_policy"]=POLICY
+        # Product vocabulary excludes generic noun chunks and named entities by
+        # default. Research Mode can use the historical extractor directly when
+        # these evidence classes are a desired experimental axis.
+        out["include_named_entities"]=False
+        out["include_noun_chunks"]=False
         return out
 
     @staticmethod
@@ -60,30 +75,28 @@ class ProductSourceLexicalExtractionService(SourceLexicalExtractionService):
         text=str(token.get("text") or "")
         if pos in CONTENT:return True
         if pos in FUNCTION:return False
-        # Uppercase alphabetic abbreviations remain lexical evidence.
         return text.isalpha() and text.upper()==text and 2<=len(text)<=8
 
     @staticmethod
     def _word_token(token):
-        # Used by coverage materialization: non-dictionary function/number tokens
-        # are retained as rejected/non-significant rather than deleted.
         return ProductSourceLexicalExtractionService._product_word_token(token)
 
     @staticmethod
     def _eligible_candidate(candidate):
         tokens=list(candidate.get("tokens") or [])
         if not tokens:return False
+        ctype=str(candidate.get("type") or "")
         if len(tokens)>1:
+            if ctype not in PRODUCT_MWE:return False
             return any(str(t.get("pos") or "X") in CONTENT for t in tokens)
         token=tokens[0]; pos=str(token.get("pos") or "X"); text=str(token.get("text") or "")
         if pos in CONTENT:return True
-        if candidate.get("type")=="abbreviation" and text.isalpha() and text.upper()==text and 2<=len(text)<=8:return True
+        if ctype=="abbreviation" and text.isalpha() and text.upper()==text and 2<=len(text)<=8:return True
         return False
 
     def _generate(self,segments,tokens_by_analysis,spans_by_analysis,settings):
-        # Generation itself must see function words so phrasal/prepositional MWEs
-        # such as "look at" remain discoverable. Temporarily bind the historical
-        # broad token predicate only during candidate generation.
+        # Candidate generation temporarily sees the historical broad word stream
+        # so function members of known MWEs (e.g. "look at") remain discoverable.
         self.__dict__["_word_token"]=SourceLexicalExtractionService._word_token
         try:
             candidates,_old_word_map,_old_multi=super()._generate(segments,tokens_by_analysis,spans_by_analysis,settings)
@@ -123,7 +136,7 @@ def run_product_lexical_extraction(
     database: Path | str,
     nlp_run_id: int,
     *,
-    actor: str = "rocketdict-workbench:product-content-pos-v1",
+    actor: str = "rocketdict-workbench:product-content-pos-v2",
     settings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     supplied = dict(settings or {})
