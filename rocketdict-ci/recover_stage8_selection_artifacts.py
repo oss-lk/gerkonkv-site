@@ -3,8 +3,10 @@ from __future__ import annotations
 """Recovery-only scan for lost Stage8 challenge-selection/clipping evidence.
 
 Unlike the general F96 source scanner, this searches historical Actions artifact
-*contents* for the exact metadata vocabulary around the original 5051/111 ->
-5000/109 transition. It cannot promote Stage8 and does not infer missing IDs.
+contents for the exact metadata vocabulary around the original 5051/111 ->
+5000/109 transition. GitHub Pages artifacts contain an inner artifact.tar; v2
+parses that TAR so every hit is attributed to its exact historical repo path.
+It cannot promote Stage8 and does not infer missing IDs.
 """
 
 import io
@@ -12,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import tarfile
 import urllib.error
 import urllib.request
 import zipfile
@@ -97,7 +100,7 @@ def iter_artifacts(owner: str, repo: str):
         page += 1
 
 
-def scan_text(raw: bytes, artifact: dict, logical: str, depth: int) -> list[dict]:
+def scan_text(raw: bytes, artifact: dict, logical: str, depth: int, container_type: str) -> list[dict]:
     text = raw.decode("utf-8", "replace")
     hits = []
     for m in TERM_RE.finditer(text):
@@ -108,6 +111,7 @@ def scan_text(raw: bytes, artifact: dict, logical: str, depth: int) -> list[dict
             "artifact_name": artifact.get("name"),
             "artifact_created_at": artifact.get("created_at"),
             "logical_member": logical,
+            "container_type": container_type,
             "nested_depth": depth,
             "term": m.group(0),
             "offset": m.start(),
@@ -116,6 +120,32 @@ def scan_text(raw: bytes, artifact: dict, logical: str, depth: int) -> list[dict
         if len(hits) >= 250:
             break
     return hits
+
+
+def scan_tar(raw: bytes, artifact: dict, prefix: str, depth: int) -> tuple[list[dict], list[dict]]:
+    hits, errors = [], []
+    try:
+        tf = tarfile.open(fileobj=io.BytesIO(raw), mode="r:*")
+    except Exception as exc:
+        return hits, [{"logical_member": prefix, "error": f"tar-open: {exc!r}"}]
+    with tf:
+        for info in tf.getmembers():
+            if not info.isfile() or info.size > MAX_MEMBER_BYTES:
+                continue
+            logical = f"{prefix}!{info.name}"
+            try:
+                handle = tf.extractfile(info)
+                if handle is None:
+                    continue
+                member = handle.read()
+            except Exception as exc:
+                errors.append({"logical_member": logical, "error": repr(exc)})
+                continue
+            hits.extend(scan_text(member, artifact, logical, depth, "tar-member"))
+            if depth < MAX_DEPTH and member.startswith(b"PK\x03\x04"):
+                h2, e2 = scan_zip(member, artifact, logical, depth + 1)
+                hits.extend(h2); errors.extend(e2)
+    return hits, errors
 
 
 def scan_zip(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0) -> tuple[list[dict], list[dict]]:
@@ -134,10 +164,17 @@ def scan_zip(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0) -> tu
             except Exception as exc:
                 errors.append({"logical_member": logical, "error": repr(exc)})
                 continue
-            hits.extend(scan_text(member, artifact, logical, depth))
-            if depth < MAX_DEPTH and member.startswith(b"PK\x03\x04"):
-                h2, e2 = scan_zip(member, artifact, logical, depth + 1)
+            # For ordinary artifacts scan the file itself. For a Pages artifact.tar,
+            # parse the TAR members instead of treating the whole TAR as text so
+            # historical filenames remain attributable.
+            if info.filename.endswith(".tar"):
+                h2, e2 = scan_tar(member, artifact, logical, depth + 1)
                 hits.extend(h2); errors.extend(e2)
+            else:
+                hits.extend(scan_text(member, artifact, logical, depth, "zip-member"))
+                if depth < MAX_DEPTH and member.startswith(b"PK\x03\x04"):
+                    h2, e2 = scan_zip(member, artifact, logical, depth + 1)
+                    hits.extend(h2); errors.extend(e2)
     return hits, errors
 
 
@@ -162,7 +199,6 @@ def main() -> None:
         except Exception as exc:
             errors.append({"artifact_id": art["id"], "artifact_name": art.get("name"), "logical_member": "download", "error": repr(exc)})
 
-    # Deduplicate identical hit contexts emitted because multiple query terms occur nearby.
     unique = []
     seen = set()
     for h in hits:
@@ -171,7 +207,7 @@ def main() -> None:
             seen.add(key); unique.append(h)
 
     report = {
-        "schema": "rocketdict-stage8-selection-artifact-recovery/1",
+        "schema": "rocketdict-stage8-selection-artifact-recovery/2",
         "promotion_allowed": False,
         "artifact_inventory_count": len(inventory),
         "attempted_artifact_count": attempted,
@@ -180,10 +216,11 @@ def main() -> None:
         "error_count": len(errors),
         "raw_hit_count": len(hits),
         "unique_hit_count": len(unique),
+        "tar_member_hit_count": sum(1 for h in unique if h["container_type"] == "tar-member"),
         "terms": TERMS,
         "hits": unique,
         "errors": errors,
-        "interpretation": "Exact artifact-content recovery only. No missing occurrence IDs or selection hashes are inferred from aggregate counts.",
+        "interpretation": "Exact artifact-content recovery only. Nested Pages TAR hits are attributed to exact historical paths. No missing occurrence IDs or selection hashes are inferred from aggregate counts.",
     }
     (OUT / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2), flush=True)
