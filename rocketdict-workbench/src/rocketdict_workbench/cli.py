@@ -34,6 +34,12 @@ def parser() -> argparse.ArgumentParser:
     campaign = sub.add_parser("campaign-create"); campaign.add_argument("root", type=Path); campaign.add_argument("definition", type=Path); campaign.add_argument("--pipeline", action="store_true")
     run = sub.add_parser("campaign-run"); run.add_argument("root", type=Path); run.add_argument("plan_id", type=int); run.add_argument("--max-new-trials", type=int)
     report = sub.add_parser("report"); report.add_argument("root", type=Path); report.add_argument("plan_id", type=int); report.add_argument("--destination", type=Path)
+    lexical = sub.add_parser("lexical-opus", help="Generate lexical OPUS n-best evidence and optionally run Stage20")
+    lexical.add_argument("root", type=Path); lexical.add_argument("--model-path", type=Path, required=True)
+    lexical.add_argument("--revision", required=True); lexical.add_argument("--archive-sha256", required=True); lexical.add_argument("--source-uri", required=True)
+    lexical.add_argument("--sense-id", type=int, action="append", default=[]); lexical.add_argument("--beam-size", type=int, default=8); lexical.add_argument("--num-hypotheses", type=int, default=8)
+    lexical.add_argument("--maximum-candidates", type=int, default=8); lexical.add_argument("--source-policy", default="local-snapshots-only")
+    lexical.add_argument("--apply-stage20", action="store_true"); lexical.add_argument("--output", type=Path)
     serve = sub.add_parser("serve"); serve.add_argument("root", type=Path); serve.add_argument("--host", default="127.0.0.1"); serve.add_argument("--port", type=int, default=8765)
     return p
 
@@ -69,6 +75,15 @@ def main(argv: list[str] | None = None) -> int:
             _json(project.create_research_campaign(definition, pipeline=args.pipeline)); return 0
         if args.command == "campaign-run":
             _json(core.run_experiment_plan(project.paths.database, args.plan_id, max_new_trials=args.max_new_trials)); return 0
+        if args.command == "lexical-opus":
+            from .lexical_opus import build_opus_lexical_snapshot, run_stage20_with_snapshot, write_provider_evidence
+            provider = build_opus_lexical_snapshot(core, project.paths.database, model_path=args.model_path, revision=args.revision, archive_sha256=args.archive_sha256, source_uri=args.source_uri, sense_ids=args.sense_id, beam_size=args.beam_size, num_hypotheses=args.num_hypotheses, maximum_candidates_per_lemma=args.maximum_candidates)
+            destination = args.output or (project.paths.experiments / "lexical-opus" / f"{provider['entries_sha256'][:16]}.json")
+            write_provider_evidence(destination, provider)
+            payload = {"provider_evidence": str(destination.resolve()), "summary": provider.get("summary"), "entries_sha256": provider.get("entries_sha256")}
+            if args.apply_stage20:
+                payload["stage20"] = run_stage20_with_snapshot(core, project.paths.database, provider, source_policy=args.source_policy, sense_ids=args.sense_id)
+            _json(payload); return 0
         if args.command == "serve":
             from .server import serve
             serve(project, host=args.host, port=args.port); return 0
