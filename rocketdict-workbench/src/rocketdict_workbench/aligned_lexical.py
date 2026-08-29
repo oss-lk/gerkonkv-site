@@ -6,14 +6,53 @@ from typing import Any
 
 from .core import RocketDictCore
 
-POLICY_KEY = "workbench-aligned-content-pos-v3"
+POLICY_KEY = "workbench-aligned-content-pos-v4"
 CONTENT_POS = {"NOUN", "PROPN", "VERB", "ADJ", "ADV"}
 FUNCTION_POS = {"DET", "AUX", "ADP", "PRON", "PART", "CCONJ", "SCONJ", "PUNCT", "SPACE", "SYM", "NUM"}
+OBJECT_DEPENDENCIES = {"dobj", "obj", "pobj"}
 ALLOWED_MWE_TYPES = {
     "phrasal_verb", "prepositional_verb", "idiom", "collocation",
     "compound_term", "technical_term", "grammar_expression",
     "discontinuous_expression",
 }
+
+
+def normalize_product_token(token: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Apply narrow Product-Mode repairs while preserving the original evidence trail."""
+    out = dict(token)
+    out["flags"] = dict(token.get("flags") or {})
+    repairs: list[str] = []
+    pos = str(out.get("pos") or "X").upper()
+    dep = str(out.get("dependency") or "").casefold()
+    text = str(out.get("text") or "")
+
+    # en_core_web_sm can occasionally tag a direct object as VERB in very
+    # short subtitle-like sentences. Restrict the repair to object dependency
+    # roles; do not globally rewrite ambiguous verbs.
+    if pos == "VERB" and dep in OBJECT_DEPENDENCIES:
+        out["pos"] = "NOUN"
+        pos = "NOUN"
+        repairs.append("verb_object_to_noun")
+
+    # spaCy is_oov means "not in the model's finite vector vocabulary", not
+    # "unknown English lexical item". Treating it as EntryType.UNKNOWN_TOKEN
+    # is a category error for normal alphabetic content words.
+    if pos in CONTENT_POS and text.isalpha() and bool(out["flags"].get("is_oov")):
+        out["flags"]["is_oov"] = False
+        repairs.append("spacy_is_oov_not_unknown_token")
+
+    # A lower-case common noun that participates in an NER span should remain
+    # a lexical noun when extracted as a single word. Proper nouns retain NER.
+    if out.get("entity_type") and pos != "PROPN":
+        out["flags"]["workbench_original_entity_type"] = out.get("entity_type")
+        out["entity_type"] = None
+        out["entity_iob"] = None
+        repairs.append("non_propn_ner_not_entry_type")
+
+    if repairs:
+        base = str(out.get("source") or "saved_nlp")
+        out["source"] = base + "+workbench_v4:" + ",".join(repairs)
+    return out, repairs
 
 
 def candidate_is_product_eligible(candidate: dict[str, Any]) -> tuple[bool, str]:
@@ -55,8 +94,23 @@ from rocketdict.extraction.service import LexicalExtractionService
 
 CONTENT={"NOUN","PROPN","VERB","ADJ","ADV"}
 FUNCTION={"DET","AUX","ADP","PRON","PART","CCONJ","SCONJ","PUNCT","SPACE","SYM","NUM"}
+OBJECT_DEPS={"dobj","obj","pobj"}
 ALLOWED_MWE={"phrasal_verb","prepositional_verb","idiom","collocation","compound_term","technical_term","grammar_expression","discontinuous_expression"}
-POLICY="workbench-aligned-content-pos-v3"
+POLICY="workbench-aligned-content-pos-v4"
+
+def normalize_token(token):
+    out=dict(token); out["flags"]=dict(token.get("flags") or {}); repairs=[]
+    pos=str(out.get("pos") or "X").upper(); dep=str(out.get("dependency") or "").casefold(); text=str(out.get("text") or "")
+    if pos=="VERB" and dep in OBJECT_DEPS:
+        out["pos"]="NOUN"; pos="NOUN"; repairs.append("verb_object_to_noun")
+    if pos in CONTENT and text.isalpha() and bool(out["flags"].get("is_oov")):
+        out["flags"]["is_oov"]=False; repairs.append("spacy_is_oov_not_unknown_token")
+    if out.get("entity_type") and pos!="PROPN":
+        out["flags"]["workbench_original_entity_type"]=out.get("entity_type")
+        out["entity_type"]=None; out["entity_iob"]=None; repairs.append("non_propn_ner_not_entry_type")
+    if repairs:
+        out["source"]=str(out.get("source") or "saved_nlp")+"+workbench_v4:"+",".join(repairs)
+    return out,repairs
 
 class ProductAlignedLexicalExtractionService(LexicalExtractionService):
     @classmethod
@@ -64,6 +118,9 @@ class ProductAlignedLexicalExtractionService(LexicalExtractionService):
         out=super()._settings(supplied)
         out["algorithm_key"]=POLICY
         out["workbench_lexical_eligibility_policy"]=POLICY
+        out["workbench_pos_repair_policy"]="verb-object-to-noun-v1"
+        out["workbench_oov_policy"]="spacy-vector-oov-is-not-lexical-unknown-v1"
+        out["workbench_singleword_ner_policy"]="proper-nouns-only-v1"
         return out
 
     @classmethod
@@ -93,7 +150,12 @@ class ProductAlignedLexicalExtractionService(LexicalExtractionService):
             candidates=super()._generate_candidates(segments_tokens,settings)
         finally:
             self.__dict__.pop("_word",None)
-        return [c for c in candidates if self._eligible_candidate(c)]
+        result=[]
+        for c in candidates:
+            if any("+workbench_v4:" in str(t.get("source") or "") for t in c.get("tokens") or []):
+                c["evidence"]=str(c.get("evidence") or "saved_token")+"+workbench_pos_type_normalization_v4"
+            if self._eligible_candidate(c):result.append(c)
+        return result
 
     def _select_candidates(self,candidates):
         super()._select_candidates(candidates)
@@ -104,7 +166,7 @@ class ProductAlignedLexicalExtractionService(LexicalExtractionService):
     def _saved_tokens(self,session,alignment,segment):
         run_id,tokens=super()._saved_tokens(session,alignment,segment)
         if tokens:
-            return run_id,tokens
+            return run_id,[normalize_token(t)[0] for t in tokens]
         runs=session.scalars(select(NlpRun).where(
             NlpRun.document_version_id==alignment.document_version_id,
             NlpRun.status.in_([RunStatus.COMPLETED,RunStatus.COMPLETED_WITH_WARNINGS]),
@@ -131,7 +193,7 @@ class ProductAlignedLexicalExtractionService(LexicalExtractionService):
                 for token in saved:
                     start=int(occurrence.start_char)+int(token.start_char); end=int(occurrence.start_char)+int(token.end_char)
                     if start<segment.stream_start or end>segment.stream_end or end<=start:continue
-                    converted.append({
+                    raw={
                         "token_id":token.id,"nlp_analysis_id":analysis.id,"token_index":token.token_index,
                         "text":token.text,"start":start,"end":end,
                         "local_start":start-segment.stream_start,"local_end":end-segment.stream_start,
@@ -140,7 +202,8 @@ class ProductAlignedLexicalExtractionService(LexicalExtractionService):
                         "entity_type":token.entity_type,"entity_iob":token.entity_iob,
                         "morph":token.morph_json or {},"flags":token.flags_json or {},
                         "source":"saved_nlp_offset_projection",
-                    })
+                    }
+                    converted.append(normalize_token(raw)[0])
                 if converted:return run.id,converted
         return None,[]
 
@@ -156,9 +219,9 @@ with sf() as s:
     )).all()
     occurrences=[{
         "occurrence_id":occ.id,"entry_id":entry.id,"lemma":entry.normalized_lemma,
-        "part_of_speech":entry.part_of_speech,"surface":occ.surface_text,
-        "source_segment_id":occ.source_segment_id,"alignment_candidate_id":occ.alignment_candidate_id,
-        "target_evidence":occ.target_evidence_text,
+        "part_of_speech":entry.part_of_speech,"entry_type":getattr(entry.entry_type,"value",str(entry.entry_type)),
+        "surface":occ.surface_text,"source_segment_id":occ.source_segment_id,
+        "alignment_candidate_id":occ.alignment_candidate_id,"target_evidence":occ.target_evidence_text,
     } for occ,entry in rows]
 print(json.dumps({
     "policy":POLICY,"extraction_run_id":result.extraction_run_id,"stage_result_id":result.stage_result_id,
@@ -179,7 +242,7 @@ def run_product_aligned_lexical_extraction(
     alignment_run_id: int,
     *,
     settings: dict[str, Any] | None = None,
-    actor: str = "rocketdict-workbench:aligned-content-pos-v3",
+    actor: str = "rocketdict-workbench:aligned-content-pos-v4",
 ) -> dict[str, Any]:
     result = core._run([
         "-c", _helper_code(), str(Path(database).expanduser().resolve()), str(int(alignment_run_id)),
