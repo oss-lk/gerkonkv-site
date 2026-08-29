@@ -52,7 +52,6 @@ class NumericLiteral:
 
 
 def _strip_ordinal_suffix(token: str) -> str:
-    # Suffix may be attached to the denominator of a fraction/mixed fraction.
     return _ORDINAL_SUFFIX_RE.sub("", token)
 
 
@@ -63,28 +62,19 @@ def normalize_numeric_literal(raw: str) -> str:
     token = re.sub(r"\s*/\s*", "/", token)
     token = re.sub(r"\s*-\s*", "-", token)
 
-    # Newton typography: apostrophe between digits is a decimal separator.
     if re.fullmatch(r"[+-]?\d+['’]\d+", token):
         return token.replace("’", "'").replace("'", ".")
-
-    # Mixed fraction: normalize spacing/hyphen only, preserving literal parts.
     if re.fullmatch(r"[+-]?\d+(?:-| )\d+/\d+", token):
         return re.sub(r" ", "-", token)
-
-    # Simple fraction: preserve numerator/denominator literal identity.
     if re.fullmatch(r"[+-]?\d+/\d+", token):
         return token
 
     compact = token.replace(" ", "")
-    # Canonical source-side interpretation: x,ddd grouping is thousands; other
-    # comma forms are decimal comma. Target-side single x,ddd ambiguity is
-    # resolved separately against source-required values.
     if re.fullmatch(r"[+-]?\d{1,3}(?:,\d{3})+", compact):
         compact = compact.replace(",", "")
     elif "," in compact:
         compact = compact.replace(",", ".")
 
-    # Canonical integer sign/leading zeros without changing decimal precision.
     if re.fullmatch(r"[+-]?\d+", compact):
         sign = ""
         digits = compact
@@ -96,21 +86,9 @@ def normalize_numeric_literal(raw: str) -> str:
 
 
 def normalize_numeric_options(raw: str) -> tuple[str, ...]:
-    """Return conservative canonical alternatives for ambiguous comma form.
-
-    `1,699` can be a grouped integer or a decimal-comma rendering. Newton's
-    source uses apostrophe decimals, while Russian output can render them with a
-    comma. Keep both only for the single-comma/three-tail case; comparison
-    resolves against source-required values before treating an addition as new.
-    """
+    """Return conservative alternatives for a single comma/three-digit tail."""
     primary = normalize_numeric_literal(raw)
-    compact = (
-        raw.casefold()
-        .replace("−", "-")
-        .replace(" ", "")
-        .replace("\u00a0", "")
-        .replace("\u202f", "")
-    )
+    compact = raw.casefold().replace("−", "-").replace(" ", "").replace("\u00a0", "").replace("\u202f", "")
     compact = _strip_ordinal_suffix(compact)
     match = re.fullmatch(r"([+-]?\d{1,3}),(\d{3})", compact)
     if not match:
@@ -144,7 +122,9 @@ def spelled_numeric_licenses(source: str) -> Counter[str]:
     low = source.casefold()
     out: Counter[str] = Counter()
     for word, value in NUMBER_WORDS.items():
-        out[value] += len(re.findall(rf"(?<!\w){re.escape(word)}(?!\w)", low))
+        count = len(re.findall(rf"(?<!\w){re.escape(word)}(?!\w)", low))
+        if count:
+            out[value] += count
     return out
 
 
@@ -183,15 +163,7 @@ def compare_numeric_integrity(source: str, target: str) -> dict:
 def self_check() -> dict:
     cases = []
 
-    def check(
-        name: str,
-        source: str,
-        target: str,
-        expected_pass: bool,
-        *,
-        missing=None,
-        additions=None,
-    ) -> None:
+    def check(name: str, source: str, target: str, expected_pass: bool, *, missing=None, additions=None) -> None:
         result = compare_numeric_integrity(source, target)
         assert result["passed"] is expected_pass, (name, result)
         if missing is not None:
@@ -200,11 +172,7 @@ def self_check() -> dict:
             assert result["unlicensed_additions_observed"] == additions, (name, result)
         cases.append({"name": name, "result": result})
 
-    # Contract examples documented for the lost 3.2 evaluator.
-    for literal in [
-        "22-1/2", "24th", "1/89000th", "42d", "1 000 000", "1,000,000",
-        "1,5", "1'699", "0'000625", "4'27",
-    ]:
+    for literal in ["22-1/2", "24th", "1/89000th", "42d", "1 000 000", "1,000,000", "1,5", "1'699", "0'000625", "4'27"]:
         assert contains_numeric_literal(literal), literal
 
     check("mixed_fraction_identity", "22-1/2 Inches", "22 1/2 дюйма", True)
@@ -215,38 +183,13 @@ def self_check() -> dict:
     check("single_grouped_thousand", "1,000 times", "1 000 раз", True)
     check("decimal_comma", "1,5 Inches", "1,5 дюйма", True)
     check("newton_apostrophe_decimal", "1'699 and 0'000625", "1,699 и 0,000625", True)
+    check("f96_15697_structural_reference_loss", "[in _Fig._ 2.] four Inches eight Feet three Feet", "[на рис.] 4 дюйма 8 футов 3 фута", False, missing={"2": 1}, additions={})
+    check("f96_16200_missing_three", "15 Min. that of the exterior 3 Degr.", "15 Мин. внешней части.", False, missing={"3": 1}, additions={})
+    check("f96_16200_nbest_preserves", "15 Min. that of the exterior 3 Degr.", "15 Мин. внешней части 3 дегр.", True)
+    check("f96_17795_extreme_sequence", "1000000, 1000000000000, or 1000000000000000000 times rarer", "1 000 000 000 и 1 000 000 000 000 раз реже", False, missing={"1000000": 1, "1000000000000000000": 1}, additions={"1000000000": 1})
+    check("duplicate_required_literal", "15 Min.", "15 мин. 15", False)
+    check("unlicensed_addition", "15 Min.", "15 мин. 99", False, additions={"99": 1})
 
-    # F96 behavioral constraints from original evidence.
-    check(
-        "f96_15697_structural_reference_loss",
-        "[in _Fig._ 2.] four Inches eight Feet three Feet",
-        "[на рис.] 4 дюйма 8 футов 3 фута",
-        False,
-        missing={"2": 1},
-        additions={},
-    )
-    check(
-        "f96_16200_missing_three",
-        "15 Min. that of the exterior 3 Degr.",
-        "15 Мин. внешней части.",
-        False,
-        missing={"3": 1},
-        additions={},
-    )
-    check(
-        "f96_16200_nbest_preserves",
-        "15 Min. that of the exterior 3 Degr.",
-        "15 Мин. внешней части 3 дегр.",
-        True,
-    )
-    check(
-        "f96_17795_extreme_sequence",
-        "1000000, 1000000000000, or 1000000000000000000 times rarer",
-        "1 000 000 000 и 1 000 000 000 000 раз реже",
-        False,
-        missing={"1000000": 1, "1000000000000000000": 1},
-        additions={"1000000000": 1},
-    )
     return {
         "schema": "rocketdict-stage8-integrity32-interface-reconstruction-selfcheck/1",
         "promotion_allowed": False,
