@@ -4,7 +4,7 @@ from __future__ import annotations
 
 This closes a gap in recover_f96_history.py: that scanner covered Git history,
 run metadata and run logs, but did not inspect the bytes stored inside Actions
-artifacts.  This program is recovery-only and cannot promote Stage 8.
+artifacts. This program is recovery-only and cannot promote Stage 8.
 """
 
 import io
@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -40,7 +41,16 @@ TERMS = [
     "17795",
 ]
 TERM_RE = re.compile("|".join(re.escape(x) for x in TERMS), re.IGNORECASE)
-PATH_RE = re.compile(r"(?:integrity(?:_doe)?\.py|stage12_pilot\.py|test_stage8_integrity|test.*integrity)", re.IGNORECASE)
+PATH_RE = re.compile(
+    r"(?:integrity(?:_doe)?\.py|stage12_pilot\.py|test_stage8_integrity|test.*integrity)",
+    re.IGNORECASE,
+)
+USER_AGENT = "rocketdict-stage8-artifact-content-recovery"
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
 
 
 def request(path: str, *, accept: str = "application/vnd.github+json") -> urllib.request.Request:
@@ -51,7 +61,7 @@ def request(path: str, *, accept: str = "application/vnd.github+json") -> urllib
             "Accept": accept,
             "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "rocketdict-stage8-artifact-content-recovery",
+            "User-Agent": USER_AGENT,
         },
     )
 
@@ -61,8 +71,26 @@ def api_json(path: str):
         return json.load(r)
 
 
-def api_bytes(path: str, timeout: int = 180) -> bytes:
-    with urllib.request.urlopen(request(path), timeout=timeout) as r:
+def artifact_bytes(path: str, timeout: int = 180) -> bytes:
+    """Download an Actions artifact without leaking GitHub auth to signed blob host.
+
+    GitHub's artifact endpoint redirects to a temporary Azure/object-store URL.
+    Sending the GitHub Authorization header to that signed URL causes the blob
+    service to reject the request. Stop automatic redirects, capture Location,
+    then fetch the signed URL with no Authorization header.
+    """
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        with opener.open(request(path), timeout=60) as r:
+            return r.read()
+    except urllib.error.HTTPError as exc:
+        if exc.code not in {301, 302, 303, 307, 308}:
+            raise
+        location = exc.headers.get("Location")
+        if not location:
+            raise RuntimeError(f"artifact redirect {exc.code} has no Location") from exc
+    signed = urllib.request.Request(location, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(signed, timeout=timeout) as r:
         return r.read()
 
 
@@ -80,32 +108,33 @@ def iter_artifacts(owner: str, repo: str):
 
 
 def text_hits(raw: bytes, logical_name: str, artifact: dict, depth: int) -> list[dict]:
-    # latin-1 is deliberate for byte-preserving ASCII term search; utf-8 decode
-    # is used only for readable context after a hit is established.
     latin = raw.decode("latin-1", "ignore")
     hits = []
     for m in TERM_RE.finditer(latin):
         lo = max(0, m.start() - 240)
         hi = min(len(latin), m.end() + 480)
-        context_bytes = raw[lo:hi]
-        context = context_bytes.decode("utf-8", "replace")
-        hits.append({
-            "artifact_id": artifact["id"],
-            "artifact_name": artifact.get("name"),
-            "artifact_size": artifact.get("size_in_bytes"),
-            "artifact_created_at": artifact.get("created_at"),
-            "logical_member": logical_name,
-            "nested_depth": depth,
-            "term": m.group(0),
-            "offset": m.start(),
-            "context": context,
-        })
+        context = raw[lo:hi].decode("utf-8", "replace")
+        hits.append(
+            {
+                "artifact_id": artifact["id"],
+                "artifact_name": artifact.get("name"),
+                "artifact_size": artifact.get("size_in_bytes"),
+                "artifact_created_at": artifact.get("created_at"),
+                "logical_member": logical_name,
+                "nested_depth": depth,
+                "term": m.group(0),
+                "offset": m.start(),
+                "context": context,
+            }
+        )
         if len(hits) >= 100:
             break
     return hits
 
 
-def scan_zip(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0) -> tuple[list[dict], list[dict], list[dict]]:
+def scan_zip(
+    raw: bytes, artifact: dict, prefix: str = "", depth: int = 0
+) -> tuple[list[dict], list[dict], list[dict]]:
     hits: list[dict] = []
     path_hits: list[dict] = []
     errors: list[dict] = []
@@ -119,14 +148,16 @@ def scan_zip(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0) -> tu
                 continue
             logical = f"{prefix}!{info.filename}" if prefix else info.filename
             if PATH_RE.search(info.filename):
-                path_hits.append({
-                    "artifact_id": artifact["id"],
-                    "artifact_name": artifact.get("name"),
-                    "artifact_created_at": artifact.get("created_at"),
-                    "logical_member": logical,
-                    "nested_depth": depth,
-                    "member_size": info.file_size,
-                })
+                path_hits.append(
+                    {
+                        "artifact_id": artifact["id"],
+                        "artifact_name": artifact.get("name"),
+                        "artifact_created_at": artifact.get("created_at"),
+                        "logical_member": logical,
+                        "nested_depth": depth,
+                        "member_size": info.file_size,
+                    }
+                )
             if info.file_size > MAX_MEMBER_BYTES:
                 continue
             try:
@@ -137,7 +168,9 @@ def scan_zip(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0) -> tu
             hits.extend(text_hits(member, logical, artifact, depth))
             if depth < MAX_NESTED_DEPTH and member.startswith(b"PK\x03\x04"):
                 h2, p2, e2 = scan_zip(member, artifact, logical, depth + 1)
-                hits.extend(h2); path_hits.extend(p2); errors.extend(e2)
+                hits.extend(h2)
+                path_hits.extend(p2)
+                errors.extend(e2)
     return hits, path_hits, errors
 
 
@@ -149,6 +182,8 @@ def main() -> None:
     path_hits = []
     errors = []
     skipped = []
+    attempted = 0
+    downloaded = 0
     for art in artifacts:
         row = {
             "id": art.get("id"),
@@ -167,17 +202,27 @@ def main() -> None:
             skipped.append({**row, "reason": "over_size_limit"})
             continue
         aid = art["id"]
+        attempted += 1
         try:
-            raw = api_bytes(f"/repos/{owner}/{repo}/actions/artifacts/{aid}/zip")
+            raw = artifact_bytes(f"/repos/{owner}/{repo}/actions/artifacts/{aid}/zip")
+            downloaded += 1
             h, p, e = scan_zip(raw, art)
-            hits.extend(h); path_hits.extend(p)
+            hits.extend(h)
+            path_hits.extend(p)
             for err in e:
                 errors.append({"artifact_id": aid, "artifact_name": art.get("name"), **err})
         except Exception as exc:
-            errors.append({"artifact_id": aid, "artifact_name": art.get("name"), "where": "download", "error": repr(exc)})
+            errors.append(
+                {
+                    "artifact_id": aid,
+                    "artifact_name": art.get("name"),
+                    "where": "download",
+                    "error": repr(exc),
+                }
+            )
 
     report = {
-        "schema": "rocketdict-stage8-artifact-content-recovery/1",
+        "schema": "rocketdict-stage8-artifact-content-recovery/2",
         "promotion_allowed": False,
         "terms": TERMS,
         "limits": {
@@ -186,7 +231,8 @@ def main() -> None:
             "max_nested_depth": MAX_NESTED_DEPTH,
         },
         "artifact_inventory_count": len(inventory),
-        "scanned_artifact_count": len(inventory) - len(skipped),
+        "attempted_artifact_count": attempted,
+        "downloaded_artifact_count": downloaded,
         "skipped": skipped,
         "path_hit_count": len(path_hits),
         "content_hit_count": len(hits),
@@ -194,10 +240,17 @@ def main() -> None:
         "path_hits": path_hits,
         "content_hits": hits,
         "errors": errors,
-        "interpretation": "Artifact-content recovery only. A hit can recover evidence/source bytes; absence is not proof that the original local ChatGPT snapshot never existed.",
+        "interpretation": (
+            "Artifact-content recovery only. A hit can recover evidence/source bytes; "
+            "absence is not proof that the original local ChatGPT snapshot never existed."
+        ),
     }
-    (OUT / "artifact-inventory.json").write_text(json.dumps(inventory, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (OUT / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (OUT / "artifact-inventory.json").write_text(
+        json.dumps(inventory, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    (OUT / "report.json").write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(report, indent=2, ensure_ascii=False), flush=True)
 
 
