@@ -8,7 +8,7 @@ from .product_policy import (
     select_product_implementation,
 )
 
-PROFILE_SCHEMA = "rocketdict-workbench-product-profile/1"
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/2"
 
 QUALITY_GATES = (
     "rocketdict-numeric-symbol-preservation",
@@ -45,8 +45,6 @@ def _implementation(stage: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def _defaults(implementation: dict[str, Any]) -> dict[str, Any]:
-    # Fixed profile settings are implementation identity and are intentionally
-    # not copied into editable adapter parameters.
     return {
         str(control["key"]): control.get("default")
         for control in implementation.get("controls") or []
@@ -90,7 +88,6 @@ def build_product_profile(
     lab_manifest: dict[str, Any],
     *,
     source_kind: str = "subtitle",
-    stanza_model_dir: str | None = None,
 ) -> dict[str, Any]:
     if source_kind not in {"subtitle", "text"}:
         raise ValueError("source_kind must be subtitle or text")
@@ -99,12 +96,8 @@ def build_product_profile(
         try:
             selected[number] = _select_named_or_product(lab_manifest, number, source_kind=source_kind)
         except ProductPolicyError:
-            # Some historical registry versions may have later stages under
-            # different adapter names. Missing optional tail stages stay explicit.
             if number <= 19:
                 raise
-    if stanza_model_dir and selected.get(8, {}).get("implementation") == "stanza-full-en":
-        selected[8]["parameters"]["model_dir"] = stanza_model_dir
 
     stage15 = _stage(lab_manifest, 15)
     gates = []
@@ -128,13 +121,27 @@ def build_product_profile(
         "quality_gates": gates,
         "workbench_stages": {
             "18": {
-                "implementation": "workbench-content-pos-v1",
-                "policy": "retain all NLP token coverage; lexicalize content POS and valid MWEs only",
+                "implementation": "workbench-content-pos-v2",
+                "policy": "retain all NLP token coverage; lexicalize content POS and dictionary-relevant MWEs; generic noun chunks/NER remain evidence only",
             },
             "20_provider": {
-                "implementation": "contextual-lexical-opus-v1",
+                "implementation": "contextual-lexical-opus-v2",
                 "selection": "aligned-local-consensus",
+                "probe_policy": "pos-dependency-aware-v2",
                 "retain_nbest_evidence": True,
+            },
+        },
+        "runtime_assets": {
+            "nlp": {
+                "preferred": "en-sm",
+                "model": "en_core_web_sm",
+                "model_version": "3.8.0",
+                "offline_required": True,
+            },
+            "translation": {
+                "preferred": "opus-en-ru-ct2",
+                "compute_type": "float32",
+                "offline_required": True,
             },
         },
         "lifecycle": {
