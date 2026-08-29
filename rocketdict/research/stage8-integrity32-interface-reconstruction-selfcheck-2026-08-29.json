@@ -1,0 +1,49 @@
+{
+  "schema": "rocketdict-stage8-integrity32-interface-reconstruction-selfcheck/1",
+  "date_utc": "2026-08-29",
+  "promotion_allowed": false,
+  "exact_contract_claimed": false,
+  "implementation": "rocketdict-ci/stage8_integrity32_interface_reconstruction.py",
+  "reconstruction_contract": "rocketdict-numeric-integrity/3.2-interface-reconstruction/1",
+  "basis": [
+    "documented numeric-integrity/3.2 feature requirements preserved in RocketDict Stage8 handoff",
+    "exact historical F96 failure behavior for occurrences 15697, 16200, and 17795",
+    "exact 0.30.40 stage12_pilot.py prefix proving the contains_numeric_literal()/compare_numeric_integrity() interface names",
+    "no claim of byte identity or full semantic identity with lost src/rocketdict/translation/integrity.py"
+  ],
+  "self_check": {
+    "case_count": 14,
+    "passed_assertions": 14,
+    "cases": [
+      "mixed_fraction_identity",
+      "ordinal_suffix_en_to_ru",
+      "fraction_ordinal_suffix",
+      "old_ordinal_d",
+      "grouped_space_comma",
+      "single_grouped_thousand",
+      "decimal_comma",
+      "newton_apostrophe_decimal",
+      "f96_15697_structural_reference_loss",
+      "f96_16200_missing_three",
+      "f96_16200_nbest_preserves",
+      "f96_17795_extreme_sequence",
+      "duplicate_required_literal",
+      "unlicensed_addition"
+    ]
+  },
+  "f96_expected_behavior": {
+    "15697": {"passed": false, "missing": {"2": 1}, "unlicensed_additions": {}},
+    "16200_selected": {"passed": false, "missing": {"3": 1}, "unlicensed_additions": {}},
+    "16200_integrity_preserving_nbest": {"passed": true},
+    "17795": {
+      "passed": false,
+      "missing": {"1000000": 1, "1000000000000000000": 1},
+      "unlicensed_additions": {"1000000000": 1}
+    }
+  },
+  "known_scope_limits": [
+    "spelled-number licensing is deliberately limited to basic explicitly evidenced one-word English number forms",
+    "compound prose numerals and other undocumented historical licences are not inferred",
+    "this reconstruction may be used for recovery experiments only; it must not replace the historical numeric-integrity/3.2 identity in promotion evidence"
+  ]
+}
