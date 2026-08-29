@@ -8,16 +8,16 @@ class ProductPolicyError(RuntimeError):
     pass
 
 
-# Curated from the RocketDict lab registry contracts. These are the English
-# profiles that provide genuine linguistic analysis rather than tokenization-
-# only/code-only fallback behavior. Availability is still checked at runtime.
+# Product Mode prioritizes the smallest fully capable permissive offline profile
+# that has been smoke-tested through the real RocketDict Stage8 path. Stanza and
+# other full NLP stacks remain valid Research Mode axes and Product fallbacks.
 FULL_EN_NLP_PRIORITY = (
-    "stanza-full-en",
-    "trankit-full-en",
-    "en-trf",
-    "en-lg",
-    "en-md",
     "en-sm",
+    "en-md",
+    "en-lg",
+    "en-trf",
+    "trankit-full-en",
+    "stanza-full-en",
 )
 
 TRANSLATION_PRIORITY = (
@@ -81,7 +81,8 @@ def select_full_nlp(stage: dict[str, Any], *, require_available: bool) -> Produc
             continue
         if is_code_only_nlp(item):
             continue
-        return ProductSelection(int(stage["number"]), str(stage["key"]), key, "full_lemma_pos_nlp")
+        reason = "offline_spacy_full_nlp_baseline" if key == "en-sm" else "full_lemma_pos_nlp_fallback"
+        return ProductSelection(int(stage["number"]), str(stage["key"]), key, reason)
     available_code_only = [
         str(x.get("implementation_key")) for x in implementations
         if _eligible(x) and _available(x) and is_code_only_nlp(x)
@@ -134,6 +135,10 @@ def select_product_implementation(stage: dict[str, Any], *, require_available: b
 
 def product_parameter_overrides(stage_number: int, implementation_key: str, *, source_kind: str = "subtitle") -> dict[str, Any]:
     """Explicit, reportable Workbench defaults; never hidden adapter mutation."""
+    if stage_number == 8 and implementation_key.startswith("en-"):
+        # spaCy model identity is encoded by the adapter itself; no downloads or
+        # hidden network setup are required once the model wheel is installed.
+        return {}
     if stage_number == 8 and implementation_key == "stanza-full-en":
         return {
             "language": "en",
@@ -180,7 +185,7 @@ def validate_product_configuration(config: dict[str, Any], lab_manifest: dict[st
     if nlp_key not in FULL_EN_NLP_PRIORITY or is_code_only_nlp(item8):
         raise ProductPolicyError(
             f"NLP implementation {nlp_key!r} is not accepted for final Product Mode dictionaries; "
-            "use Stanza/Trankit/full spaCy or run it only as a Research Mode variant"
+            "use full spaCy/Trankit/Stanza or run it only as a Research Mode variant"
         )
 
     mt = configured.get(12)
