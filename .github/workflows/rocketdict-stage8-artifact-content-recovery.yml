@@ -1,0 +1,33 @@
+name: RocketDict Stage 8 artifact content recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/recover_stage8_artifact_contents.py'
+      - '.github/workflows/rocketdict-stage8-artifact-content-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  recover-artifact-contents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Scan historical Actions artifact contents for lost Stage 8 source/evidence
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python rocketdict-ci/recover_stage8_artifact_contents.py
+      - name: Upload artifact-content recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-artifact-content-recovery
+          path: rocketdict-stage8-artifact-content-recovery
+          if-no-files-found: error
