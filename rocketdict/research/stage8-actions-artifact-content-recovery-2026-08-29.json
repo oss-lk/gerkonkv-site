@@ -1,0 +1,93 @@
+{
+  "schema": "rocketdict-stage8-actions-artifact-content-recovery-summary/1",
+  "date_utc": "2026-08-29",
+  "promotion_allowed": false,
+  "workflow": {
+    "run_id": 33243767078,
+    "head_sha": "d888e6d043d43665661acc0caec0b14ae39ba735",
+    "conclusion": "success",
+    "artifact_id": 9712174775,
+    "artifact_name": "rocketdict-stage8-artifact-content-recovery",
+    "artifact_digest": "sha256:b9688c2fa606a1650a9344e56a7f5a5093d389d4ea2a738abdd7aa9ee0a866f8"
+  },
+  "coverage": {
+    "artifact_inventory_count": 102,
+    "attempted_artifact_count": 99,
+    "downloaded_artifact_count": 98,
+    "download_errors": 1,
+    "download_error": {
+      "artifact_id": 9679966093,
+      "artifact_name": "github-pages",
+      "error": "HTTP 404 Not Found"
+    },
+    "skipped_artifact_count": 3,
+    "skip_reason": "over 50 MiB recovery-scan size cap or otherwise excluded by fail-closed inventory policy; the large official OPUS runtime had already been manually inspected and contains model/runtime dependencies rather than RocketDict source"
+  },
+  "filename_recovery": {
+    "path_hit_count": 0,
+    "searched_names": [
+      "integrity.py",
+      "integrity_doe.py",
+      "stage12_pilot.py",
+      "test_stage8_integrity_research.py",
+      "test*integrity*"
+    ]
+  },
+  "source_level_term_recovery": {
+    "compare_numeric_integrity": {
+      "historical_hits": 3,
+      "artifact_ids": [9681838606, 9690729802, 9690741914],
+      "interpretation": "three copies of the already-known exact surviving 0.30.40 overlay prefix; no independent implementation hit"
+    },
+    "contains_numeric_literal": {
+      "historical_hits": 9,
+      "artifact_ids": [9681838606, 9690729802, 9690741914],
+      "interpretation": "three copies of the already-known exact surviving 0.30.40 overlay prefix, with import and two Stage12 selector call-sites"
+    },
+    "rocketdict.translation.integrity": {
+      "historical_hits": 3,
+      "artifact_ids": [9681838606, 9690729802, 9690741914],
+      "interpretation": "same surviving overlay prefix only"
+    },
+    "translation/integrity.py": {
+      "independent_historical_hits": 0
+    },
+    "research/integrity_doe.py": {
+      "independent_historical_hits": 0
+    },
+    "integrity_doe.py": {
+      "independent_historical_hits": 0
+    }
+  },
+  "manual_high_value_artifact_checks": [
+    {
+      "artifact_id": 9657985931,
+      "name": "rocketdict-stage8-validation-selection-r1",
+      "result": "selection TSV/JSON only; no lost integrity source"
+    },
+    {
+      "artifact_id": 9656546120,
+      "name": "rocketdict-stage8-v9-pinned-term-rescue",
+      "result": "reconstruction evidence only; no lost integrity source"
+    },
+    {
+      "artifact_id": 9653493129,
+      "name": "rocketdict-stage8-ghi-reconstruction",
+      "result": "reconstruction evidence only; no lost integrity source"
+    }
+  ],
+  "stage12_size_constraint": {
+    "parent_0_30_34_bytes": 51377,
+    "exact_0_30_40_tar_member_bytes": 51356,
+    "total_delta_bytes": -21,
+    "known_exact_prefix_change_delta_bytes": 111,
+    "required_unknown_tail_delta_bytes": -132,
+    "interpretation": "the unknown 0.30.40 Stage12 tail, including replacement of the parent naive numeric mismatch block by compare_numeric_integrity(), is exactly 132 bytes shorter than the corresponding 0.30.34 tail if no other unknown-size-changing edits exist"
+  },
+  "conclusion": [
+    "Historical GitHub Actions artifact bytes have now been scanned rather than only artifact metadata and logs.",
+    "No independent copy of translation/integrity.py, research/integrity_doe.py, stage8_rescore_integrity_doe.py, or test_stage8_integrity_research.py was recovered.",
+    "The only source-level integrity call-sites remain the exact surviving 0.30.40 stage12_pilot.py prefix.",
+    "Exact rocketdict-numeric-integrity/3.2 must therefore remain marked unavailable; subsequent work may construct non-promotional interface/behavior reconstructions but must not install them as the recovered exact source."
+  ]
+}
