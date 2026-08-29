@@ -4,7 +4,7 @@ from typing import Any
 
 from .product_policy import ProductPolicyError, product_parameter_overrides, select_product_implementation
 
-PROFILE_SCHEMA = "rocketdict-workbench-product-profile/3"
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/4"
 QUALITY_GATES = (
     "rocketdict-numeric-symbol-preservation",
     "rocketdict-punctuation-preservation",
@@ -85,6 +85,12 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
             if number <= 19:
                 raise
 
+    # The historical Stage23 default includes a smoke Tatoeba fixture. Product
+    # Mode never lets that diagnostic fixture become dictionary evidence.
+    if 23 in selected:
+        selected[23]["parameters"]["corpus_snapshots"] = []
+        selected[23]["selection_reason"] = "workbench_document_examples_only"
+
     stage15 = _stage(lab_manifest, 15)
     gates = []
     for key in QUALITY_GATES:
@@ -107,8 +113,10 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
         "quality_gates": gates,
         "workbench_stages": {
             "18": {
-                "implementation": "workbench-content-pos-v2",
-                "policy": "retain all NLP token coverage; lexicalize content POS and dictionary-relevant MWEs; generic noun chunks/NER remain evidence only",
+                "implementation": "workbench-aligned-content-pos-v3",
+                "policy": "use approved alignment plus saved full NLP; project saved NLP tokens onto structurally split alignment segments by verified document-stream offsets; lexicalize content POS and dictionary-relevant MWEs; retain rejected token coverage",
+                "requires_alignment": True,
+                "offset_projection_fail_closed": True,
             },
             "20_provider": {
                 "implementation": "contextual-lexical-opus-v3",
@@ -116,6 +124,12 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
                 "probe_policy": "pos-dependency-dictionary-shape-v3",
                 "retain_nbest_evidence": True,
                 "preserve_dictionary_form_through_stage20": True,
+            },
+            "23": {
+                "compatibility_contract": "stage23-sense-scope-v1",
+                "review_identity": "lexical_sense_scoped_settings_hash",
+                "corpus_smoke_disabled": True,
+                "document_alignment_evidence_required_for_primary": True,
             },
         },
         "runtime_assets": {
@@ -128,6 +142,7 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
             "sense_induction_requires_complete_lexical_coverage": True,
             "singleton_policy": "singleton-safe-v1-audited",
             "cards_require_approved_sense_translation": True,
+            "examples_require_sense_scoped_review_identity": True,
             "export_requires_complete_approved_card_set": True,
         },
         "invariants": {
@@ -138,5 +153,6 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
             "silent_source_loss_allowed": False,
             "unlicensed_numeric_addition_allowed": False,
             "research_overwrites_product_output": False,
+            "diagnostic_smoke_corpus_allowed_as_product_example": False,
         },
     }
