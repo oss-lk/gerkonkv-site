@@ -1,0 +1,53 @@
+{
+  "schema": "rocketdict-stage8-forward-challenge-r2/1",
+  "date_utc": "2026-08-29",
+  "status": "SOURCE_ONLY_FROZEN_BEFORE_NEW_INFERENCE",
+  "promotion_allowed": false,
+  "historical_f96_identity_claimed": false,
+  "purpose": "Forward-reconstruction challenge set after exact historical 5051/111 and 5000/109 membership proved unrecoverable from available handoff/Git/Actions/File Library evidence.",
+  "input": {
+    "canonical_sqlite_sha256": "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274",
+    "final_sentence_occurrence_count": 2914,
+    "sentence_occurrence_manifest_sha256": "4cc87876a99f84419fc2598a895469eb1e5e4d8c5a7136659c6536b9db30e063"
+  },
+  "selector": {
+    "contract": "coverage-stratified-v1-parent-exact-occurrence-projection",
+    "mechanics_basis": "byte-recovered RocketDict 0.30.34 Stage12 coverage-stratified-v1 selector projected directly onto the exact canonical final sentence-occurrence stream",
+    "target_words": 5000,
+    "document_position_buckets": 8,
+    "min_numeric_units": 8,
+    "min_critical_symbol_units": 8,
+    "min_long_units": 8,
+    "long_unit_min_words": 24,
+    "numeric_regex": "(?<![\\w])(?:[+-]?\\d+(?:[.,]\\d+)*(?:[eE][+-]?\\d+)?)(?![\\w])",
+    "critical_symbols": ["=", "%", "°", "±", "×", "÷"],
+    "long_selection": "longest-first then sequence_number then occurrence id",
+    "fill_selection": "breadth-first midpoint spread_order over all occurrences",
+    "no_target_or_model_information_used_by_selector": true,
+    "no_post_selection_clipping": true,
+    "membership_tuned_to_historical_failure_ids": false
+  },
+  "selection": {
+    "actual_words": 5025,
+    "occurrences": 100,
+    "occurrence_ids": [14749,14785,14819,14854,14885,14917,14939,14948,14979,15005,15034,15057,15086,15112,15140,15169,15198,15223,15251,15282,15309,15338,15367,15393,15424,15444,15447,15474,15475,15508,15535,15562,15586,15613,15640,15667,15688,15697,15726,15754,15780,15801,15811,15842,15871,15898,15928,15985,16040,16092,16148,16187,16200,16253,16311,16312,16371,16428,16484,16539,16546,16598,16662,16707,16719,16777,16841,16902,16951,17007,17068,17141,17194,17238,17245,17300,17357,17387,17414,17436,17473,17530,17583,17633,17684,17685,17743,17795,17845,17896,17901,17950,18004,18053,18113,18165,18209,18214,18219,18274],
+    "occurrence_ids_sha256": "ab4cd71c3b2dc97d3c3c43ef49e272f51e766c9925d49284bf1b7745e2a7e71a",
+    "full_row_manifest_sha256": "5c7e2f5ac39fe263b5dcf37897e7a8860e02f3742df3003bf4b50f35b5ca6f8e",
+    "source_text_join_sha256": "3affb432b84fc88ec45bdf7e5c8481abf5c53554529f1cd4913e0e22eff65fa1",
+    "selected_numeric_occurrences": 35,
+    "selected_critical_symbol_occurrences": 1,
+    "selected_long_occurrences": 61,
+    "contains_historical_f96_failure_occurrences": {
+      "15697": true,
+      "16200": true,
+      "17795": true
+    }
+  },
+  "freeze_rules": [
+    "Occurrence membership must not change after any new R2 translation result is observed.",
+    "Historical F96 measurements remain immutable reference evidence and are never overwritten by R2.",
+    "R2 results must be labelled forward-reconstruction and may not be presented as a reproduction of the lost 109-occurrence F96 run.",
+    "Any later independent validation set must be selected source-only and frozen before its first MT output."
+  ],
+  "next_action": "Materialize the 100 frozen source occurrences from the canonical SQLite into a compact public-domain source fixture, verify all row/text hashes, then run the same official OPUS identity through baseline and G/H/I forward-reconstruction cells."
+}
