@@ -1,0 +1,46 @@
+{
+  "schema": "rocketdict-stage8-integrity32-interface-reconstruction-evidence/1",
+  "date_utc": "2026-08-29",
+  "promotion_allowed": false,
+  "exact_contract_claimed": false,
+  "implementation": "rocketdict-ci/stage8_integrity32_interface_reconstruction.py",
+  "workflow": {
+    "run_id": 33243997034,
+    "head_sha": "8df71aae06f615cf21cd5d96591a690553d28b4f",
+    "conclusion": "success",
+    "artifact_id": 9712235073,
+    "artifact_digest": "sha256:3a1f1e9887e3f475506b539ed3ecbf4debb658f47993af62b4c81b4f5180afe5"
+  },
+  "self_check": {
+    "case_count": 12,
+    "cases": [
+      {"name":"mixed_fraction_identity","expected_pass":true},
+      {"name":"ordinal_suffix_en_to_ru","expected_pass":true},
+      {"name":"fraction_ordinal_suffix","expected_pass":true},
+      {"name":"old_ordinal_d","expected_pass":true},
+      {"name":"grouped_space_comma","expected_pass":true},
+      {"name":"single_grouped_thousand","expected_pass":true},
+      {"name":"decimal_comma","expected_pass":true},
+      {"name":"newton_apostrophe_decimal","expected_pass":true},
+      {"name":"f96_15697_structural_reference_loss","expected_pass":false,"expected_missing":{"2":1},"expected_unlicensed_additions":{}},
+      {"name":"f96_16200_missing_three","expected_pass":false,"expected_missing":{"3":1},"expected_unlicensed_additions":{}},
+      {"name":"f96_16200_nbest_preserves","expected_pass":true},
+      {"name":"f96_17795_extreme_sequence","expected_pass":false,"expected_missing":{"1000000":1,"1000000000000000000":1},"expected_unlicensed_additions":{"1000000000":1}}
+    ]
+  },
+  "supported_documented_behaviors": [
+    "mixed/simple fractions",
+    "English and Russian ordinal suffix normalization",
+    "old ordinal d notation",
+    "grouped thousands with spaces/commas",
+    "decimal comma",
+    "Newton apostrophe decimal notation",
+    "source-side spelled-number licences for documented basic English number words",
+    "missing, duplicate-required and unlicensed-addition diagnostics"
+  ],
+  "interpretation": [
+    "This makes the documented Stage 8 numeric contract executable for recovery experiments and reproduces the known classification of all three F96 failures.",
+    "It is not the recovered 0.30.40 translation/integrity.py and must not be installed or cited as exact rocketdict-numeric-integrity/3.2.",
+    "Passing these twelve cases is necessary behavioral evidence, not proof of equivalence on the full historical F96 output set."
+  ]
+}
