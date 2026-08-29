@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 
 SOURCE_URL = "https://raw.githubusercontent.com/openlanguageprofiles/olp-en-cefrj/master/cefrj-vocabulary-profile-1.5.csv"
-EXPECTED_SHA256: str | None = None  # pinned after first upstream verification run
+EXPECTED_SHA256 = "b0dd3c635f1c9a4fdf1490c7e5b7c48e8bbe55b652ad0c9860a95f98e10ae498"
 EXPECTED_HEADER = ["headword", "pos", "CEFR", "CoreInventory 1", "CoreInventory 2", "Threshold"]
 KNOWN = {
     ("abandon", "verb"): "B1",
@@ -27,7 +27,7 @@ def sha256(path: Path) -> str:
 def main() -> None:
     path = Path(sys.argv[1]).resolve()
     actual = sha256(path)
-    if EXPECTED_SHA256 is not None and actual != EXPECTED_SHA256:
+    if actual != EXPECTED_SHA256:
         raise RuntimeError(f"CEFR-J SHA mismatch: {actual} != {EXPECTED_SHA256}")
     rows = []
     with path.open("r", encoding="utf-8-sig", newline="") as fh:
