@@ -9,8 +9,10 @@ from typing import Any, Iterable
 
 from .core import RocketDictCore
 
-PROVIDER_SCHEMA = "rocketdict-workbench-lexical-opus/1"
-SNAPSHOT_VERSION = "opus-2020-02-11+workbench-lexical-v1"
+PROVIDER_SCHEMA = "rocketdict-workbench-lexical-opus/2"
+SNAPSHOT_VERSION = "opus-2020-02-11+workbench-lexical-v2"
+VERB_ENTRY_TYPES = {"phrasal_verb", "prepositional_verb"}
+OBJECT_DEPENDENCIES = {"dobj", "obj", "pobj", "nsubj", "nsubjpass"}
 
 
 def normalize_lexical_text(value: str) -> str:
@@ -19,21 +21,84 @@ def normalize_lexical_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).casefold().strip()
 
 
-def probe_forms(lemma: str) -> list[dict[str, Any]]:
-    """Return deterministic lexical probes; all probe/rank evidence is retained."""
+def effective_probe_pos(part_of_speech: str | None, dependency: str | None) -> tuple[str, str]:
+    pos = str(part_of_speech or "X").upper()
+    dep = str(dependency or "").casefold()
+    if pos == "VERB" and dep in OBJECT_DEPENDENCIES:
+        return "NOUN", "dependency_pos_repair"
+    return pos, "declared_pos"
+
+
+def probe_forms(
+    lemma: str,
+    part_of_speech: str | None = None,
+    entry_type: str | None = None,
+    dependency: str | None = None,
+) -> list[dict[str, Any]]:
+    """Deterministic POS-aware probes; raw probe identity is preserved in evidence."""
     lemma = re.sub(r"\s+", " ", lemma.strip())
-    values: list[tuple[str, str, float]] = []
-    if lemma:
-        values.append(("titlecase", lemma[:1].upper() + lemma[1:], 0.0))
-        values.append(("lemma", lemma, 0.04))
+    if not lemma:
+        return []
+    effective_pos, pos_reason = effective_probe_pos(part_of_speech, dependency)
+    etype = str(entry_type or "").casefold()
+    title = lemma[:1].upper() + lemma[1:]
+    values: list[tuple[str, str, float]]
+    if etype in VERB_ENTRY_TYPES:
+        values = [
+            ("verb_argument", f"to {lemma} something", 0.98),
+            ("verb_infinitive", f"to {lemma}", 0.92),
+            ("lemma", lemma, 0.78),
+            ("titlecase", title, 0.70),
+        ]
+    elif effective_pos == "VERB":
+        values = [
+            ("verb_argument", f"to {lemma} something", 0.98),
+            ("verb_infinitive", f"to {lemma}", 0.92),
+            ("lemma", lemma, 0.80),
+            ("titlecase", title, 0.68),
+        ]
+    elif effective_pos == "ADJ":
+        values = [
+            ("adjective_copula", f"is {lemma}", 0.98),
+            ("lemma", lemma, 0.90),
+            ("titlecase", title, 0.72),
+        ]
+    elif effective_pos in {"NOUN", "PROPN"}:
+        values = [("titlecase", title, 0.96), ("lemma", lemma, 0.90)]
+    else:
+        values = [("titlecase", title, 0.92), ("lemma", lemma, 0.88)]
     result: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for kind, text, penalty in values:
+    for kind, text, base_confidence in values:
         if text in seen:
             continue
         seen.add(text)
-        result.append({"kind": kind, "text": text, "confidence_penalty": penalty})
+        result.append(
+            {
+                "kind": kind,
+                "text": text,
+                "base_confidence": base_confidence,
+                "effective_pos": effective_pos,
+                "pos_reason": pos_reason,
+            }
+        )
     return result
+
+
+def clean_probe_target(target: str, probe_kind: str) -> tuple[str, str | None]:
+    cleaned = target.strip().strip(" .,!;:…")
+    transform = None
+    if probe_kind == "verb_argument":
+        stripped = re.sub(
+            r"\s+(?:что(?:-|\s)?то|что(?:-|\s)?нибудь|это)\s*$",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip()
+        if stripped != cleaned:
+            cleaned = stripped
+            transform = "strip_generic_argument"
+    return cleaned, transform
 
 
 def admissible_ru_candidate(source_lemma: str, target: str) -> tuple[bool, str | None]:
@@ -51,30 +116,71 @@ def admissible_ru_candidate(source_lemma: str, target: str) -> tuple[bool, str |
         return False, "latin_leakage"
     if re.fullmatch(r"[\W\d_]+", cleaned, re.UNICODE):
         return False, "numeric_or_punctuation_only"
+    if normalize_lexical_text(cleaned).startswith(("чтобы ", "для того чтобы ")):
+        return False, "synthetic_probe_wrapper"
     return True, None
 
 
-def provider_confidence(rank: int, probe_kind: str) -> float:
-    penalty = 0.0 if probe_kind == "titlecase" else 0.04
-    return round(max(0.52, 0.94 - 0.055 * int(rank) - penalty), 4)
+def _looks_like_russian_infinitive(value: str) -> bool:
+    first = normalize_lexical_text(value).split(" ", 1)[0]
+    return bool(re.search(r"(?:ть|ться|ти|тись|чь|чься)$", first))
+
+
+def provider_confidence(
+    rank: int,
+    probe_kind: str,
+    *,
+    base_confidence: float | None = None,
+    effective_pos: str | None = None,
+    target: str = "",
+) -> float:
+    if base_confidence is None:
+        base_confidence = 0.94 if probe_kind == "titlecase" else 0.90
+    score = float(base_confidence) - 0.045 * int(rank)
+    if effective_pos == "VERB" and _looks_like_russian_infinitive(target):
+        score += 0.12
+    return round(min(0.99, max(0.52, score)), 4)
 
 
 def _helper_code() -> str:
-    # This executes inside the selected RocketDict core Python, keeping the
-    # Workbench package itself dependency-light and compatible with a separate
-    # core environment.
     return r'''
 import json,re,sys,unicodedata
 from pathlib import Path
 from sqlalchemy import select
 from rocketdict.database import bootstrap_database,create_session_factory
 from rocketdict.database.models import LexicalSense,LexicalEntry
+from rocketdict.database.models.extraction import LexicalCandidate,LexicalCandidateMember
 from rocketdict.translation.backends import CTranslate2MarianBackend
+
+VERB_TYPES={"phrasal_verb","prepositional_verb"}
+OBJECT_DEPS={"dobj","obj","pobj","nsubj","nsubjpass"}
 
 def norm(v):
     v=unicodedata.normalize("NFKC",v or "").strip()
     v=re.sub(r"^[\s\.,;:!?…\"'«»()\[\]{}]+|[\s\.,;:!?…\"'«»()\[\]{}]+$","",v)
     return re.sub(r"\s+"," ",v).casefold().strip()
+def effective_pos(pos,dep):
+    pos=str(pos or "X").upper(); dep=str(dep or "").casefold()
+    return ("NOUN","dependency_pos_repair") if pos=="VERB" and dep in OBJECT_DEPS else (pos,"declared_pos")
+def probes(lemma,pos,etype,dep):
+    ep,reason=effective_pos(pos,dep); etype=str(etype or "").casefold(); title=lemma[:1].upper()+lemma[1:]
+    if etype in VERB_TYPES:
+        vals=[("verb_argument",f"to {lemma} something",.98),("verb_infinitive",f"to {lemma}",.92),("lemma",lemma,.78),("titlecase",title,.70)]
+    elif ep=="VERB":
+        vals=[("verb_argument",f"to {lemma} something",.98),("verb_infinitive",f"to {lemma}",.92),("lemma",lemma,.80),("titlecase",title,.68)]
+    elif ep=="ADJ":vals=[("adjective_copula",f"is {lemma}",.98),("lemma",lemma,.90),("titlecase",title,.72)]
+    elif ep in {"NOUN","PROPN"}:vals=[("titlecase",title,.96),("lemma",lemma,.90)]
+    else:vals=[("titlecase",title,.92),("lemma",lemma,.88)]
+    out=[];seen=set()
+    for k,t,b in vals:
+        if t and t not in seen:seen.add(t);out.append((k,t,b,ep,reason))
+    return out
+def clean_target(tgt,kind):
+    c=tgt.strip().strip(" .,!;:…"); transform=None
+    if kind=="verb_argument":
+        s=re.sub(r"\s+(?:что(?:-|\s)?то|что(?:-|\s)?нибудь|это)\s*$","",c,flags=re.I).strip()
+        if s!=c:c=s;transform="strip_generic_argument"
+    return c,transform
 def admissible(src,tgt):
     n=norm(tgt)
     if not n:return False,"empty"
@@ -83,40 +189,54 @@ def admissible(src,tgt):
     if cyr==0:return False,"no_cyrillic"
     if latin>cyr:return False,"latin_leakage"
     if re.fullmatch(r"[\W\d_]+",tgt,re.UNICODE):return False,"numeric_or_punctuation_only"
+    if n.startswith(("чтобы ","для того чтобы ")):return False,"synthetic_probe_wrapper"
     return True,None
+def infinitive(v):
+    first=norm(v).split(" ",1)[0]
+    return bool(re.search(r"(?:ть|ться|ти|тись|чь|чься)$",first))
+def confidence(rank,kind,base,ep,target):
+    score=float(base)-.045*int(rank)
+    if ep=="VERB" and infinitive(target):score+=.12
+    return round(min(.99,max(.52,score)),4)
 
 db=Path(sys.argv[1]); model=Path(sys.argv[2]); revision=sys.argv[3]
-beam=int(sys.argv[4]); hypotheses=int(sys.argv[5]); maximum=int(sys.argv[6])
-requested=json.loads(sys.argv[7])
+beam=int(sys.argv[4]); hypotheses=int(sys.argv[5]); maximum=int(sys.argv[6]); requested=json.loads(sys.argv[7])
 e=bootstrap_database(db); sf=create_session_factory(e)
 with sf() as s:
     q=select(LexicalSense,LexicalEntry).join(LexicalEntry,LexicalEntry.id==LexicalSense.lexical_entry_id).order_by(LexicalSense.id)
     rows=s.execute(q).all()
+    context={}
+    for sense,entry in rows:
+        cand=s.scalar(select(LexicalCandidate).where(LexicalCandidate.lexical_entry_id==entry.id).order_by(LexicalCandidate.id.desc()))
+        dep=None; surface=None; candidate_type=None
+        if cand is not None:
+            candidate_type=cand.candidate_type; surface=cand.surface_text
+            members=s.scalars(select(LexicalCandidateMember).where(LexicalCandidateMember.lexical_candidate_id==cand.id).order_by(LexicalCandidateMember.member_order)).all()
+            if len(members)==1:dep=members[0].dependency
+        context[int(sense.id)]={"dependency":dep,"surface":surface,"candidate_type":candidate_type}
 if requested:
     wanted={int(x) for x in requested}; rows=[x for x in rows if int(x[0].id) in wanted]
 backend=CTranslate2MarianBackend(model,tokenizer_identifier=model,device="cpu",compute_type="float32",revision=revision)
-entries={}; evidence=[]
+entries={}; evidence=[]; probe_meta=[]
 for sense,entry in rows:
-    lemma=str(entry.normalized_lemma or entry.lemma or "").strip()
-    probes=[]; title=(lemma[:1].upper()+lemma[1:]) if lemma else lemma
-    for kind,text,pen in (("titlecase",title,0.0),("lemma",lemma,0.04)):
-        if text and text not in [p[1] for p in probes]:probes.append((kind,text,pen))
-    accepted={}
-    for kind,text,pen in probes:
+    lemma=str(entry.normalized_lemma or entry.lemma or "").strip(); ctx=context.get(int(sense.id),{})
+    etype=getattr(entry.entry_type,"value",str(entry.entry_type)); dep=ctx.get("dependency")
+    ps=probes(lemma,entry.part_of_speech,etype,dep); accepted={}
+    probe_meta.append({"sense_id":int(sense.id),"entry_id":int(entry.id),"lemma":lemma,"declared_pos":entry.part_of_speech,"entry_type":etype,"dependency":dep,"candidate_type":ctx.get("candidate_type"),"surface":ctx.get("surface"),"probes":[{"kind":x[0],"text":x[1],"base_confidence":x[2],"effective_pos":x[3],"pos_reason":x[4]} for x in ps]})
+    for kind,text,base,ep,pos_reason in ps:
         outs=backend.translate_batch([text],generation_settings={"num_beams":beam,"num_return_sequences":hypotheses,"max_new_tokens":32})[0]
         for rank,out in enumerate(outs):
-            cleaned=out.text.strip().strip(" .,!;:…")
-            ok,reason=admissible(lemma,cleaned)
-            evidence.append({"sense_id":int(sense.id),"entry_id":int(entry.id),"lemma":lemma,"probe_kind":kind,"probe_text":text,"rank":rank,"target":out.text,"cleaned_target":cleaned,"raw_score":out.raw_score,"accepted":ok,"rejection_reason":reason})
+            cleaned,transform=clean_target(out.text,kind); ok,reason=admissible(lemma,cleaned)
+            conf=confidence(rank,kind,base,ep,cleaned) if ok else None
+            ev={"sense_id":int(sense.id),"entry_id":int(entry.id),"lemma":lemma,"declared_pos":entry.part_of_speech,"effective_pos":ep,"pos_reason":pos_reason,"entry_type":etype,"dependency":dep,"probe_kind":kind,"probe_text":text,"rank":rank,"target":out.text,"cleaned_target":cleaned,"target_transform":transform,"raw_score":out.raw_score,"accepted":ok,"rejection_reason":reason,"provider_confidence":conf}
+            evidence.append(ev)
             if not ok:continue
-            n=norm(cleaned); conf=round(max(.52,.94-.055*rank-pen),4)
-            candidate={"translation":cleaned,"confidence":conf,"context_compatibility":.86 if kind=="titlecase" else .80,"literal":True}
+            n=norm(cleaned); candidate={"translation":cleaned,"confidence":conf,"context_compatibility":.90 if kind in {"verb_argument","adjective_copula"} else .86 if kind in {"verb_infinitive","titlecase"} else .80,"literal":True}
             prior=accepted.get(n)
             if prior is None or (candidate["confidence"],candidate["context_compatibility"])>(prior["confidence"],prior["context_compatibility"]):accepted[n]=candidate
     entries[lemma]=sorted(accepted.values(),key=lambda x:(-x["confidence"],-x["context_compatibility"],norm(x["translation"])))[:maximum]
-summary={"sense_count":len(rows),"entry_count":len(entries),"candidate_count":sum(len(x) for x in entries.values()),"rejected_count":sum(1 for x in evidence if not x["accepted"]),"backend_compute_type":backend.compute_type,"backend_runtime":backend.runtime_backend_key}
-print(json.dumps({"entries":entries,"evidence":evidence,"summary":summary},ensure_ascii=False))
-e.dispose()
+summary={"sense_count":len(rows),"entry_count":len(entries),"candidate_count":sum(len(x) for x in entries.values()),"rejected_count":sum(1 for x in evidence if not x["accepted"]),"dependency_pos_repair_count":sum(1 for x in probe_meta if any(p["pos_reason"]=="dependency_pos_repair" for p in x["probes"])),"backend_compute_type":backend.compute_type,"backend_runtime":backend.runtime_backend_key}
+print(json.dumps({"entries":entries,"evidence":evidence,"probe_meta":probe_meta,"summary":summary},ensure_ascii=False)); e.dispose()
 '''
 
 
@@ -129,10 +249,10 @@ def build_opus_lexical_snapshot(
     archive_sha256: str,
     source_uri: str,
     sense_ids: Iterable[int] = (),
-    beam_size: int = 8,
-    num_hypotheses: int = 8,
+    beam_size: int = 12,
+    num_hypotheses: int = 12,
     maximum_candidates_per_lemma: int = 8,
-    model_name: str = "OPUS EN-RU lexical n-best provider",
+    model_name: str = "OPUS EN-RU POS-aware lexical n-best provider",
     license_expression: str = "Apache-2.0",
 ) -> dict[str, Any]:
     database = Path(database).expanduser().resolve()
@@ -144,25 +264,50 @@ def build_opus_lexical_snapshot(
     requested = [int(x) for x in sense_ids]
     result = core._run(
         ["-c", _helper_code(), str(database), str(model_path), str(revision), str(int(beam_size)), str(int(num_hypotheses)), str(int(maximum_candidates_per_lemma)), json.dumps(requested, separators=(",", ":"))],
-        timeout=600,
+        timeout=900,
     )
     payload = core._parse_json(result.stdout, context="lexical OPUS provider")
     entries = dict(payload.get("entries") or {})
     evidence = list(payload.get("evidence") or [])
     snapshot = {
-        "source_type": "model", "name": model_name, "version": SNAPSHOT_VERSION, "revision": str(revision),
-        "sha256": archive_sha256.lower(), "license_expression": license_expression,
-        "license_class": "attribution_required", "commercial_allowed": True, "attribution_required": True,
-        "license_review_status": "machine_assessed", "available": True, "network_access": False,
-        "source_language": "en", "target_language": "ru", "source_uri": source_uri,
-        "local_path": str(model_path), "entries": entries, "capability_claim": "production", "is_smoke": False,
+        "source_type": "model",
+        "name": model_name,
+        "version": SNAPSHOT_VERSION,
+        "revision": str(revision),
+        "sha256": archive_sha256.lower(),
+        "license_expression": license_expression,
+        "license_class": "attribution_required",
+        "commercial_allowed": True,
+        "attribution_required": True,
+        "license_review_status": "machine_assessed",
+        "available": True,
+        "network_access": False,
+        "source_language": "en",
+        "target_language": "ru",
+        "source_uri": source_uri,
+        "local_path": str(model_path),
+        "entries": entries,
+        "capability_claim": "production",
+        "is_smoke": False,
     }
     canonical_entries = json.dumps(entries, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return {
-        "schema": PROVIDER_SCHEMA, "provider": "contextual-lexical-opus-v1", "snapshot": snapshot,
+        "schema": PROVIDER_SCHEMA,
+        "provider": "contextual-lexical-opus-v2",
+        "snapshot": snapshot,
         "entries_sha256": hashlib.sha256(canonical_entries.encode("utf-8")).hexdigest(),
-        "summary": payload.get("summary") or {}, "evidence": evidence,
-        "settings": {"beam_size": int(beam_size), "num_hypotheses": int(num_hypotheses), "maximum_candidates_per_lemma": int(maximum_candidates_per_lemma), "probe_order": ["titlecase", "lemma"], "target_language": "ru", "network_access": False},
+        "summary": payload.get("summary") or {},
+        "probe_meta": payload.get("probe_meta") or [],
+        "evidence": evidence,
+        "settings": {
+            "beam_size": int(beam_size),
+            "num_hypotheses": int(num_hypotheses),
+            "maximum_candidates_per_lemma": int(maximum_candidates_per_lemma),
+            "probe_policy": "pos-dependency-aware-v2",
+            "generic_argument_transform": "strip-russian-placeholder-v1",
+            "target_language": "ru",
+            "network_access": False,
+        },
     }
 
 
@@ -172,7 +317,7 @@ def run_stage20_with_snapshot(
     provider_result: dict[str, Any],
     *,
     source_policy: str = "local-snapshots-only",
-    actor: str = "rocketdict-workbench:contextual-lexical-opus-v1",
+    actor: str = "rocketdict-workbench:contextual-lexical-opus-v2",
     sense_ids: Iterable[int] = (),
 ) -> dict[str, Any]:
     snapshot = provider_result.get("snapshot")
@@ -201,15 +346,19 @@ for sense,entry in rows:
         c=row.get("candidate") or {}; i=row.get("item") or {}
         selected.append({"translation":c.get("translation_text"),"position":i.get("position"),"role":i.get("role"),"confidence":i.get("confidence"),"candidate_id":c.get("id")})
     selected.sort(key=lambda x:(x.get("position") or 999999))
-    out.append({"sense_id":int(sense.id),"entry_id":int(entry.id),"lemma":entry.lemma,"normalized_lemma":entry.normalized_lemma,"selection_revision_id":int(result.selection_revision_id),"generation_run_id":int(result.generation_run_id),"cache_hit":bool(result.cache_hit),"coverage_complete":bool(result.coverage_complete),"selected":selected})
+    out.append({"sense_id":int(sense.id),"entry_id":int(entry.id),"lemma":entry.lemma,"normalized_lemma":entry.normalized_lemma,"part_of_speech":entry.part_of_speech,"entry_type":getattr(entry.entry_type,"value",str(entry.entry_type)),"selection_revision_id":int(result.selection_revision_id),"generation_run_id":int(result.generation_run_id),"cache_hit":bool(result.cache_hit),"coverage_complete":bool(result.coverage_complete),"selected":selected})
 print(json.dumps({"source_policy":policy,"results":out},ensure_ascii=False)); e.dispose()
 '''
     requested = [int(x) for x in sense_ids]
-    result = core._run(["-c", code, str(Path(database).expanduser().resolve()), json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")), source_policy, actor, json.dumps(requested, separators=(",", ":"))], timeout=600)
+    result = core._run(
+        ["-c", code, str(Path(database).expanduser().resolve()), json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")), source_policy, actor, json.dumps(requested, separators=(",", ":"))],
+        timeout=600,
+    )
     return dict(core._parse_json(result.stdout, context="Stage20 lexical snapshot run"))
 
 
 def write_provider_evidence(path: Path | str, payload: dict[str, Any]) -> Path:
-    path = Path(path).expanduser().resolve(); path.parent.mkdir(parents=True, exist_ok=True)
+    path = Path(path).expanduser().resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
     return path
