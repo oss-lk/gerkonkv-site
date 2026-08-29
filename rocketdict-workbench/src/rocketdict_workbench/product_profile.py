@@ -2,20 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from .product_policy import (
-    ProductPolicyError,
-    product_parameter_overrides,
-    select_product_implementation,
-)
+from .product_policy import ProductPolicyError, product_parameter_overrides, select_product_implementation
 
-PROFILE_SCHEMA = "rocketdict-workbench-product-profile/2"
-
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/3"
 QUALITY_GATES = (
     "rocketdict-numeric-symbol-preservation",
     "rocketdict-punctuation-preservation",
     "rocketdict-length-ratio-proxy",
 )
-
 PREFERRED_IMPLEMENTATIONS = {
     10: "structural-entity-term-discourse-pronoun-v1",
     14: "glossary_refinement-current",
@@ -32,7 +26,7 @@ PREFERRED_IMPLEMENTATIONS = {
 
 def _stage(manifest: dict[str, Any], number: int) -> dict[str, Any]:
     for row in manifest.get("stages") or []:
-        if int(row.get("number") or 0) == int(number):
+        if int(row.get("number") or 0) == number:
             return row
     raise ProductPolicyError(f"Lab registry has no stage {number}")
 
@@ -58,19 +52,15 @@ def _select_named_or_product(manifest: dict[str, Any], number: int, *, source_ki
     if preferred:
         try:
             impl = _implementation(stage, preferred)
-            if impl.get("production_eligible") and not impl.get("testing_only"):
-                key = preferred
-                reason = "workbench_product_preference"
-            else:
+            if not impl.get("production_eligible") or impl.get("testing_only"):
                 raise ProductPolicyError(f"Preferred implementation is not production eligible: {preferred}")
+            key, reason = preferred, "workbench_product_preference"
         except ProductPolicyError:
             selected = select_product_implementation(stage, require_available=False)
-            key = selected.implementation_key
-            reason = selected.reason
+            key, reason = selected.implementation_key, selected.reason
     else:
         selected = select_product_implementation(stage, require_available=False)
-        key = selected.implementation_key
-        reason = selected.reason
+        key, reason = selected.implementation_key, selected.reason
     impl = _implementation(stage, key)
     params = _defaults(impl)
     params.update(product_parameter_overrides(number, key, source_kind=source_kind))
@@ -84,11 +74,7 @@ def _select_named_or_product(manifest: dict[str, Any], number: int, *, source_ki
     }
 
 
-def build_product_profile(
-    lab_manifest: dict[str, Any],
-    *,
-    source_kind: str = "subtitle",
-) -> dict[str, Any]:
+def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "subtitle") -> dict[str, Any]:
     if source_kind not in {"subtitle", "text"}:
         raise ValueError("source_kind must be subtitle or text")
     selected: dict[int, dict[str, Any]] = {}
@@ -125,24 +111,16 @@ def build_product_profile(
                 "policy": "retain all NLP token coverage; lexicalize content POS and dictionary-relevant MWEs; generic noun chunks/NER remain evidence only",
             },
             "20_provider": {
-                "implementation": "contextual-lexical-opus-v2",
+                "implementation": "contextual-lexical-opus-v3",
                 "selection": "aligned-local-consensus",
-                "probe_policy": "pos-dependency-aware-v2",
+                "probe_policy": "pos-dependency-dictionary-shape-v3",
                 "retain_nbest_evidence": True,
+                "preserve_dictionary_form_through_stage20": True,
             },
         },
         "runtime_assets": {
-            "nlp": {
-                "preferred": "en-sm",
-                "model": "en_core_web_sm",
-                "model_version": "3.8.0",
-                "offline_required": True,
-            },
-            "translation": {
-                "preferred": "opus-en-ru-ct2",
-                "compute_type": "float32",
-                "offline_required": True,
-            },
+            "nlp": {"preferred": "en-sm", "model": "en_core_web_sm", "model_version": "3.8.0", "offline_required": True},
+            "translation": {"preferred": "opus-en-ru-ct2", "compute_type": "float32", "offline_required": True},
         },
         "lifecycle": {
             "translation_revision_requires_zero_hard_quality_failures": True,
