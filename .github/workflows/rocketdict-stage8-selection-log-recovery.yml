@@ -1,0 +1,33 @@
+name: RocketDict Stage 8 selection log recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/recover_stage8_selection_logs.py'
+      - '.github/workflows/rocketdict-stage8-selection-log-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  recover-selection-logs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Scan historical RocketDict workflow logs for Stage8 challenge-selection metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python rocketdict-ci/recover_stage8_selection_logs.py
+      - name: Upload log recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-stage8-selection-log-recovery
+          path: rocketdict-stage8-selection-log-recovery
+          if-no-files-found: error
