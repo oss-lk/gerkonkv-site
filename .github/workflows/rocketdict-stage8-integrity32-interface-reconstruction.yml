@@ -1,0 +1,42 @@
+name: RocketDict Stage 8 integrity32 interface reconstruction
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/stage8_integrity32_interface_reconstruction.py'
+      - '.github/workflows/rocketdict-stage8-integrity32-interface-reconstruction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile diagnostic reconstruction
+        run: python -m py_compile rocketdict-ci/stage8_integrity32_interface_reconstruction.py
+      - name: Run documented-contract and F96 self-checks
+        run: |
+          mkdir -p rocketdict-integrity32-interface-reconstruction
+          python rocketdict-ci/stage8_integrity32_interface_reconstruction.py > rocketdict-integrity32-interface-reconstruction/selfcheck.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('rocketdict-integrity32-interface-reconstruction/selfcheck.json').read_text())
+          assert report['promotion_allowed'] is False
+          assert report['exact_contract_claimed'] is False
+          assert report['case_count'] == 12
+          print('integrity32 interface reconstruction self-checks:', report['case_count'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-integrity32-interface-reconstruction
+          path: rocketdict-integrity32-interface-reconstruction
+          if-no-files-found: error
