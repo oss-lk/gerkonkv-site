@@ -41,6 +41,8 @@ SENSE_TRANSLATION_PRIORITY = (
     "sense_translation-current",
 )
 
+SUBTITLE_SAFE_PREFERRED_UNIT_TOKENS = 12
+
 
 @dataclass(frozen=True)
 class ProductSelection:
@@ -130,6 +132,34 @@ def select_product_implementation(stage: dict[str, Any], *, require_available: b
     return ProductSelection(number, str(stage.get("key") or ""), str(selected["implementation_key"]), "first_eligible_after_product_rules")
 
 
+def product_parameter_overrides(stage_number: int, implementation_key: str, *, source_kind: str = "subtitle") -> dict[str, Any]:
+    """Explicit, reportable Workbench defaults; never hidden adapter mutation."""
+    if stage_number == 8 and implementation_key == "stanza-full-en":
+        return {
+            "language": "en",
+            "processors": "tokenize,pos,lemma,depparse",
+            "use_gpu": False,
+            "allow_download": False,
+        }
+    if stage_number == 12 and implementation_key == "opus-en-ru-ct2":
+        values: dict[str, Any] = {
+            "allow_download": False,
+            "device": "cpu",
+            "compute_type": "float32",
+            "run_assemble": True,
+        }
+        if source_kind == "subtitle":
+            # Real product smoke showed a wider multi-sentence MT unit could
+            # collapse three short subtitle-like sentences to one target line.
+            # 12 preserved all three. This remains an explicit research axis,
+            # not an immutable universal model claim.
+            values["plan_preferred_unit_tokens"] = SUBTITLE_SAFE_PREFERRED_UNIT_TOKENS
+        return values
+    if stage_number == 20 and implementation_key in {"aligned-local-consensus", "local-snapshots-only"}:
+        return {"source_policy": implementation_key}
+    return {}
+
+
 def validate_product_configuration(config: dict[str, Any], lab_manifest: dict[str, Any]) -> list[str]:
     """Fail closed on configurations that can produce technically valid but poor dictionaries."""
     warnings: list[str] = []
@@ -161,5 +191,10 @@ def validate_product_configuration(config: dict[str, Any], lab_manifest: dict[st
         raise ProductPolicyError(f"Fake/identity MT is forbidden in Product Mode: {mt_key}")
     if mt_key not in TRANSLATION_PRIORITY:
         warnings.append(f"Stage12 uses {mt_key}; this is not in the currently proven Product Mode MT preference list")
+
+    if mt_key == "opus-en-ru-ct2":
+        compute_type = (mt.get("parameters") or {}).get("compute_type")
+        if compute_type not in {None, "float32"}:
+            raise ProductPolicyError(f"Product Mode OPUS quality acceptance requires float32, got {compute_type!r}")
 
     return warnings
