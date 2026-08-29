@@ -1,0 +1,68 @@
+{
+  "schema": "rocketdict-stage8-historical-selection-recovery-exhaustion/1",
+  "date_utc": "2026-08-29",
+  "promotion_allowed": false,
+  "historical_selection_identity_recovered": false,
+  "historical_facts_preserved": {
+    "initial_source_words": 5051,
+    "initial_source_occurrences": 111,
+    "initial_description": "deterministic source-only challenge set covering document positions, numeric cases, longest units, and structural/critical cases",
+    "clipping_operation_name": "budget_clipped",
+    "selection_changed": true,
+    "final_source_words": 5000,
+    "final_source_occurrences": 109,
+    "E_chunks": 150,
+    "F96_preferred_token_budget": 96,
+    "F96_chunks": 168,
+    "known_F96_failure_occurrences": [15697, 16200, 17795]
+  },
+  "exact_identity_still_missing": {
+    "initial_111_occurrence_ids": null,
+    "initial_111_selection_sha256": null,
+    "removed_occurrence_ids": null,
+    "final_109_occurrence_ids": null,
+    "final_109_selection_sha256": null,
+    "exact_budget_clipping_code": null,
+    "exact_translation_integrity_py": null,
+    "exact_research_integrity_doe_py": null
+  },
+  "recovery_channels_exhausted": {
+    "git_reachable_history": "no lost Stage8 selector/evaluator source or missing payload chunks recovered",
+    "git_releases": "repository has no releases",
+    "file_library": "no 0.30.37-0.30.40 source snapshot, Research Vault, integrity.py, integrity_doe.py, or clipping metadata recovered",
+    "project_conversation_recovery": "recovered aggregate 5051/111 -> 5000/109 history and DOE chronology, but no ID array or selection SHA",
+    "actions_artifact_content_scan_v2": {
+      "workflow_run": 33245179038,
+      "scanner_commit": "65aa5f5f791303c4cf56adcf2b773cec28645a91",
+      "artifact_inventory_count": 107,
+      "downloaded_artifact_count": 104,
+      "error_count": 0,
+      "nested_pages_tar_paths_resolved": true,
+      "finding_5051": "earliest historical exact-path hits are rocketdict/STATE.json; no 111-ID list or selector SHA adjacent",
+      "finding_111": "literal occurrences:111 appears first in later recovery/diagnostic evidence, not original Stage8 evidence",
+      "finding_budget_clipped": "appears only in 2026-08-29 recovery records/scanners, not surviving original Stage8 artifacts",
+      "finding_selected_occurrence_ids": "earliest hits belong to later diagnostic/independent selections, not the historical F96 challenge set"
+    },
+    "actions_log_scan": {
+      "workflow_run": 33245018600,
+      "scanner_commit": "da6518e29f75b1815046f44a8c20b88495a644cb",
+      "historical_rocketdict_runs_considered": 58,
+      "hit_count": 83,
+      "error_count": 0,
+      "5051_hits": 0,
+      "5000_hits": 0,
+      "109_hits": 0,
+      "budget_clipped_hits": 0,
+      "selection_changed_historical_F96_hits": 0,
+      "interpretation": "hits are later R0/R1 reconstruction selection hashes and unrelated timestamps; original A-F96 selection metadata was not emitted to surviving Actions logs"
+    },
+    "pages_snapshot_recovery": {
+      "snapshot_count": 30,
+      "exact_source_hit_count": 0,
+      "unique_payload_member_count": 1,
+      "only_payload_member": "rocketdict/payload/stage8-overlay/part-000.b64"
+    }
+  },
+  "methodological_conclusion": "Do not continue fitting candidate historical selectors to aggregate 5051/111 or 5000/109. Historical F96 remains immutable reference evidence. Continue new research on a separately named source-only selection frozen before inference, while keeping all reconstructed contracts explicitly non-identical to lost 0.30.40 source.",
+  "privacy_scope": "project-only public technical evidence"
+}
