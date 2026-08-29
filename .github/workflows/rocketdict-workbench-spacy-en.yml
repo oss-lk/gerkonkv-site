@@ -1,0 +1,40 @@
+name: RocketDict Workbench offline spaCy EN
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/build_workbench_spacy_en_bundle.py'
+      - '.github/workflows/rocketdict-workbench-spacy-en.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install RocketDict-compatible spaCy runtime
+        run: python -m pip install 'spacy>=3.8,<3.9'
+      - name: Download pinned English model wheel
+        run: |
+          mkdir -p rocketdict-workbench-offline-spacy-en
+          curl -fL --retry 4 --retry-delay 2 \
+            'https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl' \
+            -o rocketdict-workbench-offline-spacy-en/en_core_web_sm-3.8.0-py3-none-any.whl
+          python -m pip install --no-deps rocketdict-workbench-offline-spacy-en/en_core_web_sm-3.8.0-py3-none-any.whl
+      - name: Verify model SHA, license and lexical smoke
+        run: python rocketdict-ci/build_workbench_spacy_en_bundle.py
+      - name: Upload offline spaCy English model
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-workbench-spacy-en-sm-3.8.0
+          path: rocketdict-workbench-offline-spacy-en
+          if-no-files-found: error
+          retention-days: 90
