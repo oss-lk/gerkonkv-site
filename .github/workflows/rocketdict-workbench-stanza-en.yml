@@ -24,10 +24,31 @@ jobs:
         run: python -m pip install 'stanza==1.14.0'
       - name: Build and offline-smoke English NLP assets
         run: python rocketdict-ci/build_workbench_stanza_en_bundle.py
+      - name: Build minimal runtime wheel handoff
+        run: |
+          mkdir -p rocketdict-workbench-stanza-runtime-wheelhouse
+          python -m pip download --no-deps 'stanza==1.14.0' 'emoji>=2.0.0' -d rocketdict-workbench-stanza-runtime-wheelhouse
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path('rocketdict-workbench-stanza-runtime-wheelhouse')
+          files=[]
+          for path in sorted(root.glob('*.whl')):
+              files.append({'name':path.name,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+          (root/'manifest.json').write_text(json.dumps({'schema':'rocketdict-workbench-stanza-runtime-wheelhouse/1','stanza_version':'1.14.0','files':files},indent=2)+'\n')
+          print(json.dumps(files,indent=2))
+          PY
       - name: Upload offline English NLP assets
         uses: actions/upload-artifact@v4
         with:
           name: rocketdict-workbench-stanza-en-1.14.0
           path: rocketdict-workbench-offline-nlp
+          if-no-files-found: error
+          retention-days: 90
+      - name: Upload minimal runtime wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-workbench-stanza-runtime-1.14.0
+          path: rocketdict-workbench-stanza-runtime-wheelhouse
           if-no-files-found: error
           retention-days: 90
