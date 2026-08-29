@@ -22,8 +22,13 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
+    if stanza.__version__ != VERSION:
+        raise RuntimeError(f"unexpected Stanza version: {stanza.__version__} != {VERSION}")
     ROOT.mkdir(parents=True, exist_ok=True)
     stanza.download("en", model_dir=str(MODEL_ROOT), processors=PROCESSORS, verbose=False)
+    resources_json = MODEL_ROOT / "resources.json"
+    if not resources_json.is_file():
+        raise RuntimeError("Stanza download did not materialize resources.json")
     nlp = stanza.Pipeline(
         "en",
         model_dir=str(MODEL_ROOT),
@@ -51,6 +56,7 @@ def main() -> None:
     assert by_surface["colours"]["lemma"].casefold() == "colour"
     assert by_surface["prism"]["upos"] in {"NOUN", "PROPN"}
     assert by_surface["thick"]["upos"] in {"ADJ", "ADV"}
+    assert all(row.get("deprel") for row in tokens)
 
     files = []
     for path in sorted(p for p in MODEL_ROOT.rglob("*") if p.is_file()):
@@ -59,6 +65,8 @@ def main() -> None:
             "bytes": path.stat().st_size,
             "sha256": sha256(path),
         })
+    if not files:
+        raise RuntimeError("offline Stanza bundle contains no files")
     manifest = {
         "schema": "rocketdict-workbench-offline-nlp/1",
         "provider": "stanza-full-en",
@@ -67,6 +75,15 @@ def main() -> None:
         "python": platform.python_version(),
         "language": "en",
         "processors": PROCESSORS.split(","),
+        "capabilities": {
+            "tokenization": True,
+            "sentence_boundaries": True,
+            "lemma": True,
+            "pos": True,
+            "morphology": True,
+            "dependency": True,
+            "ner": False
+        },
         "network_required_at_runtime": False,
         "pipeline_download_method": None,
         "license": "Apache-2.0",
