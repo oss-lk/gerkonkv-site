@@ -32,16 +32,21 @@ def parser() -> argparse.ArgumentParser:
     catalog = sub.add_parser("catalog"); catalog.add_argument("root", type=Path); catalog.add_argument("--probe-runtime", action="store_true"); catalog.add_argument("--output", type=Path)
     default = sub.add_parser("default-config"); default.add_argument("root", type=Path); default.add_argument("--filename", default="research-registry-default.json")
     product = sub.add_parser("product-profile", help="Create the strict Workbench Product Mode profile")
-    product.add_argument("root", type=Path); product.add_argument("--source-kind", choices=("subtitle", "text"), default="subtitle")
-    product.add_argument("--stanza-model-dir"); product.add_argument("--output", type=Path)
+    product.add_argument("root", type=Path); product.add_argument("--source-kind", choices=("subtitle", "text"), default="subtitle"); product.add_argument("--output", type=Path)
+    cefr_asset = sub.add_parser("cefrj-install", help="Install the pinned CEFR-J 1.5 asset during explicit setup")
+    cefr_asset.add_argument("root", type=Path); cefr_asset.add_argument("--destination", type=Path)
+    cefr = sub.add_parser("cefrj-assess", help="Run Product CEFR-J-only assessment; no smoke/frequency fallback")
+    cefr.add_argument("root", type=Path); cefr.add_argument("--sense-id", type=int, action="append", required=True); cefr.add_argument("--asset", type=Path); cefr.add_argument("--no-approve", action="store_true")
+    pron = sub.add_parser("pronunciation-cmudict", help="Run exact CMUdict Product pronunciation; no generated fallback")
+    pron.add_argument("root", type=Path); pron.add_argument("--entry-id", type=int, action="append", required=True); pron.add_argument("--include-russian-hint", action="store_true"); pron.add_argument("--no-approve", action="store_true")
     campaign = sub.add_parser("campaign-create"); campaign.add_argument("root", type=Path); campaign.add_argument("definition", type=Path); campaign.add_argument("--pipeline", action="store_true")
     run = sub.add_parser("campaign-run"); run.add_argument("root", type=Path); run.add_argument("plan_id", type=int); run.add_argument("--max-new-trials", type=int)
     report = sub.add_parser("report"); report.add_argument("root", type=Path); report.add_argument("plan_id", type=int); report.add_argument("--destination", type=Path)
     lexical = sub.add_parser("lexical-opus", help="Generate lexical OPUS n-best evidence and optionally run Stage20")
     lexical.add_argument("root", type=Path); lexical.add_argument("--model-path", type=Path, required=True)
     lexical.add_argument("--revision", required=True); lexical.add_argument("--archive-sha256", required=True); lexical.add_argument("--source-uri", required=True)
-    lexical.add_argument("--sense-id", type=int, action="append", default=[]); lexical.add_argument("--beam-size", type=int, default=8); lexical.add_argument("--num-hypotheses", type=int, default=8)
-    lexical.add_argument("--maximum-candidates", type=int, default=8); lexical.add_argument("--source-policy", default="local-snapshots-only")
+    lexical.add_argument("--sense-id", type=int, action="append", default=[]); lexical.add_argument("--beam-size", type=int, default=12); lexical.add_argument("--num-hypotheses", type=int, default=12)
+    lexical.add_argument("--maximum-candidates", type=int, default=8); lexical.add_argument("--source-policy", default="aligned-local-consensus")
     lexical.add_argument("--apply-stage20", action="store_true"); lexical.add_argument("--output", type=Path)
     serve = sub.add_parser("serve"); serve.add_argument("root", type=Path); serve.add_argument("--host", default="127.0.0.1"); serve.add_argument("--port", type=int, default=8765)
     return p
@@ -75,11 +80,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "product-profile":
             from .product_profile import build_product_profile
             manifest = project.lab_catalog(probe_runtime=False)
-            profile = build_product_profile(manifest, source_kind=args.source_kind, stanza_model_dir=args.stanza_model_dir)
+            profile = build_product_profile(manifest, source_kind=args.source_kind)
             destination = args.output or (project.paths.configurations / f"product-{args.source_kind}.json")
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(json.dumps(profile, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
             _json({"profile": str(destination.resolve()), "schema": profile.get("schema"), "source_kind": profile.get("source_kind"), "quality_gates": [x.get("implementation") for x in profile.get("quality_gates") or []]}); return 0
+        if args.command == "cefrj-install":
+            from .product_cefr import install_cefrj_asset
+            destination = args.destination or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
+            _json(install_cefrj_asset(destination)); return 0
+        if args.command == "cefrj-assess":
+            from .product_cefr import assess_product_cefr
+            asset = args.asset or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
+            _json(assess_product_cefr(core, project.paths.database, args.sense_id, cefrj_asset=asset, approve=not args.no_approve)); return 0
+        if args.command == "pronunciation-cmudict":
+            from .product_pronunciation import generate_product_pronunciations
+            _json(generate_product_pronunciations(core, project.paths.database, args.entry_id, include_russian_hint=args.include_russian_hint, approve=not args.no_approve)); return 0
         if args.command == "campaign-create":
             definition = json.loads(args.definition.read_text(encoding="utf-8"))
             if not isinstance(definition, dict): raise ValueError("campaign definition must be a JSON object")
