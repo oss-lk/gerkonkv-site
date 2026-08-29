@@ -4,7 +4,7 @@ from typing import Any
 
 from .product_policy import ProductPolicyError, product_parameter_overrides, select_product_implementation
 
-PROFILE_SCHEMA = "rocketdict-workbench-product-profile/4"
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/5"
 QUALITY_GATES = (
     "rocketdict-numeric-symbol-preservation",
     "rocketdict-punctuation-preservation",
@@ -16,8 +16,8 @@ PREFERRED_IMPLEMENTATIONS = {
     16: "approve-if-clean-finalization",
     17: "deterministic-structural-global",
     19: "deterministic-context-target-graph",
-    21: "cefr-current",
-    22: "pronunciation-current",
+    21: "cefrj-vocabulary-1.5",
+    22: "cmudict-production",
     23: "examples-current",
     24: "cards-current",
     25: "export-json",
@@ -71,6 +71,7 @@ def _select_named_or_product(manifest: dict[str, Any], number: int, *, source_ki
         "parameters": params,
         "selection_reason": reason,
         "adapter_descriptor_hash": impl.get("descriptor_hash"),
+        "availability": impl.get("availability"),
     }
 
 
@@ -85,8 +86,17 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
             if number <= 19:
                 raise
 
-    # The historical Stage23 default includes a smoke Tatoeba fixture. Product
-    # Mode never lets that diagnostic fixture become dictionary evidence.
+    # Diagnostic fixtures never become product evidence.
+    if 21 in selected:
+        selected[21]["parameters"]["use_builtin_smoke_sources"] = False
+        selected[21]["selection_reason"] = "workbench_real_cefr_source_only"
+    if 22 in selected:
+        selected[22]["parameters"].update({
+            "requested_dialects": ["en-US"],
+            "include_russian_hint": False,
+            "minimum_confidence": 0.25,
+        })
+        selected[22]["selection_reason"] = "workbench_exact_cmudict_only"
     if 23 in selected:
         selected[23]["parameters"]["corpus_snapshots"] = []
         selected[23]["selection_reason"] = "workbench_document_examples_only"
@@ -113,21 +123,29 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
         "quality_gates": gates,
         "workbench_stages": {
             "18": {
-                "implementation": "workbench-aligned-content-pos-v3",
-                "policy": "use approved alignment plus saved full NLP; project saved NLP tokens onto structurally split alignment segments by verified document-stream offsets; lexicalize content POS and dictionary-relevant MWEs; retain rejected token coverage",
+                "implementation": "workbench-aligned-content-pos-v4",
+                "policy": "approved alignment + full saved NLP + verified stream-offset projection; content POS/dictionary MWE eligibility; narrow object-POS repair; spaCy vector-OOV is never treated as lexical unknown; common-word NER does not change entry type",
                 "requires_alignment": True,
                 "offset_projection_fail_closed": True,
+                "repairs_are_recorded_in_token_source_and_component_settings": True,
             },
             "20_provider": {
                 "implementation": "contextual-lexical-opus-v3",
-                "selection": "aligned-local-consensus",
+                "selection": "lexical-primary-arbitration-v1 over aligned-local-consensus evidence",
                 "probe_policy": "pos-dependency-dictionary-shape-v3",
                 "retain_nbest_evidence": True,
-                "preserve_dictionary_form_through_stage20": True,
+                "alignment_role": "context_and_occurrence_coverage_not_headword_form",
+            },
+            "22": {
+                "implementation": "workbench-cmudict-exact-v1",
+                "single_word": "exact CMUdict lookup",
+                "multiword": "composition only when every component has exact CMUdict evidence",
+                "generated_fallback": False,
+                "unknown_policy": "leave pronunciation missing rather than fabricate",
             },
             "23": {
-                "compatibility_contract": "stage23-sense-scope-v1",
-                "review_identity": "lexical_sense_scoped_settings_hash",
+                "compatibility_contract": "stage23-sense-scope-v2",
+                "review_identity": "lexical_sense + approved Stage20 revision id/content hash",
                 "corpus_smoke_disabled": True,
                 "document_alignment_evidence_required_for_primary": True,
             },
@@ -135,6 +153,13 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
         "runtime_assets": {
             "nlp": {"preferred": "en-sm", "model": "en_core_web_sm", "model_version": "3.8.0", "offline_required": True},
             "translation": {"preferred": "opus-en-ru-ct2", "compute_type": "float32", "offline_required": True},
+            "pronunciation": {"preferred": "cmudict", "generated_fallback_allowed": False, "offline_required": True},
+            "cefr": {
+                "preferred": "CEFR-J Vocabulary Profile 1.5",
+                "asset": "cefrj-vocabulary-profile-1.5.csv",
+                "builtin_smoke_allowed": False,
+                "missing_asset_policy": "unknown_not_fabricated",
+            },
         },
         "lifecycle": {
             "translation_revision_requires_zero_hard_quality_failures": True,
@@ -154,5 +179,7 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
             "unlicensed_numeric_addition_allowed": False,
             "research_overwrites_product_output": False,
             "diagnostic_smoke_corpus_allowed_as_product_example": False,
+            "generated_pronunciation_allowed": False,
+            "builtin_smoke_cefr_allowed": False,
         },
     }
