@@ -1,0 +1,41 @@
+{
+  "schema": "rocketdict-stage8-historical-challenge-clipping-recovery/1",
+  "date_utc": "2026-08-29",
+  "promotion_allowed": false,
+  "source_class": "project_conversation_recovery",
+  "exact_source_bytes_recovered": false,
+  "historical_chain": [
+    {
+      "state": "integrity_doe_initial_challenge",
+      "source_words": 5051,
+      "occurrences": 111,
+      "qualification": "historically described as the same fixed candidate occurrence set used by the early Integrity DOE cells"
+    },
+    {
+      "operation": "budget_clipped",
+      "target_words": 5000,
+      "selection_changed": true,
+      "exact_function_or_code_recovered": false
+    },
+    {
+      "state": "E_and_F96_frozen_challenge",
+      "source_words": 5000,
+      "occurrences": 109,
+      "E_chunks": 150,
+      "F96_preferred_token_budget": 96,
+      "F96_chunks": 168
+    }
+  ],
+  "known_exact_historical_f96_failure_occurrences": [15697, 16200, 17795],
+  "unresolved_identity": {
+    "initial_111_occurrence_ids": null,
+    "initial_111_selection_sha256": null,
+    "removed_occurrence_ids": null,
+    "removed_word_count_total": 51,
+    "final_109_occurrence_ids": null,
+    "final_109_selection_sha256": null,
+    "exact_budget_clipping_code": null
+  },
+  "correction_to_prior_recovery_note": "An earlier recovery turn temporarily treated 111 occurrences as unconfirmed and considered 109 occurrences potentially initial. Project-conversation recovery subsequently re-established the historical 5051/111 -> budget_clipped -> 5000/109 chain. Do not repeat the 109-initial hypothesis unless stronger exact evidence contradicts this record.",
+  "methodological_rule": "Do not infer the two removed occurrence IDs merely from a pair summing to 51 words until the exact 111-set is independently recovered. Aggregate count fitting is not selector identity."
+}
