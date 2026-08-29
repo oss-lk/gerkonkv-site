@@ -1,0 +1,50 @@
+{
+  "schema": "rocketdict-stage8-pages-snapshot-recovery-summary/1",
+  "date_utc": "2026-08-29",
+  "promotion_allowed": false,
+  "workflow": {
+    "run_id": 33244056504,
+    "head_sha": "f5eaf256decff7b7256ae9e79b1f56fc2c890a6c",
+    "conclusion": "success",
+    "artifact_id": 9712254899,
+    "artifact_digest": "sha256:eb196e01dd388387db95f91b4e3b5d4122c19cd9478e389a3f8655a1b017defb"
+  },
+  "tar_snapshot_scan": {
+    "pages_artifacts_scanned": 30,
+    "snapshot_errors": 0,
+    "first_scanned_created_at": "2026-08-28T10:04:29Z",
+    "unique_payload_member_count": 1,
+    "unique_payload_members": [
+      "rocketdict/payload/stage8-overlay/part-000.b64"
+    ],
+    "exact_source_hit_count": 0,
+    "missing_exact_paths": [
+      "src/rocketdict/translation/integrity.py",
+      "src/rocketdict/research/integrity_doe.py",
+      "scripts/stage8_rescore_integrity_doe.py",
+      "tests/test_stage8_integrity_research.py"
+    ],
+    "part_000_sha256": "c9c1c18621764ce1134d1edd5115c360f9c488c02780606a89c74e45994fb9dc",
+    "part_000_bytes": 15000
+  },
+  "earlier_deleted_pages_evidence": {
+    "artifact_id": 9679995434,
+    "created_at": "2026-08-28T08:51:20Z",
+    "current_api_state": "no longer directly downloadable; GitHub connector returns 404 after later Pages deployments",
+    "preserved_byte_scan_contexts": {
+      "context_count": 100,
+      "integrity_py_mentions": 0,
+      "src_rocketdict_mentions": 0,
+      "research_vault_literal_path_mentions": 0,
+      "stage8_overlay_mentions": 5,
+      "part_mentions": 5,
+      "interpretation": "all payload-related contexts come from the contemporaneous checkpoint text stating that only part-000.b64 exists and the remaining seven overlay chunks plus all eleven Research Vault chunks are absent"
+    }
+  },
+  "conclusion": [
+    "Historical GitHub Pages artifacts were unpacked at TAR level, not merely searched as opaque binary blobs.",
+    "Every accessible historical Pages filesystem snapshot contains only stage8-overlay/part-000.b64 from the intended handoff payload and contains none of the missing exact Stage 8 source files.",
+    "Preserved contexts from the earlier 08:51 UTC Pages artifact, which disappeared from the artifact API before the TAR-specific rerun, independently state the same incomplete payload condition and contain no hidden integrity source path evidence.",
+    "Therefore currently accessible GitHub Pages history does not recover the seven missing overlay chunks, eleven Research Vault chunks, translation/integrity.py, or research/integrity_doe.py. Exact recovery remains blocked; diagnostic reconstruction must remain explicitly non-promotional."
+  ]
+}
