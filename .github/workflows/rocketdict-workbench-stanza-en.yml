@@ -27,7 +27,7 @@ jobs:
       - name: Build minimal runtime wheel handoff
         run: |
           mkdir -p rocketdict-workbench-stanza-runtime-wheelhouse
-          python -m pip download --no-deps 'stanza==1.14.0' 'emoji>=2.0.0' -d rocketdict-workbench-stanza-runtime-wheelhouse
+          python -m pip download --no-deps 'stanza==1.14.0' 'emoji>=2.0.0' 'udtools>=0.2.4' -d rocketdict-workbench-stanza-runtime-wheelhouse
           python - <<'PY'
           import hashlib, json
           from pathlib import Path
@@ -35,8 +35,15 @@ jobs:
           files=[]
           for path in sorted(root.glob('*.whl')):
               files.append({'name':path.name,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
-          (root/'manifest.json').write_text(json.dumps({'schema':'rocketdict-workbench-stanza-runtime-wheelhouse/1','stanza_version':'1.14.0','files':files},indent=2)+'\n')
-          print(json.dumps(files,indent=2))
+          manifest={
+              'schema':'rocketdict-workbench-stanza-runtime-wheelhouse/2',
+              'stanza_version':'1.14.0',
+              'bundled_runtime_packages':['stanza','emoji','udtools'],
+              'external_runtime_requirements':['numpy','platformdirs','protobuf>=3.15.0','requests','networkx','torch>=1.13.0','tqdm','huggingface-hub'],
+              'files':files,
+          }
+          (root/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2))
           PY
       - name: Upload offline English NLP assets
         uses: actions/upload-artifact@v4
