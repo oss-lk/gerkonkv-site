@@ -1,0 +1,157 @@
+from __future__ import annotations
+
+from typing import Any
+
+from .product_policy import (
+    ProductPolicyError,
+    product_parameter_overrides,
+    select_product_implementation,
+)
+
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/1"
+
+QUALITY_GATES = (
+    "rocketdict-numeric-symbol-preservation",
+    "rocketdict-punctuation-preservation",
+    "rocketdict-length-ratio-proxy",
+)
+
+PREFERRED_IMPLEMENTATIONS = {
+    10: "structural-entity-term-discourse-pronoun-v1",
+    14: "glossary_refinement-current",
+    16: "approve-if-clean-finalization",
+    17: "deterministic-structural-global",
+    19: "deterministic-context-target-graph",
+    21: "cefr-current",
+    22: "pronunciation-current",
+    23: "examples-current",
+    24: "cards-current",
+    25: "export-json",
+}
+
+
+def _stage(manifest: dict[str, Any], number: int) -> dict[str, Any]:
+    for row in manifest.get("stages") or []:
+        if int(row.get("number") or 0) == int(number):
+            return row
+    raise ProductPolicyError(f"Lab registry has no stage {number}")
+
+
+def _implementation(stage: dict[str, Any], key: str) -> dict[str, Any]:
+    for row in stage.get("implementations") or []:
+        if row.get("implementation_key") == key:
+            return row
+    raise ProductPolicyError(f"Stage {stage.get('number')} has no implementation {key!r}")
+
+
+def _defaults(implementation: dict[str, Any]) -> dict[str, Any]:
+    # Fixed profile settings are implementation identity and are intentionally
+    # not copied into editable adapter parameters.
+    return {
+        str(control["key"]): control.get("default")
+        for control in implementation.get("controls") or []
+        if control.get("default") is not None
+    }
+
+
+def _select_named_or_product(manifest: dict[str, Any], number: int, *, source_kind: str) -> dict[str, Any]:
+    stage = _stage(manifest, number)
+    preferred = PREFERRED_IMPLEMENTATIONS.get(number)
+    if preferred:
+        try:
+            impl = _implementation(stage, preferred)
+            if impl.get("production_eligible") and not impl.get("testing_only"):
+                key = preferred
+                reason = "workbench_product_preference"
+            else:
+                raise ProductPolicyError(f"Preferred implementation is not production eligible: {preferred}")
+        except ProductPolicyError:
+            selected = select_product_implementation(stage, require_available=False)
+            key = selected.implementation_key
+            reason = selected.reason
+    else:
+        selected = select_product_implementation(stage, require_available=False)
+        key = selected.implementation_key
+        reason = selected.reason
+    impl = _implementation(stage, key)
+    params = _defaults(impl)
+    params.update(product_parameter_overrides(number, key, source_kind=source_kind))
+    return {
+        "stage_number": number,
+        "stage_key": stage.get("key"),
+        "implementation": key,
+        "parameters": params,
+        "selection_reason": reason,
+        "adapter_descriptor_hash": impl.get("descriptor_hash"),
+    }
+
+
+def build_product_profile(
+    lab_manifest: dict[str, Any],
+    *,
+    source_kind: str = "subtitle",
+    stanza_model_dir: str | None = None,
+) -> dict[str, Any]:
+    if source_kind not in {"subtitle", "text"}:
+        raise ValueError("source_kind must be subtitle or text")
+    selected: dict[int, dict[str, Any]] = {}
+    for number in (8, 10, 12, 14, 16, 17, 19, 21, 22, 23, 24, 25):
+        try:
+            selected[number] = _select_named_or_product(lab_manifest, number, source_kind=source_kind)
+        except ProductPolicyError:
+            # Some historical registry versions may have later stages under
+            # different adapter names. Missing optional tail stages stay explicit.
+            if number <= 19:
+                raise
+    if stanza_model_dir and selected.get(8, {}).get("implementation") == "stanza-full-en":
+        selected[8]["parameters"]["model_dir"] = stanza_model_dir
+
+    stage15 = _stage(lab_manifest, 15)
+    gates = []
+    for key in QUALITY_GATES:
+        impl = _implementation(stage15, key)
+        gates.append({
+            "implementation": key,
+            "parameters": _defaults(impl),
+            "adapter_descriptor_hash": impl.get("descriptor_hash"),
+            "hard_gate": True,
+            "requires_reference": False,
+        })
+
+    return {
+        "schema": PROFILE_SCHEMA,
+        "source_kind": source_kind,
+        "registry_hash": lab_manifest.get("registry_hash"),
+        "source_language": lab_manifest.get("source_language", "en"),
+        "target_language": lab_manifest.get("target_language", "ru"),
+        "stages": {str(k): v for k, v in sorted(selected.items())},
+        "quality_gates": gates,
+        "workbench_stages": {
+            "18": {
+                "implementation": "workbench-content-pos-v1",
+                "policy": "retain all NLP token coverage; lexicalize content POS and valid MWEs only",
+            },
+            "20_provider": {
+                "implementation": "contextual-lexical-opus-v1",
+                "selection": "aligned-local-consensus",
+                "retain_nbest_evidence": True,
+            },
+        },
+        "lifecycle": {
+            "translation_revision_requires_zero_hard_quality_failures": True,
+            "alignment_requires_approved_translation_revision": True,
+            "sense_induction_requires_complete_lexical_coverage": True,
+            "singleton_policy": "singleton-safe-v1-audited",
+            "cards_require_approved_sense_translation": True,
+            "export_requires_complete_approved_card_set": True,
+        },
+        "invariants": {
+            "fake_or_identity_mt_allowed": False,
+            "network_required_during_processing": False,
+            "code_only_nlp_allowed_for_final_dictionary": False,
+            "reference_dependent_quality_gate_without_reference": False,
+            "silent_source_loss_allowed": False,
+            "unlicensed_numeric_addition_allowed": False,
+            "research_overwrites_product_output": False,
+        },
+    }
