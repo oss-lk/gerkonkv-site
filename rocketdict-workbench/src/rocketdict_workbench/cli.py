@@ -30,7 +30,10 @@ def parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status"); status.add_argument("root", type=Path); status.add_argument("--probe-runtime", action="store_true")
     imp = sub.add_parser("import"); imp.add_argument("root", type=Path); imp.add_argument("source", type=Path); imp.add_argument("--force-text", action="store_true")
     catalog = sub.add_parser("catalog"); catalog.add_argument("root", type=Path); catalog.add_argument("--probe-runtime", action="store_true"); catalog.add_argument("--output", type=Path)
-    default = sub.add_parser("default-config"); default.add_argument("root", type=Path); default.add_argument("--filename", default="production-default.json")
+    default = sub.add_parser("default-config"); default.add_argument("root", type=Path); default.add_argument("--filename", default="research-registry-default.json")
+    product = sub.add_parser("product-profile", help="Create the strict Workbench Product Mode profile")
+    product.add_argument("root", type=Path); product.add_argument("--source-kind", choices=("subtitle", "text"), default="subtitle")
+    product.add_argument("--stanza-model-dir"); product.add_argument("--output", type=Path)
     campaign = sub.add_parser("campaign-create"); campaign.add_argument("root", type=Path); campaign.add_argument("definition", type=Path); campaign.add_argument("--pipeline", action="store_true")
     run = sub.add_parser("campaign-run"); run.add_argument("root", type=Path); run.add_argument("plan_id", type=int); run.add_argument("--max-new-trials", type=int)
     report = sub.add_parser("report"); report.add_argument("root", type=Path); report.add_argument("plan_id", type=int); report.add_argument("--destination", type=Path)
@@ -68,7 +71,15 @@ def main(argv: list[str] | None = None) -> int:
                 _json(payload)
             return 0
         if args.command == "default-config":
-            _json({"configuration": str(project.save_default_configuration(filename=args.filename))}); return 0
+            _json({"configuration": str(project.save_default_configuration(filename=args.filename)), "mode": "research-registry-derived"}); return 0
+        if args.command == "product-profile":
+            from .product_profile import build_product_profile
+            manifest = project.lab_catalog(probe_runtime=False)
+            profile = build_product_profile(manifest, source_kind=args.source_kind, stanza_model_dir=args.stanza_model_dir)
+            destination = args.output or (project.paths.configurations / f"product-{args.source_kind}.json")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(json.dumps(profile, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+            _json({"profile": str(destination.resolve()), "schema": profile.get("schema"), "source_kind": profile.get("source_kind"), "quality_gates": [x.get("implementation") for x in profile.get("quality_gates") or []]}); return 0
         if args.command == "campaign-create":
             definition = json.loads(args.definition.read_text(encoding="utf-8"))
             if not isinstance(definition, dict): raise ValueError("campaign definition must be a JSON object")
