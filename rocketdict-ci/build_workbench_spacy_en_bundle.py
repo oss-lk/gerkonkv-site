@@ -11,6 +11,8 @@ ROOT = Path("rocketdict-workbench-offline-spacy-en")
 MODEL_WHEEL = ROOT / "en_core_web_sm-3.8.0-py3-none-any.whl"
 MODEL_NAME = "en_core_web_sm"
 MODEL_VERSION = "3.8.0"
+MODEL_RELEASE_URL = "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0"
+MODEL_WHEEL_URL = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 MODEL_SHA256 = "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85"
 
 
@@ -52,6 +54,8 @@ def main() -> None:
     assert by_surface["is"]["pos"] == "AUX"
     assert by_surface["5/62"]["pos"] == "NUM"
     meta = nlp.meta
+    if meta.get("license") != "MIT":
+        raise RuntimeError(f"unexpected model license: {meta.get('license')!r}")
     manifest = {
         "schema": "rocketdict-workbench-offline-spacy-en/1",
         "provider": "en-sm",
@@ -59,6 +63,8 @@ def main() -> None:
         "python": platform.python_version(),
         "model": MODEL_NAME,
         "model_version": MODEL_VERSION,
+        "model_release_url": MODEL_RELEASE_URL,
+        "model_wheel_url": MODEL_WHEEL_URL,
         "model_wheel": MODEL_WHEEL.name,
         "model_wheel_bytes": MODEL_WHEEL.stat().st_size,
         "model_wheel_sha256": actual,
