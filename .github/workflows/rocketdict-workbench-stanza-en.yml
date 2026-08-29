@@ -1,0 +1,33 @@
+name: RocketDict Workbench offline Stanza EN
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rocketdict-ci/build_workbench_stanza_en_bundle.py'
+      - '.github/workflows/rocketdict-workbench-stanza-en.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned Stanza runtime
+        run: python -m pip install 'stanza==1.14.0'
+      - name: Build and offline-smoke English NLP assets
+        run: python rocketdict-ci/build_workbench_stanza_en_bundle.py
+      - name: Upload offline English NLP assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-workbench-stanza-en-1.14.0
+          path: rocketdict-workbench-offline-nlp
+          if-no-files-found: error
+          retention-days: 90
