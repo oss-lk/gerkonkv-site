@@ -1,59 +1,55 @@
 # RocketDict public handoff health
 
-Last checked: 2026-08-28 UTC.
+Last synchronized: **2026-09-02**.
 
-## Status
+## Overall status
 
-The public handoff metadata and research narrative are usable, but the binary/text payload materialization is **not yet self-contained**.
+The repository is **usable for continuation as a technical/research handoff**, but it contains two distinct kinds of evidence that must not be conflated:
 
-`rocketdict/materialize_handoff.py` is authoritative about the intended payload contract:
+1. a newer active Stage 8/Product/Workbench repository line with real official OPUS GitHub execution and downstream lexical/product commits;
+2. a separately verified RocketDict **0.30.34 / LAB Stage 6Y** maintenance-hardening checkpoint whose report/continuation evidence is mirrored under `rocketdict/checkpoints/stage6y/`.
 
-- Stage 8 source overlay: 8 canonical files `rocketdict/payload/stage8-overlay/part-000.b64` through `part-007.b64`;
-- Research Vault: 11 canonical files `rocketdict/payload/research-vault/part-000.b85` through `part-010.b85`;
-- overlay tar.gz SHA-256: `ddf5f409a5690fa4d2141c8a3bd30ef73f82cc9e75c27b66716791afbc6f97b7`;
-- Research Vault xz SHA-256: `394ffcfe399deb1f83ad445cc3ac2e727c8f684a29fd06c757eee16612cfe4ab`;
-- uncompressed Research Vault SQLite SHA-256: `106fc9d7bee42a53b34412267923d17b3331019d2eef16300b539de8929927a1`.
+The exact source-level merge status between those lineages is **not proven** by the public payload. Do not overwrite one with the other based on version numbering alone.
 
-At this check, `main` contains only:
+## Stage 8 payload health
 
-- `rocketdict/payload/stage8-overlay/part-000.b64`.
+`rocketdict/materialize_handoff.py` remains authoritative about the intended Stage 8 payload contract. The public payload is still not bit-for-bit self-contained.
 
-The remaining 7 overlay chunks and all 11 Research Vault chunks are absent. Therefore `python rocketdict/materialize_handoff.py` cannot currently succeed from a fresh clone, and no continuation session should claim otherwise.
+Known intended payloads include the Stage 8 source overlay and Research Vault chunks. The surviving repository material is sufficient to recover research direction, official OPUS identity, several source fragments and mechanism evidence, but not sufficient to reconstruct every exact Stage 8 source file and Research Vault row from a fresh clone.
 
-## Verified recovery from the surviving overlay prefix
+Therefore:
 
-The surviving `part-000.b64` has now been decoded and decompressed fail-closed in GitHub Actions run `33183643328` (artifact `9690741914`, digest `sha256:78d8414641cf70465427d9a09671510050579aec7dd640a6c3be9c969fb49ea9`). It recovers two complete 0.30.40 source files plus the first 20,358 bytes of the real `src/rocketdict/lab/stage12_pilot.py` member.
+- do not claim full Stage 8 source materialization from this repository alone;
+- do not fabricate missing source or vault rows;
+- keep standalone mechanism probes non-promotional until integrated into recovered exact source;
+- retain the existing F96/Stage8 evidence and do not restart DOE from A.
 
-This prefix proves that the 0.30.40 Stage12 sampling policy still uses `coverage-stratified-v1` with default 8 position / 8 numeric / 8 critical-symbol / 8 long challenge quotas and `long_unit_min_words=24`. The visible selector algorithm is unchanged from the recovered 0.30.34 parent except that numeric eligibility changed from the old local regex to `rocketdict.translation.integrity.contains_numeric_literal()`; the same helper is used for coverage accounting. Pilot and journal formats advance to 7.0 / 5.0 and the module imports `compare_numeric_integrity` from the same missing integrity module.
+## Stage 6Y checkpoint health
 
-Therefore earlier recovery experiments that obtained matching aggregate counts by changing the sampling quotas are **diagnostic only**, not the recovered 0.30.40 configuration. The next exact source dependency is specifically `src/rocketdict/translation/integrity.py`; `src/rocketdict/research/integrity_doe.py` is also still required to recover the late Stage8 challenge clipping/execution layer. See `research/stage8-overlay-prefix-exact-recovery-2026-08-28.json`.
+The mirrored Stage 6Y report is a complete verified **evidence/handoff record**, not a source-code mirror.
 
-## What remains durable and usable
+Verified checkpoint facts include:
 
-The following are present and sufficient to recover the research direction and continue independent mechanism experiments without inventing prior results:
+- RocketDict 0.30.34 / LAB Stage 6Y;
+- I/O/ENOSPC-safe offline compaction/recovery contracts;
+- 10/10 individual source fault-matrix checks;
+- selected Stage 6W regressions 5/5 and LAB runner 7/7;
+- representative installed-wheel fault paths passed;
+- 301 packaged runtime files byte-for-byte matched source in that checkpoint;
+- heavy backup-copy ENOSPC challenge restored the 881,905,664-byte working primary byte-for-byte;
+- canonical heavy source SHA-256 remained `3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274`;
+- `quick_check=ok`, FK=0, Alembic head `8b4e7c2a91d0`.
 
-- `ROCKETDICT_HANDOFF.md`;
-- `rocketdict/START_HERE.md`;
-- `rocketdict/STATE.json`;
-- `rocketdict/RESEARCH_STATUS.md`;
-- exact canonical heavy/source-stream recovery evidence under `rocketdict/research/`;
-- exact surviving Stage8 overlay-prefix evidence under `rocketdict/research/`;
-- official OPUS real-model GitHub gate and its still-live Actions artifacts;
-- Stage 8 G/H/I standalone mechanism probes added under `rocketdict-ci/`;
-- durable compact probe results under `rocketdict/research/` as they are completed.
+The actual 0.30.34 source tree/wheel/heavy DB are deliberately **not** copied into this public repository by this synchronization because the currently accessible handoff material is documentary/evidence-level and the repo is public.
 
-The exact F96 full-pipeline implementation and the append-only Research Vault cannot be reconstructed bit-for-bit until the missing payload chunks are restored from the original prepared payload or an equivalent verified source snapshot.
+## Continuation rule
 
-## Continuation rule while payload is incomplete
+Read `rocketdict/CURRENT.md` first.
 
-1. Do not restart DOE from A; F96 remains the measured parent frontier.
-2. Do not fabricate missing source implementation or Research Vault rows.
-3. Do not replace the source-proven 8/8/8/8 Stage12 sampling defaults with parameter-fitted alternatives merely because aggregate counts match.
-4. Prioritize recovery of `translation/integrity.py`, then `research/integrity_doe.py` / exact challenge clipping identity.
-5. Mechanism probes may continue in GitHub Actions when they are explicitly labelled non-promotional and use the same official OPUS identity.
-6. Do not promote G/H/I to the 10k screen until the real Stage 8 source overlay is restored, the mechanisms are integrated, and the identical ~5k challenge set passes `rocketdict-numeric-integrity/3.2` with numeric=0, critical=0, length=0, empty=0, backend_errors=0.
-7. Once the payload is restored, run `python rocketdict/materialize_handoff.py`; treat its SHA/inventory/integrity checks as mandatory before full-pipeline work.
+- For active Stage 8/Product work: continue from current GitHub HEAD and existing Workbench/Product history.
+- For Stage 6 maintenance hardening: use `rocketdict/checkpoints/stage6y/CONTINUE_STAGE6Z.md`.
+- If merging lineages: recover exact source snapshots first, perform an explicit source merge, and rerun all affected tests/evidence. Never declare the merge from documentation similarity alone.
 
 ## Privacy
 
-This health record is project-only technical information for the public repository. Do not add personal/user/account/private-conversation information.
+This health record is intentionally project-only. Do not add personal profile, location, account data, credentials, private conversations or unrelated artifacts to this public repository.

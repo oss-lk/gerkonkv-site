@@ -1,0 +1,87 @@
+{
+  "schema": "rocketdict-public-current/2",
+  "synchronized_date": "2026-09-02",
+  "privacy": {
+    "public": true,
+    "project_only": true,
+    "personal_user_data_allowed": false
+  },
+  "repository": {
+    "full_name": "oss-lk/gerkonkv-site",
+    "branch": "main",
+    "head_before_sync": "e9124f57698ebb1e36e1708f27be23374215560c",
+    "head_before_sync_message": "Add resumable Stage20 lexical primary arbitration",
+    "active_line": "Stage8/Product/Workbench",
+    "active_line_note": "Newer than the Stage6 maintenance checkpoint; do not overwrite with an older complete archive."
+  },
+  "stage8_snapshot": {
+    "development_version": "0.30.40",
+    "release_status": "active-research-not-complete",
+    "real_opus": {
+      "release": "opus-2020-02-11.zip",
+      "zip_sha256": "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677",
+      "backend": "CTranslate2 Marian",
+      "compute_type": "float32",
+      "github_real_gate_run_id": 32991296384,
+      "representative_sentences": 120,
+      "representative_words": 4488,
+      "conclusion": "success"
+    },
+    "doe_snapshot": {
+      "parent_frontier": "F96",
+      "challenge_words": 5000,
+      "numeric_mismatch_count": 3,
+      "critical_symbol_mismatch_count": 0,
+      "length_ratio_mismatch_count": 0,
+      "empty_output_count": 0,
+      "backend_error_unit_count": 0,
+      "gate_passed": false,
+      "next": "continue from saved F96/n-best/integrity evidence; do not restart DOE from A"
+    },
+    "payload_materialization": "incomplete-public-payload; see HANDOFF_HEALTH.md"
+  },
+  "maintenance_lineage": {
+    "latest_verified_checkpoint": "RocketDict 0.30.34 / LAB Stage 6Y",
+    "source_merge_into_active_line": "not_proven",
+    "contracts": [
+      "translation-offline-sqlite-compaction-v1",
+      "translation-offline-sqlite-compaction-recovery-v1",
+      "translation-offline-sqlite-compaction-io-fault-safety-v1"
+    ],
+    "source_fault_matrix": "10/10 individual clean-exit",
+    "stage6w_selected_regressions": "5/5",
+    "lab_runner": "7/7",
+    "packaged_runtime_source_parity": "301/301",
+    "heavy": {
+      "canonical_immutable_sha256": "3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274",
+      "challenge_working_bytes": 881905664,
+      "challenge_working_sha256": "a0128b802930d350679c7d135bea9197fb9e202d863260c31a68d49681fbeafb",
+      "recovered_byte_identical_after_forced_backup_copy_enospc": true,
+      "quick_check": "ok",
+      "foreign_key_violations": 0,
+      "alembic_head": "8b4e7c2a91d0",
+      "lexical_entries": 35743,
+      "translation_runs": 0,
+      "translation_candidates": 0,
+      "translation_batch_metrics": 0,
+      "translation_inference_results": 0,
+      "translation_run_leases": 0
+    },
+    "quality_first_identity": {
+      "configuration": "dc8e07c493b733bc14a6c9fcbb425539525cbfcf1632c25d8652687a9c33fbbf",
+      "adapter_catalog": "3f62a9a0ce463ee1505cd05ac70f77896820a28823e71beac86d07ab5782d25a",
+      "execution_policy": "75d9b29f72f2f87844db916c4b445cb3282fb9814329ee097bc84c4b64f6384b",
+      "stage12_13_exact_contract": "b6f2d5b9dfb1b0e5a0372977e585fc1f013dd7565bc633c7fd1bfb83a69755e5"
+    },
+    "next_stage": "Stage 6Z",
+    "next_stage_file": "rocketdict/checkpoints/stage6y/CONTINUE_STAGE6Z.md"
+  },
+  "global_rules": [
+    "quality over speed",
+    "no fake/identity/dictionary MT accepted as real MT",
+    "no silent truncation of the 104k+ corpus",
+    "preserve failed experiments and immutable evidence",
+    "do not infer source merges from version numbers",
+    "public repository must contain project-only information"
+  ]
+}

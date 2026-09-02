@@ -1,21 +1,29 @@
 # RocketDict public handoff
 
-This repository contains the continuation state for the RocketDict research/development project.
+This repository is the public, project-only continuation point for RocketDict.
 
-**Start here:** [`rocketdict/START_HERE.md`](rocketdict/START_HERE.md)
+## Authoritative entrypoint
 
-**Then read the latest checkpoint:** [`rocketdict/CURRENT_STAGE8.md`](rocketdict/CURRENT_STAGE8.md)
+**Start with [`rocketdict/CURRENT.md`](rocketdict/CURRENT.md).**
 
-**Before materializing source/Research Vault, read handoff health:** [`rocketdict/HANDOFF_HEALTH.md`](rocketdict/HANDOFF_HEALTH.md)
+Then use:
 
-> Important as of 2026-08-27: the project/research state is sufficient to continue the Stage 8 methodology and standalone mechanism experiments, but the public binary/text handoff payload is not yet bit-for-bit self-contained. Do not claim that `materialize_handoff.py` can succeed from a fresh clone until `HANDOFF_HEALTH.md` reports all expected payload chunks present and verified.
+- [`rocketdict/START_HERE.md`](rocketdict/START_HERE.md) — Stage 8 / real-OPUS research context;
+- [`rocketdict/HANDOFF_HEALTH.md`](rocketdict/HANDOFF_HEALTH.md) — what can and cannot currently be reconstructed from a fresh clone;
+- [`rocketdict/STATE.json`](rocketdict/STATE.json) — machine-readable Stage 8 snapshot;
+- [`rocketdict/checkpoints/stage6y/`](rocketdict/checkpoints/stage6y/) — verified 0.30.34 / LAB Stage 6Y maintenance-hardening checkpoint.
 
-The handoff is intentionally written so a new ChatGPT conversation can continue the work from this repository alone. It contains only project/research information and deliberately excludes personal information about the project owner/user.
+## Current repository frontier
 
-Current development line: **RocketDict 0.30.40 / Stage 8 experimental-research branch**.
+`main` is newer than the old handoff banner. At the synchronization point recorded in `rocketdict/CURRENT.md`, repository HEAD already contains downstream Workbench/Product work through **resumable Stage20 lexical primary arbitration**. The Stage 8 research line also contains a real official OPUS EN→RU GitHub gate and integrity DOE evidence.
 
-Current research frontier: official OPUS EN→RU / CTranslate2 float32 on Newton's public-domain *Opticks*, with deterministic challenge selections, integrity DOE, Research Vault SQLite, and GitHub Actions real-model execution.
+A separate verified maintenance-hardening lineage reached **RocketDict 0.30.34 / LAB Stage 6Y**, covering offline SQLite compaction crash recovery and ENOSPC/I/O fault safety. That checkpoint is now recorded in this repository, but it must **not** be assumed to be source-level merged into the newer Stage 8/Product lineage unless an exact source comparison proves it.
 
-The last full challenge measurement remains **F96**. New G/H/I mechanism evidence is recorded in `rocketdict/CURRENT_STAGE8.md`; it is not yet a promotion result and must not be confused with a successful full ~5k Stage 8 gate.
+## Non-negotiable continuation rules
 
-Do not treat 0.30.40 as a released COMPLETE checkpoint yet. The last fully released checkpoint was 0.30.39 / Stage 7D. Stage 8 is active research and its purpose is to select and validate a quality-first production pipeline experimentally before the full 104k-word confirmation run.
+- Never replace real MT with fake/identity/dictionary translation and call it success.
+- Never silently truncate the 104k+ *Opticks* corpus.
+- Preserve immutable hashes, failed experiments and audit evidence.
+- Do not weaken quality gates merely to obtain a green run.
+- Do not overwrite the newer active lineage with an older checkpoint; treat verified parallel checkpoints as explicit lineages until merged and revalidated.
+- This repository is public: keep it project-only. Do not add personal profile, location, account data, credentials, private conversations or unrelated files.
