@@ -42,7 +42,7 @@ def parser() -> argparse.ArgumentParser:
     campaign = sub.add_parser("campaign-create"); campaign.add_argument("root", type=Path); campaign.add_argument("definition", type=Path); campaign.add_argument("--pipeline", action="store_true")
     run = sub.add_parser("campaign-run"); run.add_argument("root", type=Path); run.add_argument("plan_id", type=int); run.add_argument("--max-new-trials", type=int)
     report = sub.add_parser("report"); report.add_argument("root", type=Path); report.add_argument("plan_id", type=int); report.add_argument("--destination", type=Path)
-    lexical = sub.add_parser("lexical-opus", help="Generate lexical OPUS n-best evidence and optionally run Stage20")
+    lexical = sub.add_parser("lexical-opus", help="Generate lexical OPUS n-best evidence and optionally run Stage20/Product downstream")
     lexical.add_argument("root", type=Path); lexical.add_argument("--model-path", type=Path, required=True)
     lexical.add_argument("--revision", required=True); lexical.add_argument("--archive-sha256", required=True); lexical.add_argument("--source-uri", required=True)
     lexical.add_argument("--sense-id", type=int, action="append", default=[]); lexical.add_argument("--beam-size", type=int, default=12); lexical.add_argument("--num-hypotheses", type=int, default=12)
@@ -54,6 +54,14 @@ def parser() -> argparse.ArgumentParser:
         help="After Stage20, approve the frozen lexical-provider primary for every generated sense; requires --apply-stage20",
     )
     lexical.add_argument("--arbitration-output", type=Path, help="Optional durable JSON evidence path for Stage20 primary arbitration")
+    lexical.add_argument(
+        "--continue-product",
+        action="store_true",
+        help="Resume strict Product downstream: Stage20 arbitration -> CEFR-J -> exact CMUdict -> sense-scoped examples; requires --apply-stage20",
+    )
+    lexical.add_argument("--cefrj-asset", type=Path, help="Pinned CEFR-J 1.5 CSV; defaults to project data/assets installation")
+    lexical.add_argument("--product-state", type=Path, help="Durable resumable Product downstream state JSON")
+    lexical.add_argument("--include-russian-pronunciation-hint", action="store_true")
     lexical.add_argument("--output", type=Path)
     serve = sub.add_parser("serve"); serve.add_argument("root", type=Path); serve.add_argument("--host", default="127.0.0.1"); serve.add_argument("--port", type=int, default=8765)
     return p
@@ -113,8 +121,12 @@ def main(argv: list[str] | None = None) -> int:
             from .lexical_opus import build_opus_lexical_snapshot, run_stage20_with_snapshot, write_provider_evidence
             if args.arbitrate_primaries and not args.apply_stage20:
                 raise ValueError("--arbitrate-primaries requires --apply-stage20")
-            if args.arbitration_output and not args.arbitrate_primaries:
-                raise ValueError("--arbitration-output requires --arbitrate-primaries")
+            if args.continue_product and not args.apply_stage20:
+                raise ValueError("--continue-product requires --apply-stage20")
+            if args.arbitration_output and not (args.arbitrate_primaries or args.continue_product):
+                raise ValueError("--arbitration-output requires --arbitrate-primaries or --continue-product")
+            if args.product_state and not args.continue_product:
+                raise ValueError("--product-state requires --continue-product")
             provider = build_opus_lexical_snapshot(core, project.paths.database, model_path=args.model_path, revision=args.revision, archive_sha256=args.archive_sha256, source_uri=args.source_uri, sense_ids=args.sense_id, beam_size=args.beam_size, num_hypotheses=args.num_hypotheses, maximum_candidates_per_lemma=args.maximum_candidates)
             destination = args.output or (project.paths.experiments / "lexical-opus" / f"{provider['entries_sha256'][:16]}.json")
             write_provider_evidence(destination, provider)
@@ -122,7 +134,26 @@ def main(argv: list[str] | None = None) -> int:
             if args.apply_stage20:
                 stage20 = run_stage20_with_snapshot(core, project.paths.database, provider, source_policy=args.source_policy, sense_ids=args.sense_id)
                 payload["stage20"] = stage20
-                if args.arbitrate_primaries:
+                if args.continue_product:
+                    from .product_runner import resume_product_downstream
+                    from .sense_translation_arbitration import write_arbitration_evidence
+                    cefr_asset = args.cefrj_asset or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
+                    product_state = args.product_state or destination.with_name(f"{destination.stem}.product-downstream.json")
+                    downstream = resume_product_downstream(
+                        core,
+                        project.paths.database,
+                        provider,
+                        stage20,
+                        cefrj_asset=cefr_asset,
+                        state_path=product_state,
+                        include_russian_pronunciation_hint=args.include_russian_pronunciation_hint,
+                    )
+                    payload["product_downstream"] = downstream
+                    payload["product_state"] = str(product_state.resolve())
+                    if args.arbitration_output:
+                        write_arbitration_evidence(args.arbitration_output, downstream["stage20_arbitration"])
+                        payload["stage20_arbitration_evidence"] = str(args.arbitration_output.resolve())
+                elif args.arbitrate_primaries:
                     from .sense_translation_arbitration import arbitrate_lexical_primaries, write_arbitration_evidence
                     arbitration = arbitrate_lexical_primaries(core, project.paths.database, provider, stage20)
                     arbitration_destination = args.arbitration_output or destination.with_name(f"{destination.stem}.stage20-arbitration.json")
