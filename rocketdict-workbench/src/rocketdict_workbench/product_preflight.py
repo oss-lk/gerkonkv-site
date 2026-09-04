@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+from dataclasses import asdict
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+from .product_policy import validate_product_configuration
+from .product_profile import PROFILE_SCHEMA, QUALITY_GATES, build_product_profile
+from .project import WorkbenchProject
+
+PREFLIGHT_SCHEMA = "rocketdict-workbench-product-preflight/1"
+REQUIRED_CORE_STAGES = (8, 10, 12, 14, 16, 17, 19)
+SUBTITLE_SUFFIXES = {".srt", ".vtt", ".ass", ".ssa"}
+
+
+def _canonical_sha256(value: Any) -> str:
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _source_kind_from_suffix(suffix: str) -> str:
+    suffix = suffix.casefold()
+    if suffix in SUBTITLE_SUFFIXES:
+        return "subtitle"
+    if suffix == ".txt":
+        return "text"
+    raise RuntimeError(f"Product preflight does not accept source suffix {suffix!r}")
+
+
+def _select_source(project: WorkbenchProject, source_sha256: str | None) -> dict[str, Any]:
+    inputs = list(project.metadata().get("inputs") or [])
+    if not inputs:
+        raise RuntimeError("Product preflight requires an imported immutable source")
+    if source_sha256:
+        wanted = source_sha256.casefold()
+        rows = [row for row in inputs if str(row.get("sha256") or "").casefold() == wanted]
+        if len(rows) != 1:
+            raise RuntimeError(f"Imported source SHA is not unique/present: {source_sha256}")
+        return dict(rows[0])
+    if len(inputs) != 1:
+        raise RuntimeError("Project has multiple imported sources; --source-sha256 is required for Product Mode")
+    return dict(inputs[0])
+
+
+def _verify_source_copy(project: WorkbenchProject, source: dict[str, Any]) -> dict[str, Any]:
+    expected_sha = str(source.get("sha256") or "").casefold()
+    if len(expected_sha) != 64 or any(ch not in "0123456789abcdef" for ch in expected_sha):
+        raise RuntimeError("Imported source metadata lacks a valid SHA-256")
+    relative = Path(str(source.get("copied_path") or ""))
+    if not relative.parts or relative.is_absolute():
+        raise RuntimeError("Imported source copied_path must be project-relative")
+    root = project.paths.root.resolve()
+    copied = (root / relative).resolve()
+    try:
+        copied.relative_to(root)
+    except ValueError as exc:
+        raise RuntimeError("Imported source copied_path escapes the Workbench project") from exc
+    if not copied.is_file():
+        raise RuntimeError(f"Immutable source copy is missing: {copied}")
+    actual_sha = _file_sha256(copied)
+    if actual_sha != expected_sha:
+        raise RuntimeError(f"Immutable source copy SHA changed: {actual_sha} != {expected_sha}")
+    actual_bytes = copied.stat().st_size
+    expected_bytes = int(source.get("byte_size") or 0)
+    if expected_bytes <= 0 or actual_bytes != expected_bytes:
+        raise RuntimeError(f"Immutable source copy size changed: {actual_bytes} != {expected_bytes}")
+    return {
+        "sha256": actual_sha,
+        "byte_size": actual_bytes,
+        "suffix": str(source.get("suffix") or "").casefold(),
+        "copied_path": str(relative.as_posix()),
+        "source_name": str(source.get("source_name") or ""),
+        "import_identity_sha256": _canonical_sha256(source.get("import") or {}),
+        "interpretation_identity_sha256": _canonical_sha256(source.get("interpretation") or {}),
+    }
+
+
+def _execution_config(profile: dict[str, Any]) -> dict[str, Any]:
+    stages = []
+    for key, stage in sorted((profile.get("stages") or {}).items(), key=lambda item: int(item[0])):
+        stages.append(
+            {
+                "stage_number": int(key),
+                "enabled": True,
+                "implementation": stage.get("implementation"),
+                "parameters": dict(stage.get("parameters") or {}),
+            }
+        )
+    return {"stages": stages}
+
+
+def _assert_runtime_available(profile: dict[str, Any]) -> None:
+    stages = profile.get("stages") or {}
+    for number in REQUIRED_CORE_STAGES:
+        row = stages.get(str(number))
+        if not isinstance(row, dict):
+            raise RuntimeError(f"Product profile is missing required core stage {number}")
+        availability = row.get("availability") or {}
+        if availability.get("available") is not True:
+            raise RuntimeError(
+                f"Product stage {number} implementation {row.get('implementation')!r} is not locally available: {availability}"
+            )
+    gates = list(profile.get("quality_gates") or [])
+    actual = tuple(str(row.get("implementation") or "") for row in gates)
+    if actual != QUALITY_GATES:
+        raise RuntimeError(f"Product hard quality gate identity changed: {actual} != {QUALITY_GATES}")
+
+
+def build_product_preflight(
+    project: WorkbenchProject,
+    *,
+    source_sha256: str | None = None,
+    source_kind: str | None = None,
+) -> dict[str, Any]:
+    """Freeze the exact source, core, registry and Product profile before execution.
+
+    Runtime probing is mandatory. A missing real core implementation, mutated source
+    copy, fake/identity MT configuration, changed registry identity, or changed hard
+    quality gate set stops Product Mode before any expensive processing starts.
+    """
+    doctor = project.core.doctor()
+    if not doctor.available:
+        raise RuntimeError(f"Real RocketDict core is unavailable: {doctor.error}")
+    source_record = _select_source(project, source_sha256)
+    source = _verify_source_copy(project, source_record)
+    inferred_kind = _source_kind_from_suffix(source["suffix"])
+    if source_kind is not None and source_kind != inferred_kind:
+        raise RuntimeError(f"Requested Product source kind {source_kind!r} conflicts with imported {inferred_kind!r} source")
+
+    manifest = project.lab_catalog(probe_runtime=True)
+    registry_hash = str(manifest.get("registry_hash") or "")
+    if not registry_hash:
+        raise RuntimeError("Live Lab Registry did not provide registry_hash")
+    profile = build_product_profile(manifest, source_kind=inferred_kind)
+    if profile.get("schema") != PROFILE_SCHEMA:
+        raise RuntimeError(f"Unexpected Product profile schema: {profile.get('schema')!r}")
+    if profile.get("registry_hash") != registry_hash:
+        raise RuntimeError("Product profile registry identity differs from live Lab Registry")
+    _assert_runtime_available(profile)
+    warnings = validate_product_configuration(_execution_config(profile), manifest)
+
+    selected = {
+        str(number): {
+            "implementation": profile["stages"][str(number)].get("implementation"),
+            "adapter_descriptor_hash": profile["stages"][str(number)].get("adapter_descriptor_hash"),
+            "parameters_sha256": _canonical_sha256(profile["stages"][str(number)].get("parameters") or {}),
+        }
+        for number in REQUIRED_CORE_STAGES
+    }
+    quality_gates = [
+        {
+            "implementation": row.get("implementation"),
+            "adapter_descriptor_hash": row.get("adapter_descriptor_hash"),
+            "parameters_sha256": _canonical_sha256(row.get("parameters") or {}),
+        }
+        for row in profile.get("quality_gates") or []
+    ]
+    identity = {
+        "source": source,
+        "source_kind": inferred_kind,
+        "core": {
+            "python": doctor.python,
+            "rocketdict_version": doctor.rocketdict_version,
+            "api_version": doctor.api_version,
+        },
+        "registry_hash": registry_hash,
+        "required_core_stages": selected,
+        "quality_gates": quality_gates,
+        "profile_sha256": _canonical_sha256(profile),
+    }
+    identity["fingerprint"] = _canonical_sha256(identity)
+    return {
+        "schema": PREFLIGHT_SCHEMA,
+        "status": "ready",
+        "identity": identity,
+        "profile": profile,
+        "policy_warnings": list(warnings),
+        "network_required_during_processing": False,
+        "fake_or_identity_mt_allowed": False,
+    }
+
+
+def write_product_preflight(path: Path | str, payload: dict[str, Any]) -> Path:
+    path = Path(path).expanduser().resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return path
