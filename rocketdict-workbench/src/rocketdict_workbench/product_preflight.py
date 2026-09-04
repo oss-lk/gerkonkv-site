@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 import hashlib
 import json
 from pathlib import Path
@@ -74,14 +73,30 @@ def _verify_source_copy(project: WorkbenchProject, source: dict[str, Any]) -> di
     expected_bytes = int(source.get("byte_size") or 0)
     if expected_bytes <= 0 or actual_bytes != expected_bytes:
         raise RuntimeError(f"Immutable source copy size changed: {actual_bytes} != {expected_bytes}")
+
+    import_payload = dict(source.get("import") or {})
+    interpretation_payload = dict(source.get("interpretation") or {})
+    import_event_id = int(import_payload.get("import_event_id") or 0)
+    document_version_id = int(interpretation_payload.get("document_version_id") or 0)
+    selected_format = str(interpretation_payload.get("selected_format") or "").casefold()
+    if import_event_id <= 0:
+        raise RuntimeError("Imported source metadata lacks durable import_event_id")
+    if document_version_id <= 0:
+        raise RuntimeError("Imported source metadata lacks durable document_version_id")
+    if not selected_format:
+        raise RuntimeError("Imported source metadata lacks selected interpretation format")
+
     return {
         "sha256": actual_sha,
         "byte_size": actual_bytes,
         "suffix": str(source.get("suffix") or "").casefold(),
         "copied_path": str(relative.as_posix()),
         "source_name": str(source.get("source_name") or ""),
-        "import_identity_sha256": _canonical_sha256(source.get("import") or {}),
-        "interpretation_identity_sha256": _canonical_sha256(source.get("interpretation") or {}),
+        "import_event_id": import_event_id,
+        "document_version_id": document_version_id,
+        "selected_format": selected_format,
+        "import_identity_sha256": _canonical_sha256(import_payload),
+        "interpretation_identity_sha256": _canonical_sha256(interpretation_payload),
     }
 
 
