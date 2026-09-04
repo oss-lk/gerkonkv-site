@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from rocketdict_workbench.cli import parser
 import rocketdict_workbench.product_preflight as preflight
 
 
@@ -147,3 +148,20 @@ def test_product_preflight_rejects_source_kind_mismatch(monkeypatch, tmp_path) -
     source = _source(tmp_path)
     with pytest.raises(RuntimeError, match="conflicts with imported"):
         preflight.build_product_preflight(_Project(tmp_path, [source]), source_kind="subtitle")
+
+
+def test_product_preflight_cli_exposes_source_identity_controls() -> None:
+    args = parser().parse_args([
+        "product-preflight",
+        "/tmp/project",
+        "--source-sha256",
+        "a" * 64,
+        "--source-kind",
+        "text",
+        "--output",
+        "/tmp/preflight.json",
+    ])
+    assert args.command == "product-preflight"
+    assert args.source_sha256 == "a" * 64
+    assert args.source_kind == "text"
+    assert args.output == Path("/tmp/preflight.json")
