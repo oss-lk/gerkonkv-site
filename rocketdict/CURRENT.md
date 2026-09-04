@@ -1,10 +1,33 @@
 # CURRENT — RocketDict public continuation state
 
-Last synchronized: **2026-09-02**.
+Last synchronized: **2026-09-04**.
+
+## 0. Latest continuation increment — executable Stage20 lexical-primary arbitration
+
+The active Workbench/Product line has advanced beyond the 2026-09-02 synchronization point.
+
+Stage20 lexical-primary arbitration is no longer only a declared Product Profile policy:
+
+- `rocketdict-workbench lexical-opus` now exposes `--arbitrate-primaries` after `--apply-stage20`;
+- the CLI fails closed if arbitration is requested without Stage20, or if an arbitration output path is supplied without enabling arbitration;
+- `lexical-primary-arbitration-v1` still requires the desired dictionary headword to already exist in the Stage20 generation run with accepted immutable model evidence;
+- wrapper validation now checks exact result coverage, exact sense ordering, approved status and normalized equality with the frozen provider primary;
+- arbitration request/result evidence is persisted as a separate JSON artifact (`*.stage20-arbitration.json` by default);
+- dependency-light regression coverage was added for provider-primary mapping, missing candidates, exact approved coverage, wrong-sense rejection, changed-primary rejection, durable evidence and CLI flag exposure.
+
+Verified GitHub Actions evidence for the code/test checkpoint:
+
+- commit: `f9bef4fc66d3c9bf37271dc33c3c6f1cf3ec35ec` — `Test Stage20 lexical primary arbitration contract`;
+- workflow: `RocketDict Workbench`, run `33871064192`;
+- Python: 3.13.15;
+- package compile: success;
+- tests: **28 passed, 1 skipped**.
+
+This is an incremental Product-path hardening step, not a claim that the complete one-button dictionary pipeline is finished. The next active Workbench milestone is to connect the already-verified stage-specific product contracts into the strict resumable end-to-end production runner while preserving the real-model/integrity rules below.
 
 ## 1. Do not regress the repository
 
-The active `main` history is newer than several archived LAB checkpoints. At synchronization, HEAD before this update was:
+The active `main` history is newer than several archived LAB checkpoints. At the 2026-09-02 synchronization, HEAD before the handoff update was:
 
 `e9124f57698ebb1e36e1708f27be23374215560c` — **Add resumable Stage20 lexical primary arbitration**.
 
@@ -64,6 +87,8 @@ Do not invent missing Stage 8 source files or Research Vault rows. Mechanism exp
 ### Continue the active Stage 8/Product line
 
 Use the current GitHub HEAD, Workbench/Product commits, `START_HERE.md`, `STATE.json` and `RESEARCH_STATUS.md`. Preserve the official OPUS identity and the existing DOE/evidence rules. Do not reset to an older LAB ZIP.
+
+The immediate Workbench continuation after the 2026-09-04 increment is the strict/resumable end-to-end Product runner: source preparation → real MT → hard integrity gates → approved translation revision → alignment → lexical extraction/sense induction → Stage20 + lexical-primary arbitration → CEFR/pronunciation/examples → cards/export. Stage-specific contracts already present in the repository must be reused rather than reimplemented in a parallel stack.
 
 ### Continue the Stage 6 maintenance-hardening line
 
