@@ -38,6 +38,11 @@ def parser() -> argparse.ArgumentParser:
     product_preflight.add_argument("--source-sha256", help="Required when the project contains multiple imported sources")
     product_preflight.add_argument("--source-kind", choices=("subtitle", "text"), help="Optional assertion; otherwise inferred from the imported source")
     product_preflight.add_argument("--output", type=Path, help="Durable Product preflight JSON evidence path")
+    product_run = sub.add_parser("product-run-init", help="Create/resume unified Product state and probe the exact real-core API execution surface")
+    product_run.add_argument("root", type=Path)
+    product_run.add_argument("--source-sha256", help="Required when the project contains multiple imported sources")
+    product_run.add_argument("--source-kind", choices=("subtitle", "text"), help="Optional assertion; otherwise inferred from the imported source")
+    product_run.add_argument("--state", type=Path, help="Durable unified Product run state JSON")
     cefr_asset = sub.add_parser("cefrj-install", help="Install the pinned CEFR-J 1.5 asset during explicit setup")
     cefr_asset.add_argument("root", type=Path); cefr_asset.add_argument("--destination", type=Path)
     cefr = sub.add_parser("cefrj-assess", help="Run Product CEFR-J-only assessment; no smoke/frequency fallback")
@@ -121,6 +126,13 @@ def main(argv: list[str] | None = None) -> int:
                 "profile_schema": payload["profile"].get("schema"),
                 "policy_warnings": payload.get("policy_warnings") or [],
             }); return 0
+        if args.command == "product-run-init":
+            from .product_preflight import build_product_preflight
+            from .product_run_state import initialize_product_run
+            preflight = build_product_preflight(project, source_sha256=args.source_sha256, source_kind=args.source_kind)
+            fingerprint = str(preflight["identity"]["fingerprint"])
+            state_path = args.state or (project.paths.experiments / "product-run" / f"{fingerprint[:16]}.json")
+            _json(initialize_product_run(core, project.paths.database, preflight, state_path=state_path)); return 0
         if args.command == "cefrj-install":
             from .product_cefr import install_cefrj_asset
             destination = args.destination or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
