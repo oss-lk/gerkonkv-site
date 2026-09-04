@@ -64,7 +64,13 @@ def _stage20_identity(stage20_result: dict[str, Any]) -> tuple[list[int], list[i
     return sense_ids, entry_ids, _canonical_sha256(normalized)
 
 
-def _input_identity(provider_result: dict[str, Any], stage20_result: dict[str, Any], cefr_asset: dict[str, Any]) -> dict[str, Any]:
+def _input_identity(
+    provider_result: dict[str, Any],
+    stage20_result: dict[str, Any],
+    cefr_asset: dict[str, Any],
+    *,
+    include_russian_pronunciation_hint: bool,
+) -> dict[str, Any]:
     provider_sha = str(provider_result.get("entries_sha256") or "").lower()
     if len(provider_sha) != 64 or any(c not in "0123456789abcdef" for c in provider_sha):
         raise RuntimeError("Product downstream runner requires provider entries_sha256")
@@ -75,6 +81,13 @@ def _input_identity(provider_result: dict[str, Any], stage20_result: dict[str, A
         "sense_ids": sense_ids,
         "entry_ids": entry_ids,
         "cefrj_sha256": str(cefr_asset.get("sha256") or "").lower(),
+        "settings": {
+            "include_russian_pronunciation_hint": bool(include_russian_pronunciation_hint),
+            "approve_stage20_arbitration": True,
+            "approve_cefrj": True,
+            "approve_pronunciation": True,
+            "approve_examples": True,
+        },
     }
     identity["fingerprint"] = _canonical_sha256(identity)
     return identity
@@ -172,12 +185,18 @@ def resume_product_downstream(
 
     Every completed step is persisted atomically. Re-running with the same
     immutable inputs validates and reuses completed results; changing provider,
-    Stage20 revisions, or the pinned CEFR-J asset fails closed.
+    Stage20 revisions, the pinned CEFR-J asset, or output-affecting Product
+    settings fails closed.
     """
     database = Path(database).expanduser().resolve()
     state_path = Path(state_path).expanduser().resolve()
     cefr_meta = verify_cefrj_asset(cefrj_asset)
-    identity = _input_identity(provider_result, stage20_result, cefr_meta)
+    identity = _input_identity(
+        provider_result,
+        stage20_result,
+        cefr_meta,
+        include_russian_pronunciation_hint=include_russian_pronunciation_hint,
+    )
     sense_ids = list(identity["sense_ids"])
     entry_ids = list(identity["entry_ids"])
     state = _load_or_create_state(state_path, identity)
