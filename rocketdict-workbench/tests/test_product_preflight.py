@@ -103,6 +103,9 @@ def test_product_preflight_freezes_source_runtime_and_profile(monkeypatch, tmp_p
     assert first["status"] == "ready"
     assert first["schema"] == preflight.PREFLIGHT_SCHEMA
     assert first["identity"]["source"]["sha256"] == source["sha256"]
+    assert first["identity"]["source"]["import_event_id"] == 7
+    assert first["identity"]["source"]["document_version_id"] == 11
+    assert first["identity"]["source"]["selected_format"] == "txt"
     assert first["identity"]["source_kind"] == "text"
     assert first["identity"]["registry_hash"] == "registry-1"
     assert first["identity"]["core"]["rocketdict_version"] == "0.30.40"
@@ -148,6 +151,14 @@ def test_product_preflight_rejects_source_kind_mismatch(monkeypatch, tmp_path) -
     source = _source(tmp_path)
     with pytest.raises(RuntimeError, match="conflicts with imported"):
         preflight.build_product_preflight(_Project(tmp_path, [source]), source_kind="subtitle")
+
+
+def test_product_preflight_requires_durable_document_identity(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    _install_profile_stubs(monkeypatch)
+    source = _source(tmp_path)
+    source["interpretation"].pop("document_version_id")
+    with pytest.raises(RuntimeError, match="document_version_id"):
+        preflight.build_product_preflight(_Project(tmp_path, [source]))
 
 
 def test_product_preflight_cli_exposes_source_identity_controls() -> None:
