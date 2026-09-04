@@ -2,28 +2,48 @@
 
 Last synchronized: **2026-09-04**.
 
-## 0. Latest continuation increment — executable Stage20 lexical-primary arbitration
+## 0. Latest continuation increment — resumable Product downstream runner
 
-The active Workbench/Product line has advanced beyond the 2026-09-02 synchronization point.
+The active Workbench/Product line has advanced beyond the standalone Stage20 arbitration checkpoint.
 
-Stage20 lexical-primary arbitration is no longer only a declared Product Profile policy:
+A first strict/resumable Product runner slice now exists in `rocketdict-workbench/src/rocketdict_workbench/product_runner.py` and is exposed through `rocketdict-workbench lexical-opus --apply-stage20 --continue-product`.
 
-- `rocketdict-workbench lexical-opus` now exposes `--arbitrate-primaries` after `--apply-stage20`;
-- the CLI fails closed if arbitration is requested without Stage20, or if an arbitration output path is supplied without enabling arbitration;
-- `lexical-primary-arbitration-v1` still requires the desired dictionary headword to already exist in the Stage20 generation run with accepted immutable model evidence;
-- wrapper validation now checks exact result coverage, exact sense ordering, approved status and normalized equality with the frozen provider primary;
-- arbitration request/result evidence is persisted as a separate JSON artifact (`*.stage20-arbitration.json` by default);
-- dependency-light regression coverage was added for provider-primary mapping, missing candidates, exact approved coverage, wrong-sense rejection, changed-primary rejection, durable evidence and CLI flag exposure.
+Current executable downstream order:
 
-Verified GitHub Actions evidence for the code/test checkpoint:
+1. Stage20 `lexical-primary-arbitration-v1`;
+2. pinned CEFR-J Vocabulary Profile 1.5 assessment;
+3. exact CMUdict pronunciation with generated fallback forbidden;
+4. Stage23 sense-scoped document examples.
 
-- commit: `f9bef4fc66d3c9bf37271dc33c3c6f1cf3ec35ec` — `Test Stage20 lexical primary arbitration contract`;
-- workflow: `RocketDict Workbench`, run `33871064192`;
+The runner is deliberately fail-closed and evidence-preserving:
+
+- every step is persisted atomically in `rocketdict-workbench-product-downstream/1` state;
+- successful steps are reused on resume instead of being blindly repeated;
+- immutable run identity includes lexical-provider `entries_sha256`, exact Stage20 sense/entry/generation/selection revision identities, pinned CEFR-J SHA-256 and output-affecting Product settings;
+- changing those immutable inputs/settings rejects state reuse instead of mixing evidence from different runs;
+- Stage20 arbitration still requires the desired dictionary headword to already exist as an accepted model-evidenced candidate;
+- CEFR coverage/order and pinned source identity are checked;
+- pronunciation coverage/order is checked and generated fallback remains forbidden;
+- Stage23 coverage/order and `stage23-sense-scope-v2` are checked;
+- critically, every Stage23 row must reference exactly the approved Stage20 selection revision produced/validated by lexical-primary arbitration; a newer/unrelated approved revision is treated as review-identity drift and stops the run;
+- failed steps are recorded with error type/message and remain resumable; completed earlier steps remain durable.
+
+CLI additions:
+
+- `--continue-product`;
+- `--cefrj-asset`;
+- `--product-state`;
+- `--include-russian-pronunciation-hint` (included in immutable run fingerprint).
+
+Verified GitHub Actions evidence for the complete code/test/documentation checkpoint:
+
+- commit: `cc43068b052761c0e1be66cfc9c5202732a241f5` — `Document resumable Product downstream pipeline`;
+- workflow: `RocketDict Workbench`, run `33872151299`;
 - Python: 3.13.15;
 - package compile: success;
-- tests: **28 passed, 1 skipped**.
+- tests: **34 passed, 1 skipped**.
 
-This is an incremental Product-path hardening step, not a claim that the complete one-button dictionary pipeline is finished. The next active Workbench milestone is to connect the already-verified stage-specific product contracts into the strict resumable end-to-end production runner while preserving the real-model/integrity rules below.
+This is not yet the complete one-button dictionary pipeline. The next active Product milestone is to extend the same runner **upward** through source preparation → real MT → hard integrity gates → approved translation revision → alignment → lexical extraction/sense induction, and **downward** from Stage23 through cards/export. Existing real stage implementations and evidence contracts must be orchestrated, not reimplemented in a parallel simplified stack.
 
 ## 1. Do not regress the repository
 
@@ -31,7 +51,7 @@ The active `main` history is newer than several archived LAB checkpoints. At the
 
 `e9124f57698ebb1e36e1708f27be23374215560c` — **Add resumable Stage20 lexical primary arbitration**.
 
-Recent repository work after the original Stage 8 handoff includes Product/Workbench alignment-aware lexical extraction, dictionary-shaped lexical OPUS, exact pronunciation policy, pinned CEFR-J policy and Stage20 lexical-primary arbitration.
+Recent repository work after the original Stage 8 handoff includes Product/Workbench alignment-aware lexical extraction, dictionary-shaped lexical OPUS, exact pronunciation policy, pinned CEFR-J policy, Stage20 lexical-primary arbitration and the resumable downstream Product runner described above.
 
 Therefore an older LAB archive/version number must never be used to overwrite this active line merely because it is a complete ZIP.
 
@@ -88,7 +108,13 @@ Do not invent missing Stage 8 source files or Research Vault rows. Mechanism exp
 
 Use the current GitHub HEAD, Workbench/Product commits, `START_HERE.md`, `STATE.json` and `RESEARCH_STATUS.md`. Preserve the official OPUS identity and the existing DOE/evidence rules. Do not reset to an older LAB ZIP.
 
-The immediate Workbench continuation after the 2026-09-04 increment is the strict/resumable end-to-end Product runner: source preparation → real MT → hard integrity gates → approved translation revision → alignment → lexical extraction/sense induction → Stage20 + lexical-primary arbitration → CEFR/pronunciation/examples → cards/export. Stage-specific contracts already present in the repository must be reused rather than reimplemented in a parallel stack.
+Immediate continuation after the resumable downstream runner checkpoint:
+
+- inspect/reuse the existing core contracts for source preparation, Stage12 real MT, Stage15 hard reference-free integrity gates, translation approval/finalization, Stage17/19 alignment/context and Stage18 lexical extraction/sense induction;
+- extend the same immutable/resumable state machine upward until it can produce the Stage20 inputs itself;
+- then add Stage24 cards and Stage25 export as the final downstream tail;
+- require exact stage/revision/content identities across boundaries, just as Stage20→Stage23 is now enforced;
+- do not enable the one-button Product UI until the full path is executable and validated without synthetic fallbacks.
 
 ### Continue the Stage 6 maintenance-hardening line
 
