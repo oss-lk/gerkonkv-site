@@ -15,7 +15,8 @@ Product-first local control plane over the real RocketDict core.
 - generates dictionary-shaped lexical OPUS evidence and can run real Stage20 over the frozen provider snapshot;
 - can explicitly apply `lexical-primary-arbitration-v1` after Stage20, requiring the selected dictionary headword to already exist as an accepted model-evidenced candidate and persisting the arbitration request/result as durable JSON evidence;
 - has a resumable downstream Product runner connecting Stage20 arbitration → pinned CEFR-J → exact CMUdict pronunciation → sense-scoped Stage23 examples;
-- has an executable fail-closed Product preflight that freezes the immutable source, real core/API identity, live registry, selected Stage8–19 adapters/settings and exact hard-quality-gate identity before upstream execution is allowed;
+- has an executable fail-closed Product preflight that freezes the immutable source, durable import/document identities, real core/API identity, live registry, selected Stage8–19 adapters/settings and exact hard-quality-gate identity before upstream execution is allowed;
+- has a unified `rocketdict-workbench-product-run/1` root state anchored to that immutable preflight fingerprint and an evidence-preserving real-core API-surface probe;
 - never substitutes fake/identity MT for a missing backend.
 
 ## Two modes, one core
@@ -36,6 +37,7 @@ rocketdict-workbench --core-pythonpath /path/to/unpacked-core import ./my-projec
 rocketdict-workbench --core-pythonpath /path/to/unpacked-core catalog ./my-project --output ./catalog.json
 rocketdict-workbench --core-pythonpath /path/to/unpacked-core default-config ./my-project
 rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-preflight ./my-project
+rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-run-init ./my-project
 rocketdict-workbench --core-pythonpath /path/to/unpacked-core serve ./my-project
 ```
 
@@ -53,7 +55,7 @@ The preflight is intentionally stricter than merely loading `product-*.json`. It
 
 1. selects an already imported immutable source and recomputes the copied file SHA-256 and byte size;
 2. rejects project-relative source paths that escape the Workbench root;
-3. freezes the import and interpretation identities;
+3. freezes the import/interpretation payload hashes **and** requires durable `import_event_id`, `document_version_id` and selected source format;
 4. requires the real RocketDict core to be available and records its version/API identity;
 5. probes the live Lab Registry at runtime rather than trusting a stale catalog;
 6. rebuilds the Product Profile from that live registry and requires matching registry identity;
@@ -71,7 +73,38 @@ rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-preflight 
 
 `--source-kind subtitle|text` is an optional assertion and must agree with the imported source suffix. `--output` can choose the evidence path; otherwise the record is written below `experiments/product-preflight/` using the fingerprint prefix.
 
-This preflight does **not** claim that Stage8–19 execution is already wired. The current public handoff does not contain enough exact newer-core source to safely invent internal service/module calls. The next upstream runner step must bind this fingerprint to a proven registry/API execution path recovered or probed from the real core.
+### Unified Product run root and real-core API probe
+
+The next layer is now executable:
+
+```bash
+rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-run-init ./my-project
+```
+
+`product-run-init` rebuilds the strict Product preflight and creates/resumes an atomic `rocketdict-workbench-product-run/1` state. Its immutable root contains the preflight fingerprint, source SHA, `import_event_id`, `document_version_id`, selected source format, registry hash and real core/API identity.
+
+The initial state machine is deliberately explicit:
+
+1. `preflight` — completed and stored as immutable root evidence;
+2. `upstream_contract_probe` — probes the exact `rocketdict.api` package in the same real runtime;
+3. `upstream_execution` — remains pending until an exact Stage8–19 operation binding is proven;
+4. `stage20_downstream` — future bridge to the already-working downstream runner;
+5. `cards` — pending;
+6. `export` — pending.
+
+The API probe records:
+
+- RocketDict version and API version;
+- direct modules exposed under `rocketdict.api` and source SHA-256 when introspection is available;
+- discoverable argparse parser command paths;
+- string keys of public callable mappings;
+- an immutable probe fingerprint.
+
+These are **observations**, not automatic proof that every discovered string is an executable Product operation. Workbench therefore keeps `upstream_execution` blocked with `no_verified_stage8_19_operation_binding` rather than guessing how to invoke Stage8–19.
+
+Re-running the same `product-run-init` validates and reuses completed probe evidence. A changed preflight root, changed core/API identity or mutation of persisted probe evidence fails closed. `--state` can select a state file; otherwise it is written below `experiments/product-run/` using the preflight fingerprint prefix.
+
+This closes an important handoff gap: the next development step can work from a durable runtime observation instead of guessing internal module/service names from incomplete Stage8 source recovery.
 
 ### Product Stage20 lexical-primary arbitration
 
@@ -123,10 +156,10 @@ A subtitle file is not allowed to silently degrade into plain TXT. If the select
 
 ## Current boundary
 
-Workbench 0.1 has a real core bridge, project/database lifecycle, import/interpretation, dynamic Lab Registry, strict immutable Product preflight, real ExperimentBench campaigns, machine exports, human reports and a local browser control surface. The downstream lexical path is executable and resumable through Stage23.
+Workbench 0.1 now has a real core bridge, project/database lifecycle, import/interpretation, dynamic Lab Registry, strict immutable Product preflight, unified Product run root, real-core API-surface probe, real ExperimentBench campaigns, machine exports, human reports and a local browser control surface. The downstream lexical path remains executable and resumable through Stage23.
 
-The product button for the complete dictionary pipeline remains disabled. Upstream Stage8–19 execution is not yet connected to the Product state machine, and the public handoff does not contain enough exact newer-core source to justify guessing internal execution calls. Final cards/export are also not yet wired. This is deliberate: incomplete functionality is shown as incomplete instead of producing synthetic results.
+The product button for the complete dictionary pipeline remains disabled. The unified Product state deliberately stops before Stage8–19 execution until an exact registry/API binding is proven from real-runtime evidence. Final cards/export are also not yet wired. This is deliberate: incomplete functionality is shown as incomplete instead of producing synthetic results.
 
 ## Next product milestone
 
-Bind the Product preflight fingerprint into one unified resumable Product state and recover/probe the exact real-core registry/API execution contract for Stage8–19. Then extend that state through automatic source preparation → real MT → hard integrity gates → approved translation → alignment → lexical/sense induction, reuse the existing Stage20→Stage23 downstream runner, and finally add cards/export. Existing stage implementations and evidence contracts remain authoritative; Workbench must orchestrate them rather than create a parallel algorithm stack.
+Use the persisted `upstream_contract_probe` evidence from the exact real runtime to prove a concrete registry/API execution binding for the first upstream Product slice. Only after that binding is validated should the state advance through source preparation → real MT → hard integrity gates → approved translation → alignment → lexical/sense induction. Then reuse the existing Stage20→Stage23 downstream runner and finally add cards/export. Existing stage implementations and evidence contracts remain authoritative; Workbench must orchestrate them rather than create a parallel algorithm stack.
