@@ -134,8 +134,18 @@ def arbitrate_lexical_primaries(
     if len(rows) != len(requests):
         raise RuntimeError(f"Stage20 arbitration coverage mismatch: {len(rows)} != {len(requests)}")
     for request, row in zip(requests, rows, strict=True):
+        if int(row.get("sense_id") or 0) != request["sense_id"]:
+            raise RuntimeError(f"Stage20 arbitration sense-order mismatch: expected {request['sense_id']}, got {row.get('sense_id')}")
         if row.get("status") != "approved":
             raise RuntimeError(f"Stage20 arbitration did not approve sense {request['sense_id']}: {row}")
         if normalize_lexical_text(str(row.get("translation") or "")) != request["desired_normalized"]:
             raise RuntimeError(f"Stage20 arbitration changed the frozen lexical primary: expected {request}, got {row}")
     return {"policy": POLICY_KEY, "requests": requests, "results": rows}
+
+
+def write_arbitration_evidence(path: Path | str, payload: dict[str, Any]) -> Path:
+    """Persist the exact arbitration request/result pair as durable audit evidence."""
+    path = Path(path).expanduser().resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+    return path
