@@ -33,6 +33,11 @@ def parser() -> argparse.ArgumentParser:
     default = sub.add_parser("default-config"); default.add_argument("root", type=Path); default.add_argument("--filename", default="research-registry-default.json")
     product = sub.add_parser("product-profile", help="Create the strict Workbench Product Mode profile")
     product.add_argument("root", type=Path); product.add_argument("--source-kind", choices=("subtitle", "text"), default="subtitle"); product.add_argument("--output", type=Path)
+    product_preflight = sub.add_parser("product-preflight", help="Freeze immutable source/core/registry/Product-profile identity before execution")
+    product_preflight.add_argument("root", type=Path)
+    product_preflight.add_argument("--source-sha256", help="Required when the project contains multiple imported sources")
+    product_preflight.add_argument("--source-kind", choices=("subtitle", "text"), help="Optional assertion; otherwise inferred from the imported source")
+    product_preflight.add_argument("--output", type=Path, help="Durable Product preflight JSON evidence path")
     cefr_asset = sub.add_parser("cefrj-install", help="Install the pinned CEFR-J 1.5 asset during explicit setup")
     cefr_asset.add_argument("root", type=Path); cefr_asset.add_argument("--destination", type=Path)
     cefr = sub.add_parser("cefrj-assess", help="Run Product CEFR-J-only assessment; no smoke/frequency fallback")
@@ -100,6 +105,22 @@ def main(argv: list[str] | None = None) -> int:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(json.dumps(profile, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
             _json({"profile": str(destination.resolve()), "schema": profile.get("schema"), "source_kind": profile.get("source_kind"), "quality_gates": [x.get("implementation") for x in profile.get("quality_gates") or []]}); return 0
+        if args.command == "product-preflight":
+            from .product_preflight import build_product_preflight, write_product_preflight
+            payload = build_product_preflight(project, source_sha256=args.source_sha256, source_kind=args.source_kind)
+            fingerprint = str(payload["identity"]["fingerprint"])
+            destination = args.output or (project.paths.experiments / "product-preflight" / f"{fingerprint[:16]}.json")
+            write_product_preflight(destination, payload)
+            _json({
+                "status": payload.get("status"),
+                "preflight": str(destination.resolve()),
+                "fingerprint": fingerprint,
+                "source_sha256": payload["identity"]["source"]["sha256"],
+                "source_kind": payload["identity"]["source_kind"],
+                "registry_hash": payload["identity"]["registry_hash"],
+                "profile_schema": payload["profile"].get("schema"),
+                "policy_warnings": payload.get("policy_warnings") or [],
+            }); return 0
         if args.command == "cefrj-install":
             from .product_cefr import install_cefrj_asset
             destination = args.destination or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
