@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from rocketdict_workbench.cli import parser
 import rocketdict_workbench.product_run_state as run_state
 from rocketdict_workbench.product_preflight import PREFLIGHT_SCHEMA
 
@@ -142,3 +143,20 @@ def test_completed_probe_evidence_mutation_is_detected(tmp_path) -> None:
 
     with pytest.raises(RuntimeError, match="evidence was mutated"):
         run_state.initialize_product_run(core, database, _preflight(), state_path=state_path)
+
+
+def test_product_run_init_cli_exposes_root_identity_controls() -> None:
+    args = parser().parse_args([
+        "product-run-init",
+        "/tmp/project",
+        "--source-sha256",
+        "a" * 64,
+        "--source-kind",
+        "text",
+        "--state",
+        "/tmp/product-run.json",
+    ])
+    assert args.command == "product-run-init"
+    assert args.source_sha256 == "a" * 64
+    assert args.source_kind == "text"
+    assert args.state == Path("/tmp/product-run.json")
