@@ -47,7 +47,14 @@ def parser() -> argparse.ArgumentParser:
     lexical.add_argument("--revision", required=True); lexical.add_argument("--archive-sha256", required=True); lexical.add_argument("--source-uri", required=True)
     lexical.add_argument("--sense-id", type=int, action="append", default=[]); lexical.add_argument("--beam-size", type=int, default=12); lexical.add_argument("--num-hypotheses", type=int, default=12)
     lexical.add_argument("--maximum-candidates", type=int, default=8); lexical.add_argument("--source-policy", default="aligned-local-consensus")
-    lexical.add_argument("--apply-stage20", action="store_true"); lexical.add_argument("--output", type=Path)
+    lexical.add_argument("--apply-stage20", action="store_true")
+    lexical.add_argument(
+        "--arbitrate-primaries",
+        action="store_true",
+        help="After Stage20, approve the frozen lexical-provider primary for every generated sense; requires --apply-stage20",
+    )
+    lexical.add_argument("--arbitration-output", type=Path, help="Optional durable JSON evidence path for Stage20 primary arbitration")
+    lexical.add_argument("--output", type=Path)
     serve = sub.add_parser("serve"); serve.add_argument("root", type=Path); serve.add_argument("--host", default="127.0.0.1"); serve.add_argument("--port", type=int, default=8765)
     return p
 
@@ -104,12 +111,24 @@ def main(argv: list[str] | None = None) -> int:
             _json(core.run_experiment_plan(project.paths.database, args.plan_id, max_new_trials=args.max_new_trials)); return 0
         if args.command == "lexical-opus":
             from .lexical_opus import build_opus_lexical_snapshot, run_stage20_with_snapshot, write_provider_evidence
+            if args.arbitrate_primaries and not args.apply_stage20:
+                raise ValueError("--arbitrate-primaries requires --apply-stage20")
+            if args.arbitration_output and not args.arbitrate_primaries:
+                raise ValueError("--arbitration-output requires --arbitrate-primaries")
             provider = build_opus_lexical_snapshot(core, project.paths.database, model_path=args.model_path, revision=args.revision, archive_sha256=args.archive_sha256, source_uri=args.source_uri, sense_ids=args.sense_id, beam_size=args.beam_size, num_hypotheses=args.num_hypotheses, maximum_candidates_per_lemma=args.maximum_candidates)
             destination = args.output or (project.paths.experiments / "lexical-opus" / f"{provider['entries_sha256'][:16]}.json")
             write_provider_evidence(destination, provider)
             payload = {"provider_evidence": str(destination.resolve()), "summary": provider.get("summary"), "entries_sha256": provider.get("entries_sha256")}
             if args.apply_stage20:
-                payload["stage20"] = run_stage20_with_snapshot(core, project.paths.database, provider, source_policy=args.source_policy, sense_ids=args.sense_id)
+                stage20 = run_stage20_with_snapshot(core, project.paths.database, provider, source_policy=args.source_policy, sense_ids=args.sense_id)
+                payload["stage20"] = stage20
+                if args.arbitrate_primaries:
+                    from .sense_translation_arbitration import arbitrate_lexical_primaries, write_arbitration_evidence
+                    arbitration = arbitrate_lexical_primaries(core, project.paths.database, provider, stage20)
+                    arbitration_destination = args.arbitration_output or destination.with_name(f"{destination.stem}.stage20-arbitration.json")
+                    write_arbitration_evidence(arbitration_destination, arbitration)
+                    payload["stage20_arbitration"] = arbitration
+                    payload["stage20_arbitration_evidence"] = str(arbitration_destination.resolve())
             _json(payload); return 0
         if args.command == "serve":
             from .server import serve
