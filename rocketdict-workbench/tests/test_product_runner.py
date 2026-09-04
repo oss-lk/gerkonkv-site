@@ -5,6 +5,7 @@ import json
 import pytest
 
 import rocketdict_workbench.product_runner as runner
+from rocketdict_workbench.cli import parser
 
 
 def _provider(sha: str = "a" * 64) -> dict:
@@ -134,6 +135,23 @@ def test_downstream_runner_rejects_state_reuse_for_different_provider(monkeypatc
         )
 
 
+def test_downstream_runner_rejects_state_reuse_for_changed_output_setting(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    calls = {"arbitration": 0, "cefr": 0, "pronunciation": 0, "examples": 0}
+    _install_success_stubs(monkeypatch, calls)
+    state_path = tmp_path / "product-run.json"
+    runner.resume_product_downstream(
+        object(), tmp_path / "db.sqlite", _provider(), _stage20(),
+        cefrj_asset=tmp_path / "cefr.csv", state_path=state_path,
+        include_russian_pronunciation_hint=False,
+    )
+    with pytest.raises(RuntimeError, match="different immutable inputs"):
+        runner.resume_product_downstream(
+            object(), tmp_path / "db.sqlite", _provider(), _stage20(),
+            cefrj_asset=tmp_path / "cefr.csv", state_path=state_path,
+            include_russian_pronunciation_hint=True,
+        )
+
+
 def test_downstream_runner_fails_on_stage23_revision_drift(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
     calls = {"arbitration": 0, "cefr": 0, "pronunciation": 0, "examples": 0}
     _install_success_stubs(monkeypatch, calls, example_revision=45)
@@ -156,3 +174,32 @@ def test_stage20_identity_rejects_duplicate_senses() -> None:
     duplicated["results"] = [*duplicated["results"], dict(duplicated["results"][0], entry_id=5)]
     with pytest.raises(RuntimeError, match="Duplicate Stage20 sense id"):
         runner._stage20_identity(duplicated)
+
+
+def test_cli_exposes_product_downstream_resume_controls() -> None:
+    args = parser().parse_args(
+        [
+            "lexical-opus",
+            "/tmp/project",
+            "--model-path",
+            "/tmp/model",
+            "--revision",
+            "opus-2020-02-11",
+            "--archive-sha256",
+            "a" * 64,
+            "--source-uri",
+            "https://example.invalid/opus.zip",
+            "--apply-stage20",
+            "--continue-product",
+            "--cefrj-asset",
+            "/tmp/cefr.csv",
+            "--product-state",
+            "/tmp/product-state.json",
+            "--include-russian-pronunciation-hint",
+        ]
+    )
+    assert args.apply_stage20 is True
+    assert args.continue_product is True
+    assert str(args.cefrj_asset).endswith("cefr.csv")
+    assert str(args.product_state).endswith("product-state.json")
+    assert args.include_russian_pronunciation_hint is True
