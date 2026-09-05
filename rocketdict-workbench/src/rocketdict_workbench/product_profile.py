@@ -4,7 +4,7 @@ from typing import Any
 
 from .product_policy import ProductPolicyError, product_parameter_overrides, select_product_implementation
 
-PROFILE_SCHEMA = "rocketdict-workbench-product-profile/5"
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/6"
 QUALITY_GATES = (
     "rocketdict-numeric-symbol-preservation",
     "rocketdict-punctuation-preservation",
@@ -46,6 +46,34 @@ def _defaults(implementation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _required_inputs(stage: dict[str, Any], implementation: dict[str, Any]) -> list[str] | None:
+    """Copy an execution-input contract only when the live registry publishes one.
+
+    Older RocketDict runners exposed ``required_inputs`` as an explicit stage
+    execution contract. Workbench does not infer the contract from stage numbers or
+    historical implementation names: implementation-level metadata wins, stage-level
+    metadata is accepted when explicitly present, and absence remains visible as
+    ``None`` so Product preflight can fail closed.
+    """
+    if "required_inputs" in implementation:
+        raw = implementation.get("required_inputs")
+    elif "required_inputs" in stage:
+        raw = stage.get("required_inputs")
+    else:
+        return None
+    if not isinstance(raw, list) or any(not isinstance(value, str) or not value for value in raw):
+        raise ProductPolicyError(
+            f"Stage {stage.get('number')} implementation {implementation.get('implementation_key')!r} "
+            "publishes invalid required_inputs; expected a JSON list of non-empty strings"
+        )
+    if len(set(raw)) != len(raw):
+        raise ProductPolicyError(
+            f"Stage {stage.get('number')} implementation {implementation.get('implementation_key')!r} "
+            "publishes duplicate required_inputs"
+        )
+    return list(raw)
+
+
 def _select_named_or_product(manifest: dict[str, Any], number: int, *, source_kind: str) -> dict[str, Any]:
     stage = _stage(manifest, number)
     preferred = PREFERRED_IMPLEMENTATIONS.get(number)
@@ -71,6 +99,7 @@ def _select_named_or_product(manifest: dict[str, Any], number: int, *, source_ki
         "parameters": params,
         "selection_reason": reason,
         "adapter_descriptor_hash": impl.get("descriptor_hash"),
+        "required_inputs": _required_inputs(stage, impl),
         "availability": impl.get("availability"),
     }
 
