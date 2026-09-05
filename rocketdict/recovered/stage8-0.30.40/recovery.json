@@ -31,7 +31,7 @@
         "path": "src/rocketdict/nlp/registry.py",
         "bytes": 29072,
         "sha256": "02cfbb2347f141d9b77f4fca143322a4e4d7773dcf535611b664473510fbaf69",
-        "preserved_in_repository": null,
+        "preserved_in_repository": "rocketdict/recovered/stage8-0.30.40/src/rocketdict/nlp/registry.py",
         "retrieval": "recover again from artifact 9681838606 / stage8-overlay-prefix; exact hash is frozen here"
       }
     ],
@@ -42,7 +42,11 @@
     },
     "package_root_proves": {
       "rocketdict_version": "0.30.40",
-      "lazy_public_exports": ["API_VERSION", "RocketDictAPI", "__version__"],
+      "lazy_public_exports": [
+        "API_VERSION",
+        "RocketDictAPI",
+        "__version__"
+      ],
       "api_version_module": "rocketdict.api.contracts",
       "api_client_module": "rocketdict.api.client.RocketDictAPI"
     },
@@ -115,5 +119,17 @@
     "The complete public API implementation needed for Product Stage8 invocation is still not present in the recovered overlay prefix.",
     "The 343 MB offline OPUS runtime and real-model gate are recoverable and independently preserve the accepted real translation runtime/model evidence, but they do not contain the missing RocketDict core.",
     "Therefore the active Workbench may use these files as immutable recovery evidence only. It must not fabricate the missing 0.30.40 public operation callable or claim a real Stage8 dispatch until an exact compatible core publishes the verified binding and execution contracts."
-  ]
+  ],
+  "runtime_blocker": {
+    "status": "exact_core_incomplete",
+    "runnable_product_core": false,
+    "missing_public_api_modules_proven_by_package_root": [
+      "rocketdict.api.contracts",
+      "rocketdict.api.client",
+      "rocketdict.api.cli"
+    ],
+    "structured_callable_mapping_recovered": false,
+    "full_required_stage_implementations_recovered": false,
+    "promotion_rule": "No Product dispatch until an exact compatible runtime imports successfully and passes live Workbench registry/API/binding/execution-contract verification."
+  }
 }
