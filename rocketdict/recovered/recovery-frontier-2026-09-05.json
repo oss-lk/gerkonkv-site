@@ -1,5 +1,5 @@
 {
-  "schema": "rocketdict-core-recovery-frontier/2",
+  "schema": "rocketdict-core-recovery-frontier/3",
   "date_utc": "2026-09-05",
   "promotion_allowed": false,
   "product_execution_allowed": false,
@@ -7,16 +7,40 @@
   "known_late_artifact_bytes_available_in_current_runtime": false,
   "preferred_recovery_candidate": {
     "version": "0.30.34",
-    "artifact_kind": "wheel",
-    "name": "rocketdict-0.30.34-py3-none-any.whl",
-    "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a",
-    "why": "newest historically verified packaged Python core artifact before 0.30.40",
-    "release_zip_available": false,
+    "artifact_kind": "full_checkpoint_zip",
+    "name": "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip",
+    "sha256": "3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387",
+    "historical_bytes": null,
+    "why": "newest historically verified full RocketDict checkpoint before 0.30.40; preserves more than the installed package and was explicitly verified and handed off",
+    "historical_verification": {
+      "unzip_test_ok": true,
+      "fault_injection_tests": "7/7 passed",
+      "targeted_regressions": "34/34 passed",
+      "compileall_ok": true,
+      "wheel_install_check_ok": true,
+      "source_wheel_parity_ok": true
+    },
     "exact_catalog_identity_required_for_this_known_name": true,
     "promotion_allowed": false
   },
+  "alternate_recovery_candidate": {
+    "version": "0.30.34",
+    "artifact_kind": "wheel",
+    "name": "rocketdict-0.30.34-py3-none-any.whl",
+    "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a",
+    "historical_bytes": null,
+    "why": "separately preserved exact packaged-Python-core identity when the full checkpoint ZIP bytes cannot be recovered",
+    "promotion_allowed": false
+  },
+  "correction": {
+    "superseded_claim": "Stage6Y release ZIP packaging did not finish",
+    "corrected_fact": "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip was created, unzip-tested, regression-tested and explicitly handed off to the user",
+    "reason": "historical project output recovered after the wheel-first frontier was written",
+    "fabricated_metadata": false,
+    "unknown_zip_byte_size_left_null": true
+  },
   "recovery_priority": [
-    {"version":"0.30.34","preferred_artifact":"wheel","priority":1},
+    {"version":"0.30.34","preferred_artifact":"exact full ZIP; exact wheel alternate","priority":1},
     {"version":"0.30.33","preferred_artifact":"exact ZIP or wheel","priority":2},
     {"version":"0.30.32","preferred_artifact":"exact ZIP or wheel","priority":3},
     {"version":"0.30.31","preferred_artifact":"exact ZIP or wheel","priority":4},
@@ -33,16 +57,12 @@
   "tooling": {
     "single_directory_or_zip_candidate_schema": "rocketdict-workbench-core-recovery-candidate/1",
     "base_to_03040_plan_schema": "rocketdict-workbench-core-recovery-plan/1",
+    "lower_level_zip_scan_schema": "rocketdict-workbench-core-recovery-scan/3",
     "wheel_integrity_schema": "rocketdict-workbench-wheel-integrity/2",
     "wheel_recovery_schema": "rocketdict-workbench-core-wheel-recovery/5",
     "wheel_runtime_probe_schema": "rocketdict-workbench-core-wheel-runtime-probe/2",
     "unified_scan_schema": "rocketdict-workbench-core-recovery-scan/7",
-    "commands": [
-      "rocketdict-recover-core",
-      "rocketdict-recover-plan",
-      "rocketdict-recover-wheel",
-      "rocketdict-recover-scan"
-    ],
+    "archive_identity_rule": "For checkpoint ZIPs, exact SHA-256 is sufficient when the historical size is unavailable; when a historical size is known it must also match. Filename alone never proves identity.",
     "wheel_proof_order": [
       "container/METADATA/WHEEL/RECORD integrity",
       "known historical checkpoint catalog identity when basename matches",
@@ -59,7 +79,7 @@
       "wheel_record_missing",
       "wheel_record_verification_failed"
     ],
-    "known_name_identity_rule": "If a wheel basename matches a catalog entry with an exact wheel identity, a SHA-256/size mismatch blocks runtime before historical code import.",
+    "known_name_identity_rule": "If a known ZIP or wheel basename matches a catalog entry with exact identity metadata, SHA-256 must match and a known size must also match before historical identity is accepted.",
     "unknown_wheel_rule": "An internally valid unknown wheel may be explored as an unverified historical base candidate, but it receives no known-checkpoint identity claim.",
     "wheel_runtime_probe": {
       "default": "not_requested",
@@ -81,38 +101,14 @@
   },
   "validation": {
     "preserved_failed_runs": [
-      {
-        "workflow_run": 33967461124,
-        "job": 101309976354,
-        "result": "failure",
-        "test_summary": "2 failed, 170 passed, 1 skipped",
-        "finding": "carried Stage6Y wheel SHA had only 63 hexadecimal characters and was correctly rejected; exact 64-character source record was then recovered"
-      },
-      {
-        "commit": "223bd14c000f56210942eb2b13776368f2685c4c",
-        "workflow_run": 33967891342,
-        "job": 101311118051,
-        "result": "failure",
-        "finding": "pytest collection caught a SyntaxError in the new wheel-integrity test fixture; package compile itself succeeded; test fixture was corrected without weakening integrity semantics"
-      }
+      {"workflow_run":33967461124,"job":101309976354,"result":"failure","test_summary":"2 failed, 170 passed, 1 skipped","finding":"damaged 63-character Stage6Y wheel SHA was correctly rejected before its exact 64-character value was recovered"},
+      {"commit":"223bd14c000f56210942eb2b13776368f2685c4c","workflow_run":33967891342,"job":101311118051,"result":"failure","finding":"pytest collection caught a SyntaxError in a new wheel-integrity test fixture; corrected without weakening integrity semantics"}
     ],
     "intermediate_green_runs": [
-      {
-        "commit": "95a232722afa7e80b7a1e322f3d84f1abdc35ced",
-        "workflow_run": 33968363605,
-        "job": 101312376902,
-        "test_summary": "179 passed, 1 skipped in 1.98s",
-        "proved": "fail-closed RECORD and filename/WHEEL tag integrity"
-      },
-      {
-        "commit": "bf47ca6564fea9d827d7efc23f87ed527a3c1ee1",
-        "workflow_run": 33968467911,
-        "job": 101312655169,
-        "test_summary": "184 passed, 1 skipped in 2.17s",
-        "proved": "integrity-gated structural/plan/runtime wheel pipeline"
-      }
+      {"commit":"95a232722afa7e80b7a1e322f3d84f1abdc35ced","workflow_run":33968363605,"job":101312376902,"test_summary":"179 passed, 1 skipped in 1.98s","proved":"fail-closed RECORD and filename/WHEEL tag integrity"},
+      {"commit":"bf47ca6564fea9d827d7efc23f87ed527a3c1ee1","workflow_run":33968467911,"job":101312655169,"test_summary":"184 passed, 1 skipped in 2.17s","proved":"integrity-gated structural/plan/runtime wheel pipeline"}
     ],
-    "latest_green_run": {
+    "previous_green_run": {
       "commit": "202fbf58b450f35ef631009f65356d5cdf562547",
       "workflow_run": 33968651171,
       "job": 101313136601,
@@ -120,25 +116,18 @@
       "python": "3.13.15",
       "compile": "success",
       "test_summary": "187 passed, 1 skipped in 3.29s",
-      "result": "success",
-      "proved": [
-        "unknown intact wheel remains exploratory only",
-        "known 0.30.34 basename with wrong SHA is blocked before runtime import",
-        "explicit exact catalog identity permits runtime proof",
-        "corrupt RECORD blocks runtime",
-        "batch scan preserves blocked candidates and exact reasons"
-      ]
+      "result": "success"
     }
   },
   "next_required_input": {
     "kind": "provenance-verifiable historical RocketDict checkpoint ZIP or wheel bytes",
-    "highest_value_exact_identity": "rocketdict-0.30.34-py3-none-any.whl SHA-256 76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a"
+    "highest_value_exact_identity": "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip SHA-256 3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387",
+    "alternate_exact_identity": "rocketdict-0.30.34-py3-none-any.whl SHA-256 76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a"
   },
   "next_steps_when_bytes_exist": [
-    "Run rocketdict-recover-scan on the containing directory; the full read-only wheel proof is generated automatically.",
-    "Use --probe-wheels only when runtime import proof is desired; integrity, known catalog identity, structure and cross-layer identity are checked first.",
-    "For one wheel, rocketdict-recover-wheel --probe-runtime follows the same fail-closed proof order.",
-    "Require exact catalog identity for any known checkpoint basename; never accept filename-only equivalence.",
+    "Run rocketdict-recover-scan on the containing directory and require the known catalog identity.",
+    "For the full ZIP, inspect source/package/manifests and build the read-only base-to-0.30.40 plan before any execution.",
+    "For the wheel alternate, use the existing integrity-gated structural/plan/runtime proof; --probe-wheels remains opt-in.",
     "Do not substitute historical base bytes for the 17 missing exact 0.30.40 overlay targets or missing exact 0.30.40 public API bytes.",
     "Only after an exact-compatible runtime is established: Workbench doctor, real source import, immutable Product preflight, live API/registry probe, exact callable binding and first genuine Stage8 dispatch.",
     "Continue the same immutable Product state through Stage25 and then validate the full 90k+ public-domain corpus without truncation."
