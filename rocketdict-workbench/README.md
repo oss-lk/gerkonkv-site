@@ -16,7 +16,9 @@ Product-first local control plane over the real RocketDict core.
 - can explicitly apply `lexical-primary-arbitration-v1` after Stage20, requiring the selected dictionary headword to already exist as an accepted model-evidenced candidate and persisting the arbitration request/result as durable JSON evidence;
 - has a resumable downstream Product runner connecting Stage20 arbitration → pinned CEFR-J → exact CMUdict pronunciation → sense-scoped Stage23 examples;
 - has an executable fail-closed Product preflight that freezes the immutable source, durable import/document identities, real core/API identity, live registry, selected Stage8–19 adapters/settings and exact hard-quality-gate identity before upstream execution is allowed;
-- has a unified `rocketdict-workbench-product-run/1` root state anchored to that immutable preflight fingerprint and an evidence-preserving real-core API-surface probe;
+- has a unified `rocketdict-workbench-product-run/1` root state anchored to that immutable preflight fingerprint;
+- probes the exact runtime into structured callable evidence (`rocketdict-core-api-surface-probe/2`) rather than treating operation-name strings as executable proof;
+- can promote a Stage8 callable to `rocketdict-workbench-upstream-binding/1` only when its exact runtime metadata matches the frozen Product Stage8 contract;
 - never substitutes fake/identity MT for a missing backend.
 
 ## Two modes, one core
@@ -73,9 +75,7 @@ rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-preflight 
 
 `--source-kind subtitle|text` is an optional assertion and must agree with the imported source suffix. `--output` can choose the evidence path; otherwise the record is written below `experiments/product-preflight/` using the fingerprint prefix.
 
-### Unified Product run root and real-core API probe
-
-The next layer is now executable:
+### Unified Product run root and structured real-core API probe
 
 ```bash
 rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-run-init ./my-project
@@ -83,28 +83,41 @@ rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-run-init .
 
 `product-run-init` rebuilds the strict Product preflight and creates/resumes an atomic `rocketdict-workbench-product-run/1` state. Its immutable root contains the preflight fingerprint, source SHA, `import_event_id`, `document_version_id`, selected source format, registry hash and real core/API identity.
 
-The initial state machine is deliberately explicit:
+The state machine is explicit:
 
 1. `preflight` — completed and stored as immutable root evidence;
 2. `upstream_contract_probe` — probes the exact `rocketdict.api` package in the same real runtime;
-3. `upstream_execution` — remains pending until an exact Stage8–19 operation binding is proven;
+3. `upstream_execution` — remains pending until an exact Stage8 operation binding is proven;
 4. `stage20_downstream` — future bridge to the already-working downstream runner;
 5. `cards` — pending;
 6. `export` — pending.
 
-The API probe records:
+Probe schema v2 records both discovery-level and proof-level observations:
 
 - RocketDict version and API version;
-- direct modules exposed under `rocketdict.api` and source SHA-256 when introspection is available;
+- modules exposed under `rocketdict.api` and module source SHA-256 when introspection is available;
 - discoverable argparse parser command paths;
-- string keys of public callable mappings;
-- an immutable probe fingerprint.
+- public callable-mapping keys;
+- for each callable mapping entry: mapping module/name, exact operation key, callable module/qualname, signature, structured parameter names/kinds/required flags, inspectable callable source SHA-256, and explicit binding metadata published by that runtime;
+- one immutable probe fingerprint over all observations.
 
-These are **observations**, not automatic proof that every discovered string is an executable Product operation. Workbench therefore keeps `upstream_execution` blocked with `no_verified_stage8_19_operation_binding` rather than guessing how to invoke Stage8–19.
+Parser paths and mapping keys remain **candidates only**. They are never promoted merely because their names look like Stage8 or Product operations.
 
-Re-running the same `product-run-init` validates and reuses completed probe evidence. A changed preflight root, changed core/API identity or mutation of persisted probe evidence fails closed. `--state` can select a state file; otherwise it is written below `experiments/product-run/` using the preflight fingerprint prefix.
+### Exact-runtime Stage8 binding promotion
 
-This closes an important handoff gap: the next development step can work from a durable runtime observation instead of guessing internal module/service names from incomplete Stage8 source recovery.
+After `product-run-init`, a Stage8 operation may be promoted only from structured callable evidence:
+
+```bash
+rocketdict-workbench --core-pythonpath /path/to/unpacked-core product-run-bind-stage8 ./my-project \
+  --state ./my-project/experiments/product-run/<fingerprint>.json \
+  --operation <exact-operation-key>
+```
+
+The verifier fails closed unless the callable itself explicitly publishes metadata matching all frozen Product identities: Stage 8, the exact Stage8 `stage_key`, implementation key, adapter descriptor SHA-256, and required inputs exactly `document_version_id`. It also requires inspectable callable source SHA-256 and matching preflight/probe RocketDict/API identities.
+
+The persisted binding freezes the selected `document_version_id`, preflight fingerprint, Product-run root fingerprint, registry hash, core/API versions, probe fingerprint, operation identity, callable signature/source hash, Product implementation/descriptor and parameter hash. Re-verifying unchanged evidence is idempotent; mutation of persisted binding evidence is rejected.
+
+**Important:** the Workbench CI verifies this promotion contract with controlled evidence. It does not prove that the incomplete public newer-core payload currently contains a real Stage8 callable carrying this metadata. Until an exact runtime probe observes such a callable, Product Stage8 remains unexecuted. See `docs/PRODUCT_STAGE8_BINDING.md`.
 
 ### Product Stage20 lexical-primary arbitration
 
@@ -156,10 +169,10 @@ A subtitle file is not allowed to silently degrade into plain TXT. If the select
 
 ## Current boundary
 
-Workbench 0.1 now has a real core bridge, project/database lifecycle, import/interpretation, dynamic Lab Registry, strict immutable Product preflight, unified Product run root, real-core API-surface probe, real ExperimentBench campaigns, machine exports, human reports and a local browser control surface. The downstream lexical path remains executable and resumable through Stage23.
+Workbench 0.1 now has a real core bridge, project/database lifecycle, import/interpretation, dynamic Lab Registry, strict immutable Product preflight, unified Product run root, structured real-core API probe, fail-closed Stage8 binding verifier, real ExperimentBench campaigns, machine exports, human reports and a local browser control surface. The downstream lexical path remains executable and resumable through Stage23.
 
-The product button for the complete dictionary pipeline remains disabled. The unified Product state deliberately stops before Stage8–19 execution until an exact registry/API binding is proven from real-runtime evidence. Final cards/export are also not yet wired. This is deliberate: incomplete functionality is shown as incomplete instead of producing synthetic results.
+The product button for the complete dictionary pipeline remains disabled. The verifier is ready to promote a real Stage8 binding, but the current public handoff still lacks enough exact newer-core payload to claim that such a callable has actually been observed. Stage8 invocation itself and final cards/export are therefore still unwired.
 
 ## Next product milestone
 
-Use the persisted `upstream_contract_probe` evidence from the exact real runtime to prove a concrete registry/API execution binding for the first upstream Product slice. Only after that binding is validated should the state advance through source preparation → real MT → hard integrity gates → approved translation → alignment → lexical/sense induction. Then reuse the existing Stage20→Stage23 downstream runner and finally add cards/export. Existing stage implementations and evidence contracts remain authoritative; Workbench must orchestrate them rather than create a parallel algorithm stack.
+Run the probe against the exact recoverable/newer RocketDict core. If it exposes a unique callable whose explicit metadata passes `product-run-bind-stage8`, persist that real binding and implement the first resumable Stage8 invocation with durable input/result hashes and output revision IDs. If no such callable exists, recover/add the missing public core execution contract first—do not infer one from names. After Stage8 is genuinely executable, advance the same state through real MT → hard integrity gates → approved translation → alignment → lexical/sense induction, then reuse Stage20→Stage23 and finally add cards/export.
