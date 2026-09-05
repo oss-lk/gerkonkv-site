@@ -20,6 +20,10 @@ def _core(args) -> RocketDictCore:  # type: ignore[no-untyped-def]
     return RocketDictCore(python=args.core_python, pythonpath=paths)
 
 
+def _pre_gate_stage(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--stage", type=int, choices=(8, 10, 12, 14), required=True)
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="rocketdict-workbench", description="RocketDict product/research workbench")
     p.add_argument("--core-python", default=sys.executable, help="Python interpreter containing the real RocketDict core")
@@ -43,6 +47,8 @@ def parser() -> argparse.ArgumentParser:
     product_run.add_argument("--source-sha256", help="Required when the project contains multiple imported sources")
     product_run.add_argument("--source-kind", choices=("subtitle", "text"), help="Optional assertion; otherwise inferred from the imported source")
     product_run.add_argument("--state", type=Path, help="Durable unified Product run state JSON")
+
+    # Stage8 compatibility surface. The canonical multi-stage Product path is below.
     product_discover = sub.add_parser("product-run-discover-stage8", help="Compare every structured runtime callable with the frozen live-registry Stage8 contract")
     product_discover.add_argument("root", type=Path)
     product_discover.add_argument("--state", type=Path, required=True, help="Unified Product run state produced by product-run-init")
@@ -59,6 +65,51 @@ def parser() -> argparse.ArgumentParser:
     product_execute = sub.add_parser("product-run-execute-stage8", help="Execute/resume Stage8 only through the proven public API contract")
     product_execute.add_argument("root", type=Path)
     product_execute.add_argument("--state", type=Path, required=True, help="Unified Product run state with a verified Stage8 binding")
+
+    discover_upstream = sub.add_parser(
+        "product-run-discover-upstream",
+        help="Diagnose exact callable/input evidence for one pre-Stage15 Product stage",
+    )
+    discover_upstream.add_argument("root", type=Path)
+    discover_upstream.add_argument("--state", type=Path, required=True)
+    _pre_gate_stage(discover_upstream)
+    bind_upstream = sub.add_parser(
+        "product-run-bind-upstream",
+        help="Bind one exact-runtime pre-Stage15 callable to its frozen Product contract",
+    )
+    bind_upstream.add_argument("root", type=Path)
+    bind_upstream.add_argument("--state", type=Path, required=True)
+    _pre_gate_stage(bind_upstream)
+    bind_upstream.add_argument("--operation", required=True)
+    prove_upstream = sub.add_parser(
+        "product-run-prove-upstream",
+        help="Prove one pre-Stage15 public request/result/replay contract without mutation",
+    )
+    prove_upstream.add_argument("root", type=Path)
+    prove_upstream.add_argument("--state", type=Path, required=True)
+    _pre_gate_stage(prove_upstream)
+    plan_upstream = sub.add_parser(
+        "product-run-plan-upstream",
+        help="Render one immutable pre-Stage15 public API request without dispatching it",
+    )
+    plan_upstream.add_argument("root", type=Path)
+    plan_upstream.add_argument("--state", type=Path, required=True)
+    _pre_gate_stage(plan_upstream)
+    execute_upstream = sub.add_parser(
+        "product-run-execute-upstream",
+        help="Execute/resume one pre-Stage15 stage only through its proven public contract",
+    )
+    execute_upstream.add_argument("root", type=Path)
+    execute_upstream.add_argument("--state", type=Path, required=True)
+    _pre_gate_stage(execute_upstream)
+    advance_upstream = sub.add_parser(
+        "product-run-advance-upstream",
+        help="Auto-advance exact Product Stage8/10/12/14 evidence and hard-stop at Stage15",
+    )
+    advance_upstream.add_argument("root", type=Path)
+    advance_upstream.add_argument("--state", type=Path, required=True)
+    advance_upstream.add_argument("--max-stages", type=int)
+
     cefr_asset = sub.add_parser("cefrj-install", help="Install the pinned CEFR-J 1.5 asset during explicit setup")
     cefr_asset.add_argument("root", type=Path); cefr_asset.add_argument("--destination", type=Path)
     cefr = sub.add_parser("cefrj-assess", help="Run Product CEFR-J-only assessment; no smoke/frequency fallback")
@@ -164,6 +215,24 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "product-run-execute-stage8":
             from .upstream_execution import execute_stage8
             _json(execute_stage8(core, project.paths.database, args.state)); return 0
+        if args.command == "product-run-discover-upstream":
+            from .upstream_chain import discover_upstream_stage
+            _json(discover_upstream_stage(args.state, args.stage)); return 0
+        if args.command == "product-run-bind-upstream":
+            from .upstream_chain import verify_upstream_stage_binding
+            _json(verify_upstream_stage_binding(args.state, args.stage, args.operation)); return 0
+        if args.command == "product-run-prove-upstream":
+            from .upstream_pipeline import prove_upstream_execution_contract
+            _json(prove_upstream_execution_contract(core, project.paths.database, args.state, args.stage)); return 0
+        if args.command == "product-run-plan-upstream":
+            from .upstream_pipeline import plan_upstream_execution
+            _json(plan_upstream_execution(args.state, args.stage)); return 0
+        if args.command == "product-run-execute-upstream":
+            from .upstream_pipeline import execute_upstream_stage
+            _json(execute_upstream_stage(core, project.paths.database, args.state, args.stage)); return 0
+        if args.command == "product-run-advance-upstream":
+            from .upstream_pipeline import advance_pre_gate_upstream
+            _json(advance_pre_gate_upstream(core, project.paths.database, args.state, max_stages=args.max_stages)); return 0
         if args.command == "cefrj-install":
             from .product_cefr import install_cefrj_asset
             destination = args.destination or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
