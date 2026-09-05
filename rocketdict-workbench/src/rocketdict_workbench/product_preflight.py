@@ -9,7 +9,7 @@ from .product_policy import validate_product_configuration
 from .product_profile import PROFILE_SCHEMA, QUALITY_GATES, build_product_profile
 from .project import WorkbenchProject
 
-PREFLIGHT_SCHEMA = "rocketdict-workbench-product-preflight/1"
+PREFLIGHT_SCHEMA = "rocketdict-workbench-product-preflight/2"
 REQUIRED_CORE_STAGES = (8, 10, 12, 14, 16, 17, 19)
 SUBTITLE_SUFFIXES = {".srt", ".vtt", ".ass", ".ssa"}
 
@@ -114,6 +114,20 @@ def _execution_config(profile: dict[str, Any]) -> dict[str, Any]:
     return {"stages": stages}
 
 
+def _execution_contract(row: dict[str, Any], number: int) -> tuple[str, list[str]]:
+    stage_key = str(row.get("stage_key") or "")
+    if not stage_key:
+        raise RuntimeError(f"Product stage {number} lacks live registry stage_key execution identity")
+    if "required_inputs" not in row:
+        raise RuntimeError(f"Product stage {number} lacks live registry required_inputs execution contract")
+    required_inputs = row.get("required_inputs")
+    if not isinstance(required_inputs, list) or any(not isinstance(value, str) or not value for value in required_inputs):
+        raise RuntimeError(f"Product stage {number} has invalid live registry required_inputs execution contract")
+    if len(set(required_inputs)) != len(required_inputs):
+        raise RuntimeError(f"Product stage {number} has duplicate live registry required_inputs")
+    return stage_key, list(required_inputs)
+
+
 def _assert_runtime_available(profile: dict[str, Any]) -> None:
     stages = profile.get("stages") or {}
     for number in REQUIRED_CORE_STAGES:
@@ -125,6 +139,7 @@ def _assert_runtime_available(profile: dict[str, Any]) -> None:
             raise RuntimeError(
                 f"Product stage {number} implementation {row.get('implementation')!r} is not locally available: {availability}"
             )
+        _execution_contract(row, number)
     gates = list(profile.get("quality_gates") or [])
     actual = tuple(str(row.get("implementation") or "") for row in gates)
     if actual != QUALITY_GATES:
@@ -140,8 +155,9 @@ def build_product_preflight(
     """Freeze the exact source, core, registry and Product profile before execution.
 
     Runtime probing is mandatory. A missing real core implementation, mutated source
-    copy, fake/identity MT configuration, changed registry identity, or changed hard
-    quality gate set stops Product Mode before any expensive processing starts.
+    copy, fake/identity MT configuration, changed registry identity, missing execution
+    input contract, or changed hard quality gate set stops Product Mode before any
+    expensive processing starts.
     """
     doctor = project.core.doctor()
     if not doctor.available:
@@ -164,14 +180,27 @@ def build_product_preflight(
     _assert_runtime_available(profile)
     warnings = validate_product_configuration(_execution_config(profile), manifest)
 
-    selected = {
-        str(number): {
-            "implementation": profile["stages"][str(number)].get("implementation"),
-            "adapter_descriptor_hash": profile["stages"][str(number)].get("adapter_descriptor_hash"),
-            "parameters_sha256": _canonical_sha256(profile["stages"][str(number)].get("parameters") or {}),
+    selected: dict[str, dict[str, Any]] = {}
+    for number in REQUIRED_CORE_STAGES:
+        row = profile["stages"][str(number)]
+        stage_key, required_inputs = _execution_contract(row, number)
+        selected[str(number)] = {
+            "stage_key": stage_key,
+            "implementation": row.get("implementation"),
+            "adapter_descriptor_hash": row.get("adapter_descriptor_hash"),
+            "parameters_sha256": _canonical_sha256(row.get("parameters") or {}),
+            "required_inputs": required_inputs,
+            "execution_contract_sha256": _canonical_sha256(
+                {
+                    "stage_number": number,
+                    "stage_key": stage_key,
+                    "implementation": row.get("implementation"),
+                    "adapter_descriptor_hash": row.get("adapter_descriptor_hash"),
+                    "parameters": row.get("parameters") or {},
+                    "required_inputs": required_inputs,
+                }
+            ),
         }
-        for number in REQUIRED_CORE_STAGES
-    }
     quality_gates = [
         {
             "implementation": row.get("implementation"),
