@@ -246,9 +246,10 @@ def test_batch_scan_preserves_corrupt_wheel_but_never_executes_it(tmp_path: Path
         python=sys.executable,
     )
 
-    assert report["schema"] == "rocketdict-workbench-core-recovery-scan/7"
+    assert report["schema"] == "rocketdict-workbench-core-recovery-scan/8"
     assert report["promotion_allowed"] is False
     assert report["product_execution_allowed"] is False
+    assert report["checkpoint_pipeline_count"] == 0
     assert report["wheel_pipeline_count"] == 1
     assert report["wheel_integrity_ok_count"] == 0
     assert report["wheel_runtime_attempted_count"] == 0
