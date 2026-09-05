@@ -1,38 +1,30 @@
-# RocketDict core recovery workflow
+# RocketDict exact-core recovery workflow
 
 Date: 2026-09-05
 
-This document is the operational recovery path for the active Product line. It is intentionally fail-closed: none of these tools can promote a recovered candidate into a Product runtime by themselves.
+This is the operational recovery path for the active Product line. Recovery tools are deliberately fail-closed: none can promote a candidate into Product execution by themselves.
 
-## Why recovery is still required
+## Current blocker
 
-The active Workbench already implements the Product pipeline through Stage25, but the exact public RocketDict 0.30.40 core is incomplete in the repository.
+Workbench already implements the Product pipeline through Stage25. The missing prerequisite is a complete exact-compatible RocketDict core/public API.
 
-Exact bytes currently recovered from the 0.30.40 Stage8 artifact prefix:
+Exact 0.30.40 evidence currently preserves only:
 
-- `src/rocketdict/__init__.py`
-  - 502 bytes
-  - SHA-256 `7bf417eeda2104a06d9aaaaef4b79807698685ac4dc07539c2e887cd14e60b5c`
-- `src/rocketdict/nlp/registry.py`
-  - 29,072 bytes
-  - SHA-256 `02cfbb2347f141d9b77f4fca143322a4e4d7773dcf535611b664473510fbaf69`
+- `src/rocketdict/__init__.py` — 502 bytes — SHA-256 `7bf417eeda2104a06d9aaaaef4b79807698685ac4dc07539c2e887cd14e60b5c`
+- `src/rocketdict/nlp/registry.py` — 29,072 bytes — SHA-256 `02cfbb2347f141d9b77f4fca143322a4e4d7773dcf535611b664473510fbaf69`
 
 The next tar member, `src/rocketdict/lab/stage12_pilot.py`, is truncated.
 
-Historical reconstruction also proved an important boundary: the intended Stage8 overlay contained 19 research/translation files and **did not contain `rocketdict.api.*`**. Therefore recovering the missing seven overlay chunks alone could never restore the complete base core/public API.
+Historical materializer analysis proves the intended Stage8 overlay contained 19 research/translation files and no `rocketdict.api.*`. Therefore restoring the missing seven overlay chunks alone cannot restore the complete base core.
 
-The exact historical reconstruction evidence is machine-readable in:
+Machine-readable evidence:
 
 - `rocketdict/recovered/stage8-0.30.40/recovery.json`
 - `rocketdict/recovered/stage8-0.30.40/core-recovery-history.json`
+- `rocketdict/recovered/checkpoint-catalog.json`
+- `rocketdict/recovered/search-exhaustion-2026-09-05.json`
 
-Both retain `promotion_allowed=false`.
-
-## Recovery commands
-
-Workbench installs three recovery commands.
-
-### 1. Inspect one candidate
+## 1. Inspect one candidate
 
 ```bash
 rocketdict-recover-core /path/to/checkpoint-or-source
@@ -43,11 +35,9 @@ Accepted inputs:
 - source directory;
 - ZIP checkpoint.
 
-Directory candidates can receive an isolated subprocess runtime probe. The probe verifies that imported RocketDict modules originate from the candidate tree rather than another installed package.
+Directory candidates may receive an isolated subprocess import probe with module-origin verification. ZIP candidates are read-only structural evidence and are never extracted/executed by this verifier.
 
-ZIP candidates are read-only structural evidence. They are not extracted or executed by the verifier.
-
-The candidate verifier checks the Workbench bridge dependencies including:
+Required Workbench bridge modules include:
 
 - `rocketdict.api.contracts`
 - `rocketdict.api.client`
@@ -56,53 +46,52 @@ The candidate verifier checks the Workbench bridge dependencies including:
 - `rocketdict.importing.cli`
 - `rocketdict.interpretation.cli`
 
-It also compares any available 0.30.40 exact hash anchors.
+Candidate status is recovery evidence only, never promotion.
 
-A candidate status such as `exact_version_structural_candidate` is **not** Product promotion.
-
-### 2. Build a deterministic base→0.30.40 compatibility plan
+## 2. Build deterministic base→0.30.40 plan
 
 ```bash
 rocketdict-recover-plan /path/to/checkpoint-or-source
 ```
 
-The planner is read-only. It never creates a reconstructed source tree.
+The planner never writes reconstructed source.
 
-Current exact Stage8 overlay contract:
+Current Stage8 overlay contract:
 
-- total intended overlay members: 19;
-- exact target bytes currently available: 2;
-- exact target bytes currently missing: 17.
+- intended members: 19
+- exact target bytes available: 2
+- exact target bytes missing: 17
 
-For each intended overlay member the plan distinguishes:
+Per member it emits one of:
 
 - `exact_target_already_present`
 - `exact_replacement_available`
 - `replacement_required_but_target_missing`
 - `target_missing_and_candidate_missing`
 
-A historical/base file at the correct path does **not** become accepted 0.30.40 target evidence merely because it exists. Replacement bytes must be backed by the exact recovery manifest with size and SHA-256.
+A same-path file from an older base is not accepted as 0.30.40 target evidence without exact manifest-backed size/SHA.
 
-Likewise, the public API is treated as a base-core dependency. Because exact 0.30.40 API bytes are not recovered, candidate API modules remain `unproven_against_exact_0.30.40`.
+Exact 0.30.40 public API bytes remain unrecovered, so candidate API modules remain `unproven_against_exact_0.30.40`.
 
-### 3. Screen a directory of old checkpoints
+## 3. Screen a directory of historical checkpoints
 
 ```bash
 rocketdict-recover-scan /path/to/archive-directory
 ```
 
-The scanner recursively discovers:
+Current schema: `rocketdict-workbench-core-recovery-scan/2`.
 
-- ZIP files;
-- canonical RocketDict source roots.
+Scanner behavior:
 
-By default it does not execute discovered directory candidates. Runtime probing is explicit:
+- recursively finds ZIPs and canonical RocketDict source roots;
+- ZIPs are structural-only;
+- directories are not executed by default;
+- use `--probe-directories` for explicit runtime probes;
+- corrupt ZIPs become isolated candidate errors;
+- `root/src/rocketdict/__init__.py` is canonicalized to `root`, avoiding duplicate checkouts;
+- optional full plans are written under fingerprint-derived names with `--reports-dir`.
 
-```bash
-rocketdict-recover-scan /path/to/archive-directory --probe-directories
-```
-
-Optional full compatibility plans can be persisted under hash-derived names:
+Example:
 
 ```bash
 rocketdict-recover-scan /path/to/archive-directory \
@@ -110,62 +99,95 @@ rocketdict-recover-scan /path/to/archive-directory \
   --output ./recovery-scan.json
 ```
 
-Ranking is only recovery triage. It prioritizes useful leads such as a documented archive identity or exact-version structural candidate. It does not mean the candidate is compatible or promotable.
+## Historical checkpoint catalog
 
-The scanner canonicalizes `root/src/rocketdict/__init__.py` to `root`, so a single checkout is not double-counted as both `root` and `root/src`. A corrupt ZIP becomes an isolated candidate error and does not abort analysis of the remaining candidates.
+Default catalog:
 
-## Historical archive leads
+`rocketdict/recovered/checkpoint-catalog.json`
 
-One documented older full checkpoint is known:
+Override only when deliberately testing another validated catalog:
 
-- archive: `RocketDict_CURRENT_COMPACT.zip`
-- version: `0.30.8`
-- bytes: `125875993`
-- SHA-256: `f948a9b59e4deb7b00a606fdb88973dd9a435c087c132f32f03d2d0c863b51ac`
-- manifest files: 666
+```bash
+rocketdict-recover-scan /path/to/archive-directory \
+  --checkpoint-catalog /path/to/checkpoint-catalog.json
+```
 
-Its bytes are not currently recovered. It is a historical **base candidate only**, not a substitute for 0.30.40.
+Catalog semantics are strict:
 
-Project history also records later checkpoints including 0.30.9, 0.30.19, 0.30.29, 0.30.32 and 0.30.34-era work. File Library searches currently recover README/heavy evidence for 0.30.29/Stage6T, but not the corresponding ZIP bytes.
+- exact archive SHA-256 + byte size is cryptographic identity evidence;
+- a historical archive-name match is only triage evidence;
+- a name-only match never becomes byte identity;
+- a known checkpoint without a proven archive filename receives no guessed pattern;
+- catalog and every entry must retain `promotion_allowed=false`.
 
-The private historical repository `oss-lk/spacy-project-vault` is not a source for the missing full base core. Its surviving RocketDict branches are research/model/evidence lineages; the checked `rocketdict-stage06-spacy-model` tree contains no RocketDict source package.
+Known exact historical archive identity:
+
+- `RocketDict_CURRENT_COMPACT.zip`
+- version `0.30.8`
+- 125,875,993 bytes
+- SHA-256 `f948a9b59e4deb7b00a606fdb88973dd9a435c087c132f32f03d2d0c863b51ac`
+- 666 manifest files.
+
+Later catalog records preserve historical evidence for 0.30.9, 0.30.19, 0.30.29, 0.30.32 and the separate 0.30.34 Stage6Y lineage without inventing unknown SHA values or filenames.
+
+## Search-exhaustion boundary
+
+Read:
+
+`rocketdict/recovered/search-exhaustion-2026-09-05.json`
+
+Already checked:
+
+- reachable Git history + parentless upload root;
+- observed deleted RocketDict refs;
+- likely historical API source paths;
+- GitHub Releases in both RocketDict-related repositories;
+- historical `spacy-project-vault` Stage6 branch;
+- File Library recovery evidence;
+- two currently retained Stage31 transcripts;
+- ten ZIPs in the current ephemeral recovery workspace.
+
+Current workspace result:
+
+- 10 ZIPs
+- 1 ZIP with any RocketDict package root (`stage8-overlay-prefix.zip`)
+- 0 with required public API source modules
+- 0 with RocketDict wheel
+- 0 with nested RocketDict full checkpoint
+- 0 complete core candidates.
+
+Do not repeat these surfaces unless new refs/files/objects appear.
 
 ## Promotion boundary
 
-Even a strong recovery candidate must still pass the normal Product chain:
+A recovered candidate still must pass:
 
-1. exact source/runtime candidate recovery;
+1. recovery identity/compatibility checks;
 2. Workbench doctor;
-3. real source import + durable IDs;
+3. real source import and durable IDs;
 4. immutable Product preflight;
 5. live registry/API probe;
-6. exact callable binding and execution-contract proof;
-7. first genuine Stage8 dispatch;
+6. exact callable binding + execution-contract proof;
+7. genuine Stage8 dispatch;
 8. Stage10/12/14;
-9. Stage15 hard quality gates with explicit PASS semantics;
+9. Stage15 hard gates with explicit PASS semantics;
 10. Stage16→17→Workbench18→19;
-11. real OPUS-backed Stage20;
+11. real OPUS Stage20;
 12. CEFR-J / CMUdict / Stage23;
-13. Stage24 cards;
-14. Stage25 export;
-15. full 90k+ public-domain corpus validation without truncation.
+13. Stage24;
+14. Stage25;
+15. full 90k+ public-domain validation without truncation.
 
-No recovery tool can skip or weaken those steps.
+No recovery tool skips these steps.
 
-## Latest recovery CI checkpoint
+## Latest verified recovery checkpoint
 
-Commit:
-
-`d1e94eced4deaeec9e9a9a3a70fecdee48572e12` — `Fix canonical recovery candidate discovery and ZIP isolation`
-
-GitHub Actions:
-
-- workflow: `RocketDict Workbench`
-- run: `33964578578`
-- job: `101302315173`
+- commit `ff9018516d924d56de6e6c4d267a91e5b920a5a6`
+- Workbench run `33965240536`
+- job `101304088386`
 - Ubuntu 24.04
 - Python 3.13.15
 - compile success
-- **153 passed, 1 skipped in 1.53s**
+- **159 passed, 1 skipped in 2.11s**
 
-The preceding red run was retained as evidence: it found the duplicate-root and corrupt-ZIP isolation defects. The fixed checkpoint does not hide that failed experiment.
+The next useful recovery input is new provenance-verifiable full historical RocketDict checkpoint/core bytes. Until those bytes exist, retain `exact_core_incomplete` and do not synthesize the missing implementation.

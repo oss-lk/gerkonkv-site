@@ -4,57 +4,68 @@ This repository is the public, project-only continuation point for RocketDict.
 
 ## Authoritative entrypoint
 
-**Start with [`rocketdict/CURRENT.md`](rocketdict/CURRENT.md).**
+Start with [`rocketdict/CURRENT.md`](rocketdict/CURRENT.md).
 
-Then use:
+Then read:
 
-- [`rocketdict-workbench/docs/CORE_RECOVERY.md`](rocketdict-workbench/docs/CORE_RECOVERY.md) — operational exact-core/checkpoint recovery workflow;
-- [`rocketdict/START_HERE.md`](rocketdict/START_HERE.md) — Stage8 / real-OPUS research context;
-- [`rocketdict/HANDOFF_HEALTH.md`](rocketdict/HANDOFF_HEALTH.md) — original public payload-materialization health record;
-- [`rocketdict/recovered/stage8-0.30.40/recovery.json`](rocketdict/recovered/stage8-0.30.40/recovery.json) — exact recovered 0.30.40 byte evidence and blocker;
-- [`rocketdict/recovered/stage8-0.30.40/core-recovery-history.json`](rocketdict/recovered/stage8-0.30.40/core-recovery-history.json) — machine-readable historical recovery map;
-- [`rocketdict/STATE.json`](rocketdict/STATE.json) — historical Stage8 snapshot;
-- [`rocketdict/checkpoints/stage6y/`](rocketdict/checkpoints/stage6y/) — verified 0.30.34 / LAB Stage6Y maintenance-hardening checkpoint.
+- [`rocketdict-workbench/docs/CORE_RECOVERY.md`](rocketdict-workbench/docs/CORE_RECOVERY.md) — operational recovery commands and promotion boundary;
+- [`rocketdict/recovered/checkpoint-catalog.json`](rocketdict/recovered/checkpoint-catalog.json) — machine-readable historical checkpoint identities/names with explicit evidence levels;
+- [`rocketdict/recovered/search-exhaustion-2026-09-05.json`](rocketdict/recovered/search-exhaustion-2026-09-05.json) — sources already searched so they are not redundantly repeated;
+- [`rocketdict/recovered/stage8-0.30.40/recovery.json`](rocketdict/recovered/stage8-0.30.40/recovery.json) — exact recovered 0.30.40 bytes and blocker;
+- [`rocketdict/recovered/stage8-0.30.40/core-recovery-history.json`](rocketdict/recovered/stage8-0.30.40/core-recovery-history.json) — historical payload/Actions recovery map;
+- [`rocketdict/START_HERE.md`](rocketdict/START_HERE.md) and [`rocketdict/STATE.json`](rocketdict/STATE.json) for older Stage8 research context;
+- [`rocketdict/checkpoints/stage6y/`](rocketdict/checkpoints/stage6y/) for the separate verified 0.30.34 maintenance lineage.
 
-## Current repository frontier
+## Current frontier
 
-The active Workbench/Product implementation is already resumable through Stage25. The main blocker is **not missing orchestration**: it is the absence of a complete exact-compatible runnable RocketDict core/public API.
+The Workbench Product pipeline already reaches resumable Stage25. The hard blocker is the absence of a complete exact-compatible RocketDict core/public API, not missing orchestration.
 
-Exact 0.30.40 recovery currently preserves only two complete source members from a truncated Stage8 artifact prefix. Historical materializer/ancestry analysis proves that the intended 19-file Stage8 overlay did not include `rocketdict.api.*`; recovering the remaining overlay chunks alone therefore cannot reconstruct the complete base core.
+Exact 0.30.40 recovery currently preserves two complete Stage8 overlay source members. Historical reconstruction proves the intended 19-file Stage8 overlay did not contain `rocketdict.api.*`; seven missing overlay chunks alone cannot reconstruct the base core.
 
-Workbench now contains three fail-closed recovery tools:
+Recovery tools:
 
-- `rocketdict-recover-core` — inspect one source directory/ZIP candidate;
-- `rocketdict-recover-plan` — deterministic read-only base→0.30.40 compatibility plan;
-- `rocketdict-recover-scan` — batch screening/ranking of old ZIP/checkouts.
+- `rocketdict-recover-core`
+- `rocketdict-recover-plan`
+- `rocketdict-recover-scan`
 
-Current recovery math for the historical Stage8 overlay contract is 19 intended members, 2 exact target bytes available, 17 exact target bytes missing. The exact 0.30.40 public API bytes remain unrecovered and unproven.
+Current scanner schema: `rocketdict-workbench-core-recovery-scan/2`.
 
-Latest verified recovery code checkpoint:
+It distinguishes exact archive SHA/size identity from historical filename-only matching. Known checkpoints without a proven filename do not receive guessed patterns.
 
-- commit `d1e94eced4deaeec9e9a9a3a70fecdee48572e12`
-- `RocketDict Workbench` run `33964578578`
-- job `101302315173`
+Current recovery math:
+
+- intended Stage8 overlay members: 19
+- exact target bytes available: 2
+- exact target bytes missing: 17
+- exact 0.30.40 public API modules recovered: 0
+- complete core candidate found in currently accessible recovery sources: 0
+
+Latest verified checkpoint before this documentation update:
+
+- commit `ff9018516d924d56de6e6c4d267a91e5b920a5a6`
+- Workbench run `33965240536`
+- job `101304088386`
 - Python 3.13.15
 - compile success
-- **153 passed, 1 skipped**.
-
-A separate verified maintenance-hardening lineage reached RocketDict 0.30.34 / LAB Stage6Y. That checkpoint must not be assumed source-level merged into the active Product lineage unless exact source comparison and regression prove it.
+- **159 passed, 1 skipped**.
 
 ## Immediate continuation
 
-1. Recover any complete historical RocketDict checkpoint/source bytes from old uploads, machines, archives or another provenance-verifiable source.
-2. Run `rocketdict-recover-scan` over the recovered collection.
-3. Run `rocketdict-recover-core` and `rocketdict-recover-plan` on the strongest candidate.
-4. Do not manufacture missing 0.30.40 overlay/API bytes.
-5. Only after a complete exact-compatible runtime exists: Workbench doctor → import → immutable Product preflight → live registry/API probe → exact binding/execution proof → genuine Stage8 dispatch → continue through Stage25.
-6. After runtime continuity is proven, run the full 90k+ public-domain validation corpus without truncation and retain the complete translation/research evidence database.
+Do not repeat already exhausted Git/deleted-ref/Release/current-workspace scans unless new objects become available.
 
-## Non-negotiable continuation rules
+The next useful input is new provenance-verifiable historical RocketDict checkpoint/core bytes, preferably a later 0.30.x full checkpoint. When bytes appear:
+
+1. `rocketdict-recover-scan <directory>`;
+2. `rocketdict-recover-core <candidate>`;
+3. `rocketdict-recover-plan <candidate>`;
+4. only if a complete exact-compatible runtime is proven: Workbench doctor → import → Product preflight → live registry/API probe → exact binding/execution proof → genuine Stage8 dispatch → continue through Stage25;
+5. finally run the full 90k+ public-domain corpus without truncation and retain the complete translation/research evidence database.
+
+## Non-negotiable rules
 
 - Never replace real MT with fake/identity/dictionary translation and call it success.
-- Never silently truncate the 104k+ *Opticks* corpus or another required long corpus.
+- Never silently truncate required long corpora.
 - Preserve immutable hashes, failed experiments and audit evidence.
 - Do not weaken quality gates merely to obtain a green run.
-- Do not overwrite the newer active lineage with an older checkpoint; verified parallel checkpoints remain explicit lineages until compatibility is proven.
-- This repository is public: keep it project-only. Do not add personal profile, location, account data, credentials, private conversations or unrelated files.
+- Do not overwrite Product with an older checkpoint without exact compatibility proof and regression.
+- Keep this public repository project-only and free of personal/account/private-conversation data.
