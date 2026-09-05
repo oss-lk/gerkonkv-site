@@ -1,5 +1,5 @@
 {
-  "schema": "rocketdict-core-recovery-search-exhaustion/1",
+  "schema": "rocketdict-core-recovery-search-exhaustion/2",
   "date_utc": "2026-09-05",
   "promotion_allowed": false,
   "complete_historical_core_recovered": false,
@@ -27,34 +27,46 @@
       }
     ],
     "likely_api_path_history_checks": [
-      {
-        "path": "src/rocketdict/api/client.py",
-        "reachable_commits": 0
-      },
-      {
-        "path": "rocketdict/src/rocketdict/api/client.py",
-        "reachable_commits": 0
-      },
-      {
-        "path": "rocketdict/active_source/src/rocketdict/api/client.py",
-        "reachable_commits": 0
-      }
+      {"path":"src/rocketdict/api/client.py","reachable_commits":0},
+      {"path":"rocketdict/src/rocketdict/api/client.py","reachable_commits":0},
+      {"path":"rocketdict/active_source/src/rocketdict/api/client.py","reachable_commits":0}
     ],
     "release_checks": [
-      {
-        "repository": "oss-lk/gerkonkv-site",
-        "release_count": 0
-      },
-      {
-        "repository": "oss-lk/spacy-project-vault",
-        "release_count": 0
-      }
+      {"repository":"oss-lk/gerkonkv-site","release_count":0},
+      {"repository":"oss-lk/spacy-project-vault","release_count":0}
     ],
     "private_historical_repo": {
       "repository": "oss-lk/spacy-project-vault",
       "checked_branch": "rocketdict-stage06-spacy-model",
       "result": "notes_and_project_materials_only_no_rocketdict_source_package"
     }
+  },
+  "github_actions_artifacts": {
+    "spacy_project_vault": {
+      "date_window_checked": "2026-08-20..2026-09-01",
+      "rocketdict_real_opus_runs": [
+        {"run_id":32985777761,"run_number":4,"artifact_count":0},
+        {"run_id":32985758628,"run_number":3,"artifact_count":0},
+        {"run_id":32985715220,"run_number":2,"artifact_count":0},
+        {"run_id":32985680517,"run_number":1,"artifact_count":0}
+      ],
+      "result": "no_retained_workflow_artifacts"
+    },
+    "gerkonkv_site": {
+      "workbench_workflow_checked_at_commit": "e9124f57698ebb1e36e1708f27be23374215560c",
+      "workbench_upload_artifact_step_present": false,
+      "deleted_public_opus_workflow": {
+        "commit": "818cc87f7efcc0a4dc2981c875f5c10eeb2276f8",
+        "upload_artifact_present": true,
+        "artifact_name": "rocketdict-real-opus-gate",
+        "uploaded_paths": ["work/evidence/**","work/output/**"],
+        "retention_days": 14,
+        "core_or_wheel_in_uploaded_paths": false,
+        "currently_listable_runs_for_deleted_branch": 0
+      },
+      "result": "no_actions_artifact_path_can_supply_historical_core_or_wheel_from_the_checked_workflows"
+    },
+    "conclusion": "GitHub Actions artifact recovery is exhausted for the known RocketDict workflows unless a previously unknown workflow/run is discovered."
   },
   "file_library": {
     "recovered_checkpoint_content_evidence": [
@@ -79,124 +91,49 @@
     "full_checkpoint_zip_bytes_recovered": false,
     "api_source_module_bytes_recovered": false
   },
-  "ephemeral_recovery_workspace_zip_inventory": [
-    {
-      "name": "rocketdict-deleted-ref-events-recovery.zip",
-      "bytes": 8254,
-      "sha256": "c2fff73c403cbbc5ab6b25620fcf2915097283bddb3f5d6a2eca00ff045b83ee",
-      "member_count": 1,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "rocketdict-offline-opus-runtime-cp313.zip",
-      "bytes": 343401002,
-      "sha256": "c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c",
-      "member_count": 7,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "rocketdict-real-opus-gate.zip",
-      "bytes": 30389,
-      "sha256": "7044b3f3cd6a1b625c06b97067d68da1f7999b118e9e6f63776df28f969c1e00",
-      "member_count": 10,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "rocketdict-stage8-api-artifact-recovery-v2.zip",
-      "bytes": 1626006,
-      "sha256": "2728dc1da4e92e9f4b27d45b17e0a69a989adc2afbed8647e397286daca34c50",
-      "member_count": 2,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "rocketdict-stage8-api-artifact-recovery-v3.zip",
-      "bytes": 1693011,
-      "sha256": "cc4d7ffb42769af8b6c4dd240b8560c7ccaf9db37a183a822660f00916237ee2",
-      "member_count": 2,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "rocketdict-stage8-api-artifact-recovery.zip",
-      "bytes": 693117,
-      "sha256": "9949f5895fa4ea00e99b5d7cdca2ac59b579addab71403e3cd3566539f3acc10",
-      "member_count": 2,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "stage7-structural-recovery-a.zip",
-      "bytes": 3611170,
-      "sha256": "4d395857bdfaaf7ab4934e5423ef33c006d3dc0c45dddf11c815e0c918069b71",
-      "member_count": 19,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "stage7-structural-recovery-b.zip",
-      "bytes": 2108453,
-      "sha256": "d23b1becf07aa05b74e30b5ca786732861f61e568acf025a06d59631d28cec54",
-      "member_count": 18,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "stage8-artifact-recovery.zip",
-      "bytes": 781214,
-      "sha256": "b9688c2fa606a1650a9344e56a7f5a5093d389d4ea2a738abdd7aa9ee0a866f8",
-      "member_count": 2,
-      "rocketdict_package_init_hits": 0,
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0
-    },
-    {
-      "name": "stage8-overlay-prefix.zip",
-      "bytes": 29772,
-      "sha256": "d56876cc23cc281ab9f9da36dedcff9536aca766ef7da7ad414addd57a2cf8d8",
-      "member_count": 5,
-      "rocketdict_package_init_hits": 1,
-      "rocketdict_package_init_paths": [
-        "members/src/rocketdict/__init__.py"
-      ],
-      "rocketdict_api_required_hits": 0,
-      "rocketdict_wheel_hits": 0,
-      "nested_rocketdict_zip_hits": 0,
-      "classification": "known_truncated_0.30.40_overlay_prefix_evidence_only"
-    }
-  ],
-  "workspace_inventory_summary": {
-    "zip_count": 10,
+  "ephemeral_recovery_workspace": {
+    "exact_rescan_record": "rocketdict/recovered/runtime-artifact-rescan-2026-09-05.json",
+    "top_level_zip_or_wheel_artifacts": 10,
+    "top_level_wheels": 0,
+    "exact_03034_wheel_sha_match_count": 0,
     "zip_with_any_rocketdict_package_init": 1,
     "zip_with_all_required_public_api_modules": 0,
     "zip_with_rocketdict_wheel": 0,
     "zip_with_nested_rocketdict_checkpoint_zip": 0,
-    "complete_core_candidate_found": false
+    "complete_core_candidate_found": false,
+    "only_package_root_hit": {
+      "name": "stage8-overlay-prefix.zip",
+      "sha256": "d56876cc23cc281ab9f9da36dedcff9536aca766ef7da7ad414addd57a2cf8d8",
+      "classification": "known_truncated_0.30.40_overlay_prefix_evidence_only"
+    },
+    "offline_opus_runtime": {
+      "name": "rocketdict-offline-opus-runtime-cp313.zip",
+      "bytes": 343401002,
+      "sha256": "c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c",
+      "rocketdict_package_present": false,
+      "rocketdict_api_present": false,
+      "conclusion": "OPUS execution dependencies survive but do not contain the missing RocketDict core/public API"
+    }
+  },
+  "preferred_external_recovery_identity": {
+    "name": "rocketdict-0.30.34-py3-none-any.whl",
+    "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a",
+    "bytes_currently_recovered": false
   },
   "conclusion": [
-    "Current reachable Git history, observed deleted refs, releases, File Library evidence and the current recovery workspace do not contain a complete exact-compatible RocketDict core.",
+    "Current reachable Git history, observed deleted refs, releases, File Library evidence, known GitHub Actions artifacts/workflows and the active recovery workspace do not contain a complete exact-compatible RocketDict core.",
     "The only local ZIP containing a RocketDict package root is the already-known truncated Stage8 0.30.40 overlay-prefix evidence and it contains none of the required public API modules.",
-    "The strongest known full-byte recovery lead remains an external historical checkpoint/archive copy, preferably one of the later 0.30.x checkpoints recorded in checkpoint-catalog.json.",
-    "When new bytes are recovered, run rocketdict-recover-scan, rocketdict-recover-core and rocketdict-recover-plan before any Product execution attempt."
+    "The 343 MB offline OPUS runtime preserves inference dependencies but no RocketDict package/API source.",
+    "The strongest exact historical packaged-core lead is the external RocketDict 0.30.34 wheel identity preserved in checkpoint-catalog.json.",
+    "When new bytes are recovered, use the integrity- and catalog-gated rocketdict-recover-scan / rocketdict-recover-wheel proof chain before any Product execution attempt."
+  ],
+  "do_not_repeat_without_new_evidence": [
+    "reachable Git history and known deleted refs",
+    "GitHub Releases in both RocketDict-related repositories",
+    "known historical API path searches",
+    "spacy-project-vault Stage6 model branch",
+    "known RocketDict GitHub Actions artifact runs/workflows",
+    "current ten-artifact runtime workspace byte hashing",
+    "retained Stage31 transcript recovery"
   ]
 }
