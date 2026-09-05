@@ -14,6 +14,7 @@ from rocketdict_workbench.upstream_chain import (
     resolve_stage_inputs,
     verify_upstream_stage_binding,
 )
+from rocketdict_workbench.upstream_execution import EXECUTION_RECORD_SCHEMA
 
 
 def _canon(value) -> str:  # type: ignore[no-untyped-def]
@@ -74,6 +75,18 @@ def _callable(number: int, selected: dict) -> dict:
     }
 
 
+def _completed_stage8() -> dict:
+    result = {"schema": "stage8-result/1", "nlp_run_id": 23, "stage_result_id": 24}
+    return {
+        "schema": EXECUTION_RECORD_SCHEMA,
+        "status": "completed",
+        "stage_number": 8,
+        "result": result,
+        "result_sha256": _canon(result),
+        "durable_identities": {"nlp_run_id": 23, "stage_result_id": 24},
+    }
+
+
 def _state(*, stage12_input: str = "nlp_run_id", completed_stage8: bool = True, source_extra: dict | None = None) -> dict:
     stage_defs = {
         8: ["document_version_id"],
@@ -123,12 +136,7 @@ def _state(*, stage12_input: str = "nlp_run_id", completed_stage8: bool = True, 
     probe["fingerprint"] = _canon(probe)
     upstream = {"status": "pending", "attempts": 0}
     if completed_stage8:
-        upstream["executions"] = {
-            "8": {
-                "status": "completed",
-                "durable_identities": {"nlp_run_id": 23, "stage_result_id": 24},
-            }
-        }
+        upstream["executions"] = {"8": _completed_stage8()}
     return {
         "schema": RUN_STATE_SCHEMA,
         "status": "stage8_completed_awaiting_next_upstream_binding" if completed_stage8 else "awaiting_upstream_binding",
@@ -168,7 +176,7 @@ def test_stage10_resolves_exact_source_identity_by_name(tmp_path) -> None:
     assert discovery["exact_matches"][0]["operation"] == "product.stage10.run"
 
 
-def test_stage12_can_resolve_prior_completed_durable_identity_without_aliasing(tmp_path) -> None:
+def test_stage12_can_resolve_hash_verified_prior_identity_without_aliasing(tmp_path) -> None:
     path = _write(tmp_path, _state())
     discovery = discover_upstream_stage(path, 12)
     assert discovery["status"] == "unique_exact_match"
@@ -177,9 +185,27 @@ def test_stage12_can_resolve_prior_completed_durable_identity_without_aliasing(t
 
     binding = verify_upstream_stage_binding(path, 12, "product.stage12.run")["binding"]
     assert binding["frozen_inputs"] == {"nlp_run_id": 23}
-    assert binding["proof"]["input_resolution_mode"] == "exact-name-source-or-completed-durable-identity-v1"
+    assert binding["proof"]["input_resolution_mode"] == "exact-name-source-or-hash-verified-completed-identity-v2"
     persisted = json.loads(path.read_text(encoding="utf-8"))
     assert persisted["status"] == "stage8_completed_awaiting_next_upstream_binding"
+
+
+def test_mutated_completed_result_cannot_supply_downstream_identity(tmp_path) -> None:
+    payload = _state()
+    payload["steps"]["upstream_execution"]["executions"]["8"]["result"]["nlp_run_id"] = 999
+    path = _write(tmp_path, payload)
+    discovery = discover_upstream_stage(path, 12)
+    assert discovery["status"] == "input_resolution_blocked"
+    assert "mutated" in discovery["input_error"]
+
+
+def test_durable_identity_must_be_backed_by_hashed_result(tmp_path) -> None:
+    payload = _state()
+    payload["steps"]["upstream_execution"]["executions"]["8"]["durable_identities"]["nlp_run_id"] = 999
+    path = _write(tmp_path, payload)
+    discovery = discover_upstream_stage(path, 12)
+    assert discovery["status"] == "input_resolution_blocked"
+    assert "not backed" in discovery["input_error"]
 
 
 def test_unresolved_input_blocks_binding_even_when_callable_matches(tmp_path) -> None:
