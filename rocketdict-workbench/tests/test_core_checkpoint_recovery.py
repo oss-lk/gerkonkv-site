@@ -6,12 +6,14 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import tomllib
 import zipfile
 
 import pytest
 
 from rocketdict_workbench.core_checkpoint_recovery import inspect_full_checkpoint
 from rocketdict_workbench.core_recovery import RecoveryCandidateError
+from rocketdict_workbench.core_scan_pipeline import scan_recovery_pipeline
 
 
 def _repo() -> Path:
@@ -106,7 +108,18 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _catalog(path: Path, checkpoint: Path, *, expected_sha: str | None = None) -> Path:
+def _nested_wheel_bytes(checkpoint: Path) -> bytes:
+    with zipfile.ZipFile(checkpoint) as zf:
+        return zf.read("checkpoint/dist/rocketdict-0.30.34-py3-none-any.whl")
+
+
+def _catalog(
+    path: Path,
+    checkpoint: Path,
+    *,
+    expected_sha: str | None = None,
+    expected_wheel_sha: str | None = None,
+) -> Path:
     path.write_text(
         json.dumps(
             {
@@ -121,7 +134,7 @@ def _catalog(path: Path, checkpoint: Path, *, expected_sha: str | None = None) -
                         "archive_sha256": expected_sha or _sha(checkpoint),
                         "archive_bytes": None,
                         "wheel_name_patterns": ["rocketdict-0.30.34-py3-none-any.whl"],
-                        "wheel_sha256": None,
+                        "wheel_sha256": expected_wheel_sha,
                         "wheel_bytes": None,
                         "candidate_role": "test",
                         "evidence_level": "test",
@@ -135,15 +148,20 @@ def _catalog(path: Path, checkpoint: Path, *, expected_sha: str | None = None) -
     return path
 
 
-def test_exact_full_checkpoint_proves_source_nested_wheel_api_and_parity(tmp_path: Path) -> None:
+def test_exact_full_checkpoint_proves_source_nested_wheel_api_parity_and_catalog_binding(tmp_path: Path) -> None:
     checkpoint = _checkpoint(
         tmp_path / "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip"
     )
-    catalog = _catalog(tmp_path / "catalog.json", checkpoint)
+    nested = _nested_wheel_bytes(checkpoint)
+    catalog = _catalog(
+        tmp_path / "catalog.json",
+        checkpoint,
+        expected_wheel_sha=hashlib.sha256(nested).hexdigest(),
+    )
 
     report = inspect_full_checkpoint(checkpoint, checkpoint_catalog=catalog)
 
-    assert report["schema"] == "rocketdict-workbench-full-checkpoint-recovery/1"
+    assert report["schema"] == "rocketdict-workbench-full-checkpoint-recovery/2"
     assert report["status"] == "exact_historical_checkpoint_candidate"
     assert report["promotion_allowed"] is False
     assert report["product_execution_allowed"] is False
@@ -155,6 +173,7 @@ def test_exact_full_checkpoint_proves_source_nested_wheel_api_and_parity(tmp_pat
     assert report["source_roots"] == [{"prefix": "checkpoint", "layout": "src"}]
     assert report["source"]["version"] == "0.30.34"
     assert report["source"]["package_file_count"] == len(_package())
+    assert report["source"]["api_complete"] is True
 
     source_api = report["source"]["api_inventory"]
     assert all(row["present"] for row in source_api.values())
@@ -163,15 +182,27 @@ def test_exact_full_checkpoint_proves_source_nested_wheel_api_and_parity(tmp_pat
     ).hexdigest()
 
     assert report["nested_rocketdict_wheel_count"] == 1
+    assert report["nested_rocketdict_wheel_integrity_ok_count"] == 1
+    assert report["nested_rocketdict_wheel_catalog_exact_match_count"] == 1
+    assert report["nested_rocketdict_wheel_catalog_exact_mismatch_count"] == 0
+    assert report["source_wheel_parity_complete_count"] == 1
     wheel = report["nested_rocketdict_wheels"][0]
     assert wheel["ok"] is True
     assert wheel["metadata"]["name"] == "rocketdict"
     assert wheel["metadata"]["version"] == "0.30.34"
     assert wheel["record"]["verified"] is True
+    assert wheel["historical_catalog_name_match"] is True
+    assert wheel["historical_catalog_exact_identity_match"] is True
+    assert wheel["historical_catalog_exact_identity_mismatch"] is False
+    wheel_match = wheel["historical_catalog_matches"][0]
+    assert wheel_match["sha256_match"] is True
+    assert wheel_match["size_constraint_available"] is False
+    assert wheel_match["exact_identity_match"] is True
     assert wheel["source_parity"]["complete"] is True
     assert wheel["source_parity"]["source_file_count"] == len(_package())
     assert wheel["source_parity"]["wheel_file_count"] == len(_package())
     assert wheel["source_parity"]["content_mismatch_count"] == 0
+    assert wheel["api_complete"] is True
     assert all(row["present"] for row in wheel["api_inventory"].values())
 
     evidence_paths = {row["path"] for row in report["evidence_inventory"]}
@@ -203,6 +234,8 @@ def test_full_checkpoint_detects_source_wheel_content_drift(tmp_path: Path) -> N
 
     report = inspect_full_checkpoint(checkpoint)
     parity = report["nested_rocketdict_wheels"][0]["source_parity"]
+    assert report["status"] == "blocked_checkpoint_candidate"
+    assert "source_wheel_parity_incomplete" in report["blockers"]
     assert parity["complete"] is False
     assert parity["source_only_count"] == 0
     assert parity["wheel_only_count"] == 0
@@ -232,6 +265,29 @@ def test_known_full_checkpoint_name_with_wrong_sha_is_explicitly_blocked(tmp_pat
     assert report["promotion_allowed"] is False
 
 
+def test_nested_known_wheel_with_wrong_catalog_sha_blocks_checkpoint(tmp_path: Path) -> None:
+    checkpoint = _checkpoint(
+        tmp_path / "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip"
+    )
+    catalog = _catalog(
+        tmp_path / "catalog.json",
+        checkpoint,
+        expected_wheel_sha="0" * 64,
+    )
+
+    report = inspect_full_checkpoint(checkpoint, checkpoint_catalog=catalog)
+
+    assert report["historical_checkpoint_exact_identity_match"] is True
+    assert report["status"] == "blocked_checkpoint_candidate"
+    assert report["nested_rocketdict_wheel_catalog_exact_match_count"] == 0
+    assert report["nested_rocketdict_wheel_catalog_exact_mismatch_count"] == 1
+    assert "nested_rocketdict_wheel_historical_catalog_exact_identity_mismatch" in report["blockers"]
+    wheel = report["nested_rocketdict_wheels"][0]
+    assert wheel["historical_catalog_exact_identity_match"] is False
+    assert wheel["historical_catalog_exact_identity_mismatch"] is True
+    assert wheel["historical_catalog_matches"][0]["sha256_match"] is False
+
+
 def test_checkpoint_rejects_unsafe_outer_member_names(tmp_path: Path) -> None:
     checkpoint = _checkpoint(tmp_path / "unsafe.zip", unsafe_member=True)
     with pytest.raises(RecoveryCandidateError, match="unsafe member names"):
@@ -252,3 +308,49 @@ def test_checkpoint_without_source_root_is_blocked_but_evidence_remains_visible(
     assert report["compatibility_plan"] is None
     assert report["evidence_inventory_count"] == 2
     assert report["promotion_allowed"] is False
+
+
+def test_unified_scan_attaches_full_checkpoint_proof_and_counters(tmp_path: Path) -> None:
+    checkpoint = _checkpoint(
+        tmp_path / "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip"
+    )
+    nested = _nested_wheel_bytes(checkpoint)
+    catalog = _catalog(
+        tmp_path / "catalog.json",
+        checkpoint,
+        expected_wheel_sha=hashlib.sha256(nested).hexdigest(),
+    )
+
+    report = scan_recovery_pipeline(tmp_path, checkpoint_catalog=catalog)
+
+    assert report["schema"] == "rocketdict-workbench-core-recovery-scan/8"
+    assert report["promotion_allowed"] is False
+    assert report["product_execution_allowed"] is False
+    assert report["checkpoint_pipeline_count"] == 1
+    assert report["checkpoint_exact_identity_match_count"] == 1
+    assert report["checkpoint_blocked_count"] == 0
+    assert report["checkpoint_source_api_complete_count"] == 1
+    assert report["checkpoint_nested_wheel_count"] == 1
+    assert report["checkpoint_nested_wheel_integrity_ok_count"] == 1
+    assert report["checkpoint_nested_wheel_catalog_exact_match_count"] == 1
+    assert report["checkpoint_nested_wheel_catalog_exact_mismatch_count"] == 0
+    assert report["checkpoint_source_wheel_parity_complete_count"] == 1
+    assert report["wheel_pipeline_count"] == 0
+    assert report["error_count"] == 0
+    row = report["candidates"][0]
+    assert row["kind"] == "zip"
+    assert row["checkpoint_recovery_status"] == "exact_historical_checkpoint_candidate"
+    assert row["checkpoint_exact_identity_match"] is True
+    assert row["checkpoint_source_api_complete"] is True
+    assert row["checkpoint_nested_rocketdict_wheel_count"] == 1
+    assert row["checkpoint_source_wheel_parity_complete_count"] == 1
+    assert row["checkpoint_recovery"]["source"]["version"] == "0.30.34"
+
+
+def test_pyproject_exposes_full_checkpoint_cli() -> None:
+    project = tomllib.loads(
+        (_repo() / "rocketdict-workbench" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert project["project"]["scripts"]["rocketdict-recover-checkpoint"] == (
+        "rocketdict_workbench.core_checkpoint_recovery:main"
+    )
