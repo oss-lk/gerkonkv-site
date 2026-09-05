@@ -123,3 +123,5 @@ def test_set_assembly_duplicate_operation_key_is_not_collapsed_to_first_mapping(
           git diff --cached --check
           git commit -m "Harden Stage24 crash recovery and set assembly identity"
           git push origin HEAD:main
+
+# Existing-workflow push trigger marker.
