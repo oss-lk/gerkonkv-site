@@ -50,6 +50,15 @@ def parser() -> argparse.ArgumentParser:
     product_bind.add_argument("root", type=Path)
     product_bind.add_argument("--state", type=Path, required=True, help="Unified Product run state produced by product-run-init")
     product_bind.add_argument("--operation", required=True, help="Exact callable operation key observed by the structured API probe")
+    product_prove = sub.add_parser("product-run-prove-stage8-execution", help="Prove the exact callable request/result/replay contract before Stage8 mutation")
+    product_prove.add_argument("root", type=Path)
+    product_prove.add_argument("--state", type=Path, required=True, help="Unified Product run state containing a verified Stage8 binding")
+    product_plan = sub.add_parser("product-run-plan-stage8", help="Render the immutable Stage8 public-API request without dispatching it")
+    product_plan.add_argument("root", type=Path)
+    product_plan.add_argument("--state", type=Path, required=True, help="Unified Product run state with a verified execution contract")
+    product_execute = sub.add_parser("product-run-execute-stage8", help="Execute/resume Stage8 only through the proven public API contract")
+    product_execute.add_argument("root", type=Path)
+    product_execute.add_argument("--state", type=Path, required=True, help="Unified Product run state with a verified Stage8 binding")
     cefr_asset = sub.add_parser("cefrj-install", help="Install the pinned CEFR-J 1.5 asset during explicit setup")
     cefr_asset.add_argument("root", type=Path); cefr_asset.add_argument("--destination", type=Path)
     cefr = sub.add_parser("cefrj-assess", help="Run Product CEFR-J-only assessment; no smoke/frequency fallback")
@@ -146,6 +155,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "product-run-bind-stage8":
             from .upstream_binding import verify_stage8_binding
             _json(verify_stage8_binding(args.state, args.operation)); return 0
+        if args.command == "product-run-prove-stage8-execution":
+            from .upstream_execution import prove_stage8_execution_contract
+            _json(prove_stage8_execution_contract(core, project.paths.database, args.state)); return 0
+        if args.command == "product-run-plan-stage8":
+            from .upstream_execution import plan_stage8_execution
+            _json(plan_stage8_execution(args.state)); return 0
+        if args.command == "product-run-execute-stage8":
+            from .upstream_execution import execute_stage8
+            _json(execute_stage8(core, project.paths.database, args.state)); return 0
         if args.command == "cefrj-install":
             from .product_cefr import install_cefrj_asset
             destination = args.destination or (project.paths.data / "assets" / "cefrj-vocabulary-profile-1.5.csv")
