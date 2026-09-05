@@ -1,30 +1,13 @@
 {
-  "schema": "rocketdict-core-recovery-search-exhaustion/2",
+  "schema": "rocketdict-core-recovery-search-exhaustion/3",
   "date_utc": "2026-09-05",
   "promotion_allowed": false,
   "complete_historical_core_recovered": false,
   "git_history": {
-    "parentless_upload_commit": {
-      "sha": "442e09dbb2e0b48147837b2bc78b6454ce6dca35",
-      "tree_sha": "e3289100392a92f6118745311312a5422327b48f",
-      "message": "Add files via upload",
-      "result": "website_only_no_rocketdict_source_tree"
-    },
+    "parentless_upload_commit": {"sha":"442e09dbb2e0b48147837b2bc78b6454ce6dca35","tree_sha":"e3289100392a92f6118745311312a5422327b48f","message":"Add files via upload","result":"website_only_no_rocketdict_source_tree"},
     "deleted_refs_observed": [
-      {
-        "ref": "refs/heads/rocketdict-opus-gate-public",
-        "head": "818cc87f7efcc0a4dc2981c875f5c10eeb2276f8",
-        "head_tree": "4de124ec34f2a8101ed0cae7398fb8464a26a050",
-        "result": "website_plus_opus_workflow_no_core_source"
-      },
-      {
-        "ref": "refs/heads/rocketdict-pr-actions-run",
-        "predecessor": "f76cc656cdbb1324d591524f5d90789e72083d2d",
-        "predecessor_tree": "1c66ecce64a5840920fcde834095a55f501e20c3",
-        "head": "b3795ef5af529a863a0ba6bbe429da7a24acc064",
-        "head_tree": "c9c02e6100af429f34ea9a54c507b4fefa415ba4",
-        "result": "website_plus_actions_selftest_no_core_source"
-      }
+      {"ref":"refs/heads/rocketdict-opus-gate-public","head":"818cc87f7efcc0a4dc2981c875f5c10eeb2276f8","head_tree":"4de124ec34f2a8101ed0cae7398fb8464a26a050","result":"website_plus_opus_workflow_no_core_source"},
+      {"ref":"refs/heads/rocketdict-pr-actions-run","predecessor":"f76cc656cdbb1324d591524f5d90789e72083d2d","predecessor_tree":"1c66ecce64a5840920fcde834095a55f501e20c3","head":"b3795ef5af529a863a0ba6bbe429da7a24acc064","head_tree":"c9c02e6100af429f34ea9a54c507b4fefa415ba4","result":"website_plus_actions_selftest_no_core_source"}
     ],
     "likely_api_path_history_checks": [
       {"path":"src/rocketdict/api/client.py","reachable_commits":0},
@@ -35,104 +18,99 @@
       {"repository":"oss-lk/gerkonkv-site","release_count":0},
       {"repository":"oss-lk/spacy-project-vault","release_count":0}
     ],
-    "private_historical_repo": {
-      "repository": "oss-lk/spacy-project-vault",
-      "checked_branch": "rocketdict-stage06-spacy-model",
-      "result": "notes_and_project_materials_only_no_rocketdict_source_package"
-    }
+    "stage6t_to_stage6y_commit_window": {
+      "window":"2026-08-24..2026-08-27",
+      "gerkonkv_site_result":"no Stage6T-Y core commits in the checked development window",
+      "spacy_project_vault_result":"only OPUS gate commits; no Stage6T-Y source/checkpoint tree",
+      "conclusion":"late Stage6 checkpoints were sandbox/checkpoint artifacts rather than normal reachable Git trees"
+    },
+    "private_historical_repo": {"repository":"oss-lk/spacy-project-vault","checked_branch":"rocketdict-stage06-spacy-model","result":"notes_and_project_materials_only_no_rocketdict_source_package"}
   },
   "github_actions_artifacts": {
     "spacy_project_vault": {
-      "date_window_checked": "2026-08-20..2026-09-01",
-      "rocketdict_real_opus_runs": [
+      "date_window_checked":"2026-08-20..2026-09-01",
+      "rocketdict_real_opus_runs":[
         {"run_id":32985777761,"run_number":4,"artifact_count":0},
         {"run_id":32985758628,"run_number":3,"artifact_count":0},
         {"run_id":32985715220,"run_number":2,"artifact_count":0},
         {"run_id":32985680517,"run_number":1,"artifact_count":0}
       ],
-      "result": "no_retained_workflow_artifacts"
+      "result":"no_retained_workflow_artifacts"
     },
     "gerkonkv_site": {
-      "workbench_workflow_checked_at_commit": "e9124f57698ebb1e36e1708f27be23374215560c",
-      "workbench_upload_artifact_step_present": false,
-      "deleted_public_opus_workflow": {
-        "commit": "818cc87f7efcc0a4dc2981c875f5c10eeb2276f8",
-        "upload_artifact_present": true,
-        "artifact_name": "rocketdict-real-opus-gate",
-        "uploaded_paths": ["work/evidence/**","work/output/**"],
-        "retention_days": 14,
-        "core_or_wheel_in_uploaded_paths": false,
-        "currently_listable_runs_for_deleted_branch": 0
-      },
-      "result": "no_actions_artifact_path_can_supply_historical_core_or_wheel_from_the_checked_workflows"
+      "workbench_workflow_checked_at_commit":"e9124f57698ebb1e36e1708f27be23374215560c",
+      "workbench_upload_artifact_step_present":false,
+      "deleted_public_opus_workflow":{"commit":"818cc87f7efcc0a4dc2981c875f5c10eeb2276f8","upload_artifact_present":true,"artifact_name":"rocketdict-real-opus-gate","uploaded_paths":["work/evidence/**","work/output/**"],"retention_days":14,"core_or_wheel_in_uploaded_paths":false,"currently_listable_runs_for_deleted_branch":0},
+      "result":"no_actions_artifact_path_can_supply_historical_core_or_wheel_from_the_checked_workflows"
     },
-    "conclusion": "GitHub Actions artifact recovery is exhausted for the known RocketDict workflows unless a previously unknown workflow/run is discovered."
+    "conclusion":"GitHub Actions artifact recovery is exhausted for the known RocketDict workflows unless a previously unknown workflow/run is discovered."
   },
   "file_library": {
     "recovered_checkpoint_content_evidence": [
-      {
-        "version": "0.30.29",
-        "stage": "Stage 6T",
-        "artifact_kind": "README",
-        "proves": [
-          "RocketDictAPI existed in that checkpoint line",
-          "durable local queue and CLI surfaces were documented",
-          "broader Stage1-25 lifecycle was documented"
-        ]
-      },
-      {
-        "artifact_kind": "HEAVY_PREFLIGHT.json",
-        "proves": [
-          "durable Stage1-11 checkpoint existed",
-          "real OPUS Stage12 policy and hard blockers were recorded"
-        ]
-      }
+      {"version":"0.30.29","stage":"Stage 6T","artifact_kind":"README","proves":["RocketDictAPI existed in that checkpoint line","durable local queue and CLI surfaces were documented","broader Stage1-25 lifecycle was documented"]},
+      {"artifact_kind":"HEAVY_PREFLIGHT.json","proves":["durable Stage1-11 checkpoint existed","real OPUS Stage12 policy and hard blockers were recorded"]}
     ],
-    "full_checkpoint_zip_bytes_recovered": false,
-    "api_source_module_bytes_recovered": false
+    "exact_stage6y_zip_search": {
+      "name":"RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip",
+      "sha256":"3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387",
+      "date_navigation_checked":"2026-08-26",
+      "binary_object_recovered":false
+    },
+    "exact_stage6y_wheel_search": {"name":"rocketdict-0.30.34-py3-none-any.whl","binary_object_recovered":false},
+    "full_checkpoint_zip_bytes_recovered":false,
+    "api_source_module_bytes_recovered":false
+  },
+  "google_drive": {
+    "exact_names_checked":["RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip","rocketdict-0.30.34-py3-none-any.whl","RocketDict_0.30.33_LAB_STAGE6X_COMPACTION_HARD_CRASH_RECOVERY_COMPLETE.zip","RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_COMPACTION_COMPLETE.zip"],
+    "general_rocketdict_search_result_count":0,
+    "exact_artifact_result_count":0,
+    "conclusion":"connected Google Drive contains no currently recoverable RocketDict checkpoint/core artifact"
+  },
+  "public_exact_search": {
+    "queries":["Stage6Y ZIP exact filename","Stage6Y ZIP exact SHA-256","0.30.34 wheel exact filename","0.30.34 wheel exact SHA-256"],
+    "exact_artifact_result_count":0,
+    "conclusion":"no public indexed copy of the exact Stage6Y ZIP or wheel identity was found"
   },
   "ephemeral_recovery_workspace": {
-    "exact_rescan_record": "rocketdict/recovered/runtime-artifact-rescan-2026-09-05.json",
-    "top_level_zip_or_wheel_artifacts": 10,
-    "top_level_wheels": 0,
-    "exact_03034_wheel_sha_match_count": 0,
-    "zip_with_any_rocketdict_package_init": 1,
-    "zip_with_all_required_public_api_modules": 0,
-    "zip_with_rocketdict_wheel": 0,
-    "zip_with_nested_rocketdict_checkpoint_zip": 0,
-    "complete_core_candidate_found": false,
-    "only_package_root_hit": {
-      "name": "stage8-overlay-prefix.zip",
-      "sha256": "d56876cc23cc281ab9f9da36dedcff9536aca766ef7da7ad414addd57a2cf8d8",
-      "classification": "known_truncated_0.30.40_overlay_prefix_evidence_only"
-    },
-    "offline_opus_runtime": {
-      "name": "rocketdict-offline-opus-runtime-cp313.zip",
-      "bytes": 343401002,
-      "sha256": "c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c",
-      "rocketdict_package_present": false,
-      "rocketdict_api_present": false,
-      "conclusion": "OPUS execution dependencies survive but do not contain the missing RocketDict core/public API"
-    }
+    "exact_rescan_record":"rocketdict/recovered/runtime-artifact-rescan-2026-09-05.json",
+    "top_level_zip_or_wheel_artifacts":10,
+    "top_level_wheels":0,
+    "exact_03034_zip_sha_match_count":0,
+    "exact_03034_wheel_sha_match_count":0,
+    "zip_with_any_rocketdict_package_init":1,
+    "zip_with_all_required_public_api_modules":0,
+    "zip_with_rocketdict_wheel":0,
+    "zip_with_nested_rocketdict_checkpoint_zip":0,
+    "complete_core_candidate_found":false,
+    "only_package_root_hit":{"name":"stage8-overlay-prefix.zip","sha256":"d56876cc23cc281ab9f9da36dedcff9536aca766ef7da7ad414addd57a2cf8d8","classification":"known_truncated_0.30.40_overlay_prefix_evidence_only"},
+    "offline_opus_runtime":{"name":"rocketdict-offline-opus-runtime-cp313.zip","bytes":343401002,"sha256":"c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c","rocketdict_package_present":false,"rocketdict_api_present":false,"conclusion":"OPUS execution dependencies survive but do not contain the missing RocketDict core/public API"}
   },
   "preferred_external_recovery_identity": {
-    "name": "rocketdict-0.30.34-py3-none-any.whl",
-    "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a",
-    "bytes_currently_recovered": false
+    "artifact_kind":"full_checkpoint_zip",
+    "name":"RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip",
+    "sha256":"3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387",
+    "historical_bytes":null,
+    "bytes_currently_recovered":false,
+    "alternate_wheel":{"name":"rocketdict-0.30.34-py3-none-any.whl","sha256":"76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a","bytes_currently_recovered":false}
   },
+  "correction": "The previous /2 record incorrectly treated the 0.30.34 wheel as the strongest external artifact because it also carried the false claim that Stage6Y ZIP packaging did not finish. Historical project output proves the full Stage6Y ZIP was created and handed off; /3 supersedes that claim without inventing its lost byte size.",
   "conclusion": [
-    "Current reachable Git history, observed deleted refs, releases, File Library evidence, known GitHub Actions artifacts/workflows and the active recovery workspace do not contain a complete exact-compatible RocketDict core.",
-    "The only local ZIP containing a RocketDict package root is the already-known truncated Stage8 0.30.40 overlay-prefix evidence and it contains none of the required public API modules.",
+    "Current reachable Git history, observed deleted refs, Releases, known Actions artifacts/workflows, File Library, connected Google Drive, public exact-name/SHA search and the active recovery workspace do not contain the bytes of the full Stage6Y checkpoint.",
+    "The strongest exact historical recovery lead is RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip with SHA-256 3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387.",
+    "The exact 0.30.34 wheel remains the strongest alternate packaged-core lead.",
+    "The only local ZIP containing a RocketDict package root is the known truncated Stage8 0.30.40 overlay-prefix evidence and it contains none of the required public API modules.",
     "The 343 MB offline OPUS runtime preserves inference dependencies but no RocketDict package/API source.",
-    "The strongest exact historical packaged-core lead is the external RocketDict 0.30.34 wheel identity preserved in checkpoint-catalog.json.",
-    "When new bytes are recovered, use the integrity- and catalog-gated rocketdict-recover-scan / rocketdict-recover-wheel proof chain before any Product execution attempt."
+    "When new bytes are recovered, use catalog-gated rocketdict-recover-scan / recover-core / recover-plan before any Product execution attempt."
   ],
   "do_not_repeat_without_new_evidence": [
-    "reachable Git history and known deleted refs",
+    "reachable Git history, Stage6T-Y date-window commits and known deleted refs",
     "GitHub Releases in both RocketDict-related repositories",
     "known historical API path searches",
     "spacy-project-vault Stage6 model branch",
     "known RocketDict GitHub Actions artifact runs/workflows",
+    "File Library exact Stage6Y name/SHA/date navigation",
+    "connected Google Drive exact/general RocketDict searches",
+    "public exact Stage6Y filename/SHA searches",
     "current ten-artifact runtime workspace byte hashing",
     "retained Stage31 transcript recovery"
   ]
