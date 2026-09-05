@@ -6,8 +6,15 @@ from pathlib import Path
 
 import pytest
 
+from rocketdict_workbench.cli import parser
+from rocketdict_workbench.product_preflight import PREFLIGHT_SCHEMA
 from rocketdict_workbench.product_run_state import API_PROBE_SCHEMA, RUN_STATE_SCHEMA
-from rocketdict_workbench.upstream_binding import BINDING_SCHEMA, verify_stage8_binding
+from rocketdict_workbench.upstream_binding import (
+    BINDING_SCHEMA,
+    DISCOVERY_SCHEMA,
+    discover_stage8_bindings,
+    verify_stage8_binding,
+)
 
 
 def _canon(value) -> str:  # type: ignore[no-untyped-def]
@@ -15,10 +22,47 @@ def _canon(value) -> str:  # type: ignore[no-untyped-def]
     return hashlib.sha256(raw).hexdigest()
 
 
-def _state(*, metadata: dict | None = None, callable_present: bool = True) -> dict:
+def _stage8_contract(*, required_inputs: list[str] | None = None) -> tuple[dict, dict]:
     descriptor = "d" * 64
+    inputs = list(required_inputs or ["document_version_id"])
+    profile_stage = {
+        "stage_number": 8,
+        "stage_key": "nlp_analysis",
+        "implementation": "en-sm",
+        "parameters": {},
+        "adapter_descriptor_hash": descriptor,
+        "required_inputs": inputs,
+    }
+    selected = {
+        "stage_key": "nlp_analysis",
+        "implementation": "en-sm",
+        "adapter_descriptor_hash": descriptor,
+        "parameters_sha256": _canon({}),
+        "required_inputs": inputs,
+        "execution_contract_sha256": _canon(
+            {
+                "stage_number": 8,
+                "stage_key": "nlp_analysis",
+                "implementation": "en-sm",
+                "adapter_descriptor_hash": descriptor,
+                "parameters": {},
+                "required_inputs": inputs,
+            }
+        ),
+    }
+    return selected, profile_stage
+
+
+def _state(
+    *,
+    metadata: dict | None = None,
+    callable_present: bool = True,
+    frozen_required_inputs: list[str] | None = None,
+) -> dict:
+    descriptor = "d" * 64
+    selected, profile_stage = _stage8_contract(required_inputs=frozen_required_inputs)
     preflight = {
-        "schema": "rocketdict-workbench-product-preflight/1",
+        "schema": PREFLIGHT_SCHEMA,
         "status": "ready",
         "identity": {
             "fingerprint": "5" * 64,
@@ -30,24 +74,9 @@ def _state(*, metadata: dict | None = None, callable_present: bool = True) -> di
             },
             "core": {"python": "python", "rocketdict_version": "0.30.40", "api_version": "1"},
             "registry_hash": "registry-1",
-            "required_core_stages": {
-                "8": {
-                    "implementation": "en-sm",
-                    "adapter_descriptor_hash": descriptor,
-                    "parameters_sha256": "e" * 64,
-                }
-            },
+            "required_core_stages": {"8": selected},
         },
-        "profile": {
-            "stages": {
-                "8": {
-                    "stage_number": 8,
-                    "stage_key": "nlp_analysis",
-                    "implementation": "en-sm",
-                    "adapter_descriptor_hash": descriptor,
-                }
-            }
-        },
+        "profile": {"stages": {"8": profile_stage}},
     }
     binding_metadata = metadata if metadata is not None else {
         "stage_number": 8,
@@ -123,6 +152,18 @@ def _write(tmp_path: Path, payload: dict) -> Path:
     return path
 
 
+def test_stage8_discovery_finds_unique_exact_runtime_match(tmp_path) -> None:
+    path = _write(tmp_path, _state())
+    result = discover_stage8_bindings(path)
+
+    assert result["schema"] == DISCOVERY_SCHEMA
+    assert result["status"] == "unique_exact_match"
+    assert result["exact_match_count"] == 1
+    assert result["exact_matches"][0]["operation"] == "product.stage8.run"
+    assert result["expected_stage8_contract"]["required_inputs"] == ["document_version_id"]
+    assert result["parser_or_string_candidates_are_execution_proof"] is False
+
+
 def test_stage8_binding_requires_exact_runtime_callable_metadata(tmp_path) -> None:
     path = _write(tmp_path, _state())
 
@@ -135,7 +176,8 @@ def test_stage8_binding_requires_exact_runtime_callable_metadata(tmp_path) -> No
     assert first["binding"]["implementation"] == "en-sm"
     assert first["binding"]["required_inputs"] == ["document_version_id"]
     assert first["binding"]["frozen_inputs"] == {"document_version_id": 11}
-    assert first["binding"]["proof"]["proof_mode"] == "exact-runtime-callable-metadata-v1"
+    assert first["binding"]["proof"]["proof_mode"] == "live-registry-plus-exact-runtime-callable-v1"
+    assert len(first["binding"]["execution_contract_sha256"]) == 64
     assert first["binding"]["fingerprint"] == second["binding"]["fingerprint"]
 
     persisted = json.loads(path.read_text(encoding="utf-8"))
@@ -146,11 +188,14 @@ def test_stage8_binding_requires_exact_runtime_callable_metadata(tmp_path) -> No
 
 def test_parser_candidate_alone_cannot_be_promoted_to_stage8_binding(tmp_path) -> None:
     path = _write(tmp_path, _state(callable_present=False))
+    discovery = discover_stage8_bindings(path)
+    assert discovery["status"] == "no_exact_match"
+    assert discovery["structured_callable_count"] == 0
     with pytest.raises(RuntimeError, match="parser/candidate strings are not sufficient proof"):
         verify_stage8_binding(path, "product.stage8.run")
 
 
-def test_stage8_binding_rejects_descriptor_drift(tmp_path) -> None:
+def test_stage8_discovery_explains_descriptor_drift(tmp_path) -> None:
     metadata = {
         "stage_number": 8,
         "stage_key": "nlp_analysis",
@@ -159,11 +204,14 @@ def test_stage8_binding_rejects_descriptor_drift(tmp_path) -> None:
         "required_inputs": ["document_version_id"],
     }
     path = _write(tmp_path, _state(metadata=metadata))
-    with pytest.raises(RuntimeError, match="descriptor identity differs"):
+    result = discover_stage8_bindings(path)
+    assert result["status"] == "no_exact_match"
+    assert result["candidates"][0]["mismatch_reasons"] == ["adapter_descriptor_hash_mismatch"]
+    with pytest.raises(RuntimeError, match="adapter_descriptor_hash_mismatch"):
         verify_stage8_binding(path, "product.stage8.run")
 
 
-def test_stage8_binding_rejects_unproven_required_input_contract(tmp_path) -> None:
+def test_stage8_binding_rejects_callable_required_input_drift(tmp_path) -> None:
     metadata = {
         "stage_number": 8,
         "stage_key": "nlp_analysis",
@@ -172,8 +220,14 @@ def test_stage8_binding_rejects_unproven_required_input_contract(tmp_path) -> No
         "required_inputs": ["document_version_id", "invented_context_id"],
     }
     path = _write(tmp_path, _state(metadata=metadata))
-    with pytest.raises(RuntimeError, match="requires exact inputs"):
+    with pytest.raises(RuntimeError, match="required_inputs_mismatch"):
         verify_stage8_binding(path, "product.stage8.run")
+
+
+def test_stage8_binding_rejects_unresolvable_live_registry_contract(tmp_path) -> None:
+    path = _write(tmp_path, _state(frozen_required_inputs=["document_version_id", "context_id"]))
+    with pytest.raises(RuntimeError, match="live Stage8 registry contract cannot yet be resolved"):
+        discover_stage8_bindings(path)
 
 
 def test_stage8_binding_rejects_probe_internal_fingerprint_drift(tmp_path) -> None:
@@ -194,3 +248,14 @@ def test_stage8_binding_rejects_mutated_persisted_binding(tmp_path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(RuntimeError, match="binding evidence was mutated"):
         verify_stage8_binding(path, "product.stage8.run")
+
+
+def test_stage8_discovery_cli_exposes_state_control() -> None:
+    args = parser().parse_args([
+        "product-run-discover-stage8",
+        "/tmp/project",
+        "--state",
+        "/tmp/product-run.json",
+    ])
+    assert args.command == "product-run-discover-stage8"
+    assert args.state == Path("/tmp/product-run.json")
