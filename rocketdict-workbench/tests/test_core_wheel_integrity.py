@@ -31,7 +31,7 @@ def _wheel(
             "Metadata-Version: 2.1\n"
             "Name: rocketdict\n"
             f"Version: {metadata_version}\n"
-            ">Requires-Python: >=3.11\n".replace(">", "")
+            "Requires-Python: >=3.11\n"
             "Requires-Dist: SQLAlchemy>=2\n"
             "Requires-Dist: typer>=0.12\n"
         ).encode("utf-8"),
