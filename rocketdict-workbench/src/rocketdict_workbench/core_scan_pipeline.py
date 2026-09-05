@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Unified historical-core recovery scan with fail-closed wheel proof chains."""
+"""Unified historical-core recovery scan with fail-closed ZIP/wheel proof chains."""
 
 import argparse
 import hashlib
@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from .core_checkpoint_recovery import inspect_full_checkpoint
 from .core_scan import (
     MAX_DEFAULT_CANDIDATES,
     MAX_DEFAULT_DEPTH,
@@ -19,7 +20,7 @@ from .core_scan import (
 from .core_scan_artifacts import scan_core_artifacts
 from .core_wheel_pipeline import recover_wheel_candidate
 
-SCHEMA = "rocketdict-workbench-core-recovery-scan/7"
+SCHEMA = "rocketdict-workbench-core-recovery-scan/8"
 
 
 def _canonical_sha(value: Any) -> str:
@@ -54,15 +55,95 @@ def scan_recovery_pipeline(
     )
     candidates = [dict(row) for row in (base.get("candidates") or [])]
     errors = list(base.get("errors") or [])
+    report_root = Path(reports_dir).expanduser().resolve() if reports_dir else None
+
+    checkpoint_pipeline_count = 0
+    checkpoint_exact_identity_match_count = 0
+    checkpoint_blocked_count = 0
+    checkpoint_source_api_complete_count = 0
+    checkpoint_nested_wheel_count = 0
+    checkpoint_nested_wheel_integrity_ok_count = 0
+    checkpoint_nested_wheel_catalog_exact_match_count = 0
+    checkpoint_nested_wheel_catalog_exact_mismatch_count = 0
+    checkpoint_source_wheel_parity_complete_count = 0
+
     wheel_pipeline_count = 0
     wheel_integrity_ok_count = 0
     wheel_catalog_exact_match_count = 0
     wheel_catalog_exact_mismatch_count = 0
     wheel_runtime_attempted_count = 0
     wheel_runtime_proven_count = 0
-    report_root = Path(reports_dir).expanduser().resolve() if reports_dir else None
 
     for row in candidates:
+        if row.get("kind") == "zip":
+            checkpoint_pipeline_count += 1
+            try:
+                proof = inspect_full_checkpoint(
+                    Path(str(row["path"])),
+                    target_evidence_root=target_evidence_root,
+                    checkpoint_catalog=checkpoint_catalog,
+                )
+            except Exception as exc:  # batch boundary: preserve generic ZIP evidence
+                row["checkpoint_recovery_status"] = "error"
+                row["checkpoint_recovery_fingerprint"] = None
+                row["checkpoint_exact_identity_match"] = False
+                row["checkpoint_source_api_complete"] = False
+                errors.append(
+                    {
+                        "path": row["path"],
+                        "kind": "checkpoint_pipeline",
+                        "type": type(exc).__name__,
+                        "error": str(exc),
+                    }
+                )
+            else:
+                source = proof.get("source") or {}
+                if proof.get("historical_checkpoint_exact_identity_match"):
+                    checkpoint_exact_identity_match_count += 1
+                if proof.get("status") == "blocked_checkpoint_candidate":
+                    checkpoint_blocked_count += 1
+                if source.get("api_complete"):
+                    checkpoint_source_api_complete_count += 1
+                checkpoint_nested_wheel_count += int(
+                    proof.get("nested_rocketdict_wheel_count") or 0
+                )
+                checkpoint_nested_wheel_integrity_ok_count += int(
+                    proof.get("nested_rocketdict_wheel_integrity_ok_count") or 0
+                )
+                checkpoint_nested_wheel_catalog_exact_match_count += int(
+                    proof.get("nested_rocketdict_wheel_catalog_exact_match_count") or 0
+                )
+                checkpoint_nested_wheel_catalog_exact_mismatch_count += int(
+                    proof.get("nested_rocketdict_wheel_catalog_exact_mismatch_count") or 0
+                )
+                checkpoint_source_wheel_parity_complete_count += int(
+                    proof.get("source_wheel_parity_complete_count") or 0
+                )
+
+                row["checkpoint_recovery"] = proof
+                row["checkpoint_recovery_status"] = proof.get("status")
+                row["checkpoint_recovery_fingerprint"] = (
+                    (proof.get("identity") or {}).get("fingerprint")
+                )
+                row["checkpoint_exact_identity_match"] = bool(
+                    proof.get("historical_checkpoint_exact_identity_match")
+                )
+                row["checkpoint_source_api_complete"] = bool(source.get("api_complete"))
+                row["checkpoint_nested_rocketdict_wheel_count"] = int(
+                    proof.get("nested_rocketdict_wheel_count") or 0
+                )
+                row["checkpoint_source_wheel_parity_complete_count"] = int(
+                    proof.get("source_wheel_parity_complete_count") or 0
+                )
+                row["promotion_allowed"] = False
+
+                if report_root is not None:
+                    fingerprint = str(row["checkpoint_recovery_fingerprint"] or "unknown")
+                    _atomic_write(
+                        report_root / f"checkpoint-{fingerprint[:16]}.json",
+                        json.dumps(proof, ensure_ascii=False, indent=2) + "\n",
+                    )
+
         if row.get("kind") != "wheel":
             continue
         wheel_pipeline_count += 1
@@ -173,6 +254,19 @@ def scan_recovery_pipeline(
         "error_count": len(errors),
         "probe_directories": probe_directories,
         "probe_wheels": probe_wheels,
+        "checkpoint_pipeline_count": checkpoint_pipeline_count,
+        "checkpoint_exact_identity_match_count": checkpoint_exact_identity_match_count,
+        "checkpoint_blocked_count": checkpoint_blocked_count,
+        "checkpoint_source_api_complete_count": checkpoint_source_api_complete_count,
+        "checkpoint_nested_wheel_count": checkpoint_nested_wheel_count,
+        "checkpoint_nested_wheel_integrity_ok_count": checkpoint_nested_wheel_integrity_ok_count,
+        "checkpoint_nested_wheel_catalog_exact_match_count": checkpoint_nested_wheel_catalog_exact_match_count,
+        "checkpoint_nested_wheel_catalog_exact_mismatch_count": checkpoint_nested_wheel_catalog_exact_mismatch_count,
+        "checkpoint_source_wheel_parity_complete_count": checkpoint_source_wheel_parity_complete_count,
+        "checkpoint_policy": (
+            "all_discovered_checkpoint_ZIPs_receive_read_only_outer_identity_source_nested_wheel_"
+            "catalog_parity_api_evidence_and_base_to_03040_proof"
+        ),
         "wheel_pipeline_count": wheel_pipeline_count,
         "wheel_integrity_ok_count": wheel_integrity_ok_count,
         "wheel_catalog_exact_match_count": wheel_catalog_exact_match_count,
@@ -186,11 +280,11 @@ def scan_recovery_pipeline(
         ),
         "checkpoint_catalog": base.get("checkpoint_catalog"),
         "ranking_semantics": (
-            "Recovery triage only. A known wheel basename with a cataloged exact identity must "
-            "match that identity before runtime probing. Runtime evidence can improve triage rank "
-            "only after package integrity, catalog identity where applicable, and cross-layer "
-            "artifact identity pass. No rank authorizes historical bytes as exact 0.30.40 or as "
-            "Product execution proof."
+            "Recovery triage only. Checkpoint ZIPs receive an additional read-only proof of outer "
+            "catalog identity, source API inventory, nested RocketDict wheel integrity/catalog "
+            "identity and source↔wheel parity. Known wheel basenames still require exact catalog "
+            "identity before runtime probing. No ZIP/wheel proof or rank authorizes historical "
+            "bytes as exact 0.30.40 or Product execution proof."
         ),
         "candidates": candidates,
         "errors": errors,
@@ -202,7 +296,8 @@ def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rocketdict-recover-scan",
         description=(
-            "Batch historical RocketDict recovery scan with integrity- and catalog-gated wheel runtime proof"
+            "Batch historical RocketDict recovery scan with read-only full-checkpoint proof "
+            "and integrity/catalog-gated wheel runtime proof"
         ),
     )
     p.add_argument("root", type=Path)
