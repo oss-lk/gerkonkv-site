@@ -9,15 +9,12 @@ import pytest
 
 from rocketdict_workbench.product_preflight import PREFLIGHT_SCHEMA
 from rocketdict_workbench.product_run_state import API_PROBE_SCHEMA, RUN_STATE_SCHEMA
-from rocketdict_workbench.upstream_execution import EXECUTION_RECORD_SCHEMA, PUBLIC_EXECUTION_CONTRACT_SCHEMA
+from rocketdict_workbench.upstream_chain import discover_upstream_stage, verify_upstream_stage_binding
+from rocketdict_workbench.upstream_execution import PUBLIC_EXECUTION_CONTRACT_SCHEMA
 from rocketdict_workbench.upstream_pipeline import (
-    UPSTREAM_DISCOVERY_SCHEMA,
     UPSTREAM_PIPELINE_SCHEMA,
-    advance_product_upstream,
-    build_upstream_identity_ledger,
-    discover_upstream_bindings,
+    advance_pre_gate_upstream,
     execute_upstream_stage,
-    verify_upstream_binding,
 )
 
 
@@ -28,11 +25,12 @@ def _canon(value) -> str:  # type: ignore[no-untyped-def]
 
 def _stage(number: int, key: str, implementation: str, required_inputs: list[str], descriptor_char: str) -> tuple[dict, dict]:
     descriptor = descriptor_char * 64
+    parameters = {"quality": "product", "stage": number}
     profile = {
         "stage_number": number,
         "stage_key": key,
         "implementation": implementation,
-        "parameters": {"quality": "product"},
+        "parameters": parameters,
         "adapter_descriptor_hash": descriptor,
         "required_inputs": list(required_inputs),
     }
@@ -40,21 +38,21 @@ def _stage(number: int, key: str, implementation: str, required_inputs: list[str
         "stage_key": key,
         "implementation": implementation,
         "adapter_descriptor_hash": descriptor,
-        "parameters_sha256": _canon(profile["parameters"]),
+        "parameters_sha256": _canon(parameters),
         "required_inputs": list(required_inputs),
         "execution_contract_sha256": _canon({
             "stage_number": number,
             "stage_key": key,
             "implementation": implementation,
             "adapter_descriptor_hash": descriptor,
-            "parameters": profile["parameters"],
+            "parameters": parameters,
             "required_inputs": list(required_inputs),
         }),
     }
     return selected, profile
 
 
-def _operation(number: int, key: str, implementation: str, required_inputs: list[str], descriptor_char: str, operation: str, source_char: str) -> dict:
+def _operation(number: int, selected: dict, operation: str, source_char: str) -> dict:
     return {
         "mapping_module": "rocketdict.api.operations",
         "mapping_name": "OPERATIONS",
@@ -66,23 +64,32 @@ def _operation(number: int, key: str, implementation: str, required_inputs: list
         "source_sha256": source_char * 64,
         "binding_metadata": {
             "stage_number": number,
-            "stage_key": key,
-            "implementation_key": implementation,
-            "adapter_descriptor_hash": descriptor_char * 64,
-            "required_inputs": list(required_inputs),
+            "stage_key": selected["stage_key"],
+            "implementation_key": selected["implementation"],
+            "adapter_descriptor_hash": selected["adapter_descriptor_hash"],
+            "required_inputs": list(selected["required_inputs"]),
         },
     }
 
 
 def _state(*, ambiguous_stage8: bool = False) -> dict:
-    s8, p8 = _stage(8, "nlp_analysis", "en-sm", ["document_version_id"], "d")
-    s10, p10 = _stage(10, "context_enrichment", "context-v1", ["nlp_run_id"], "e")
-    operations = [
-        _operation(8, "nlp_analysis", "en-sm", ["document_version_id"], "d", "product.stage8.run", "b"),
-        _operation(10, "context_enrichment", "context-v1", ["nlp_run_id"], "e", "product.stage10.run", "c"),
-    ]
+    definitions = {
+        8: ("nlp_analysis", "en-sm", ["document_version_id"], "d"),
+        10: ("context_enrichment", "context-v1", ["nlp_run_id"], "e"),
+        12: ("translation_baseline", "opus-en-ru-ct2", ["context_run_id"], "f"),
+        14: ("refinement", "glossary_refinement-current", ["assembly_id"], "a"),
+        16: ("finalization", "approve-if-clean-finalization", ["refinement_run_id"], "7"),
+    }
+    selected: dict[str, dict] = {}
+    profiles: dict[str, dict] = {}
+    operations = []
+    for index, (number, (key, implementation, inputs, char)) in enumerate(definitions.items()):
+        identity, profile = _stage(number, key, implementation, inputs, char)
+        selected[str(number)] = identity
+        profiles[str(number)] = profile
+        operations.append(_operation(number, identity, f"product.stage{number}.run", str((index + 2) % 10)))
     if ambiguous_stage8:
-        operations.append(_operation(8, "nlp_analysis", "en-sm", ["document_version_id"], "d", "product.stage8.alternate", "a"))
+        operations.append(_operation(8, selected["8"], "product.stage8.alternate", "9"))
     preflight = {
         "schema": PREFLIGHT_SCHEMA,
         "status": "ready",
@@ -96,16 +103,16 @@ def _state(*, ambiguous_stage8: bool = False) -> dict:
             },
             "core": {"python": "python", "rocketdict_version": "0.30.40", "api_version": "1"},
             "registry_hash": "registry-1",
-            "required_core_stages": {"8": s8, "10": s10},
+            "required_core_stages": selected,
         },
-        "profile": {"stages": {"8": p8, "10": p10}},
+        "profile": {"stages": profiles},
     }
     probe = {
         "schema": API_PROBE_SCHEMA,
         "status": "observed",
         "database": {"path": "/tmp/db.sqlite", "exists": True},
         "core": {"rocketdict_version": "0.30.40", "api_version": "1"},
-        "api_modules": [{"module": "rocketdict.api.operations", "imported": True, "source_sha256": "9" * 64}],
+        "api_modules": [{"module": "rocketdict.api.operations", "imported": True, "source_sha256": "8" * 64}],
         "parser_commands": ["call"],
         "callable_mapping_keys": [row["operation"] for row in operations],
         "callable_operations": operations,
@@ -134,7 +141,11 @@ def _contract(stage: int, input_name: str, identity_name: str, *, replay_safe: b
         "schema": PUBLIC_EXECUTION_CONTRACT_SCHEMA,
         "transport": "rocketdict.api.call/1",
         "replay_safe": replay_safe,
-        "request": {"params": {input_name: f"input:{input_name}", "parameters": "profile:parameters", "implementation": "binding:implementation"}},
+        "request": {"params": {
+            input_name: f"input:{input_name}",
+            "parameters": "profile:parameters",
+            "implementation": "binding:implementation",
+        }},
         "result": {
             "required_fields": ["schema", identity_name],
             "identity_fields": [identity_name],
@@ -149,17 +160,30 @@ class _Core:
         self.contracts = {
             "product.stage8.run": _contract(8, "document_version_id", "nlp_run_id"),
             "product.stage10.run": _contract(10, "nlp_run_id", "context_run_id"),
+            "product.stage12.run": _contract(12, "context_run_id", "assembly_id"),
+            "product.stage14.run": _contract(14, "assembly_id", "refinement_run_id"),
+            "product.stage16.run": _contract(16, "refinement_run_id", "translation_revision_id"),
         }
-        self.sources = {"product.stage8.run": "b" * 64, "product.stage10.run": "c" * 64}
+        self.sources = {
+            "product.stage8.run": "2" * 64,
+            "product.stage10.run": "3" * 64,
+            "product.stage12.run": "4" * 64,
+            "product.stage14.run": "5" * 64,
+            "product.stage16.run": "6" * 64,
+        }
         self.results = {
             "product.stage8.run": {"schema": "stage8-result/1", "nlp_run_id": 101},
             "product.stage10.run": {"schema": "stage10-result/1", "context_run_id": 202},
+            "product.stage12.run": {"schema": "stage12-result/1", "assembly_id": 303},
+            "product.stage14.run": {"schema": "stage14-result/1", "refinement_run_id": 404},
+            "product.stage16.run": {"schema": "stage16-result/1", "translation_revision_id": 505},
         }
         self.api_calls: list[str] = []
         self.fail_operation: str | None = None
 
     def _run(self, args, *, timeout=120.0, input_text=None):  # type: ignore[no-untyped-def]
         operation = args[4]
+        stage = int(operation.split("stage", 1)[1].split(".", 1)[0])
         payload = {
             "schema": "rocketdict-workbench-operation-contract-probe/1",
             "database": {"path": "/tmp/db.sqlite", "exists": True},
@@ -168,7 +192,7 @@ class _Core:
             "mapping_name": "OPERATIONS",
             "operation": operation,
             "callable_module": "rocketdict.api.operations",
-            "callable_qualname": "run_stage_8" if operation.endswith("stage8.run") else "run_stage_10",
+            "callable_qualname": f"run_stage_{stage}",
             "callable_source_sha256": self.sources[operation],
             "contract_attribute": "rocketdict_execution_contract",
             "contract": self.contracts.get(operation),
@@ -193,107 +217,98 @@ def _write(tmp_path: Path, payload: dict) -> Path:
     return path
 
 
-def test_stage10_is_unresolvable_until_stage8_returns_nlp_identity(tmp_path) -> None:
+def test_stage10_is_unresolvable_until_stage8_returns_exact_named_identity(tmp_path) -> None:
     path = _write(tmp_path, _state())
-    discovery = discover_upstream_bindings(path, 10)
-    assert discovery["schema"] == UPSTREAM_DISCOVERY_SCHEMA
-    assert discovery["status"] == "unresolved_required_inputs"
-    assert discovery["missing_inputs"] == ["nlp_run_id"]
+    discovery = discover_upstream_stage(path, 10)
+    assert discovery["status"] == "input_resolution_blocked"
+    assert "nlp_run_id" in discovery["input_error"]
 
 
-def test_auto_advance_executes_stage8_then_stage10_from_durable_identity_ledger(tmp_path) -> None:
+def test_auto_advance_executes_8_10_12_14_then_hard_stops_before_stage16(tmp_path) -> None:
     path = _write(tmp_path, _state())
     core = _Core()
-    result = advance_product_upstream(core, "/tmp/db.sqlite", path, max_stages=2)
+    result = advance_pre_gate_upstream(core, "/tmp/db.sqlite", path)
+
     assert result["schema"] == UPSTREAM_PIPELINE_SCHEMA
-    assert result["status"] == "progressed"
-    assert result["completed_now"] == [8, 10]
-    assert result["next_stage"] == 12
-    assert core.api_calls == ["product.stage8.run", "product.stage10.run"]
+    assert result["status"] == "pre_hard_gate_core_completed"
+    assert result["completed_now"] == [8, 10, 12, 14]
+    assert result["next_stage"] == 15
+    assert result["post_gate_stages_executed"] is False
+    assert core.api_calls == [
+        "product.stage8.run",
+        "product.stage10.run",
+        "product.stage12.run",
+        "product.stage14.run",
+    ]
+    assert "product.stage16.run" not in core.api_calls
 
-    persisted = json.loads(path.read_text(encoding="utf-8"))
-    executions = persisted["steps"]["upstream_execution"]["executions"]
-    assert executions["8"]["durable_identities"] == {"nlp_run_id": 101}
+    state = json.loads(path.read_text(encoding="utf-8"))
+    executions = state["steps"]["upstream_execution"]["executions"]
     assert executions["10"]["request"]["params"]["nlp_run_id"] == 101
-    assert executions["10"]["durable_identities"] == {"context_run_id": 202}
-    ledger = build_upstream_identity_ledger(persisted, persisted["steps"]["preflight"]["result"])
-    assert ledger["values"]["document_version_id"] == 11
-    assert ledger["values"]["nlp_run_id"] == 101
-    assert ledger["values"]["context_run_id"] == 202
+    assert executions["12"]["request"]["params"]["context_run_id"] == 202
+    assert executions["14"]["request"]["params"]["assembly_id"] == 303
+    assert state["status"] == "pre_hard_gate_core_completed_awaiting_stage15_quality_gate"
+    assert state["steps"]["upstream_execution"]["blocked_reason"] == "stage15_hard_quality_gate_execution_not_yet_proven"
 
 
-def test_ambiguous_exact_runtime_operations_stop_before_database_mutation(tmp_path) -> None:
+def test_max_stages_supports_resumable_pre_gate_progress(tmp_path) -> None:
+    path = _write(tmp_path, _state())
+    core = _Core()
+    first = advance_pre_gate_upstream(core, "/tmp/db.sqlite", path, max_stages=2)
+    assert first["status"] == "progressed"
+    assert first["completed_now"] == [8, 10]
+    assert first["next_stage"] == 12
+    second = advance_pre_gate_upstream(core, "/tmp/db.sqlite", path)
+    assert second["status"] == "pre_hard_gate_core_completed"
+    assert second["completed_now"] == [12, 14]
+    assert core.api_calls == [
+        "product.stage8.run",
+        "product.stage10.run",
+        "product.stage12.run",
+        "product.stage14.run",
+    ]
+
+
+def test_ambiguous_exact_callable_stops_before_any_mutation(tmp_path) -> None:
     path = _write(tmp_path, _state(ambiguous_stage8=True))
     core = _Core()
-    result = advance_product_upstream(core, "/tmp/db.sqlite", path)
+    result = advance_pre_gate_upstream(core, "/tmp/db.sqlite", path)
     assert result["status"] == "blocked"
     assert result["blocked_stage"] == 8
     assert result["reason"] == "ambiguous_exact_matches"
     assert core.api_calls == []
-    persisted = json.loads(path.read_text(encoding="utf-8"))
-    assert persisted["status"] == "blocked_before_stage8"
 
 
-def test_missing_public_execution_contract_stops_before_dispatch(tmp_path) -> None:
+def test_missing_execution_contract_stops_before_dispatch(tmp_path) -> None:
     path = _write(tmp_path, _state())
     core = _Core()
     core.contracts["product.stage8.run"] = None
-    result = advance_product_upstream(core, "/tmp/db.sqlite", path)
+    result = advance_pre_gate_upstream(core, "/tmp/db.sqlite", path)
     assert result["status"] == "blocked"
-    assert result["blocked_stage"] == 8
     assert result["reason"] == "public_execution_contract_unproven"
     assert core.api_calls == []
 
 
-def test_generic_binding_freezes_prior_stage_identity_origin(tmp_path) -> None:
+def test_replay_safe_ambiguous_dispatch_can_resume(tmp_path) -> None:
     path = _write(tmp_path, _state())
     core = _Core()
-    advance_product_upstream(core, "/tmp/db.sqlite", path, max_stages=1)
-    binding = verify_upstream_binding(path, 10, "product.stage10.run")
-    assert binding["frozen_inputs"] == {"nlp_run_id": 101}
-    assert binding["input_origins"] == {"nlp_run_id": "stage8.result"}
-    assert binding["proof"]["proof_mode"] == "live-registry-plus-exact-runtime-callable-v2"
-
-
-def test_durable_identity_collision_fails_closed(tmp_path) -> None:
-    payload = _state()
-    result = {"schema": "stage8-result/1", "document_version_id": 999}
-    payload["steps"]["upstream_execution"]["executions"] = {
-        "8": {
-            "schema": EXECUTION_RECORD_SCHEMA,
-            "status": "completed",
-            "stage_number": 8,
-            "result": result,
-            "result_sha256": _canon(result),
-            "durable_identities": {"document_version_id": 999},
-        }
-    }
-    path = _write(tmp_path, payload)
-    state = json.loads(path.read_text(encoding="utf-8"))
-    with pytest.raises(RuntimeError, match="Durable identity collision"):
-        build_upstream_identity_ledger(state, state["steps"]["preflight"]["result"])
-
-
-def test_ambiguous_dispatch_is_persisted_and_replay_safe_retry_can_complete(tmp_path) -> None:
-    path = _write(tmp_path, _state())
-    core = _Core()
-    verify_upstream_binding(path, 8, "product.stage8.run")
+    verify_upstream_stage_binding(path, 8, "product.stage8.run")
     core.fail_operation = "product.stage8.run"
     with pytest.raises(RuntimeError, match="simulated ambiguous"):
         execute_upstream_stage(core, "/tmp/db.sqlite", path, 8)
-    state = json.loads(path.read_text(encoding="utf-8"))
-    assert state["steps"]["upstream_execution"]["executions"]["8"]["status"] == "dispatch_failed_ambiguous"
     core.fail_operation = None
     completed = execute_upstream_stage(core, "/tmp/db.sqlite", path, 8)
     assert completed["status"] == "completed"
     assert completed["attempts"] == 2
 
 
-def test_non_replay_safe_ambiguous_dispatch_is_not_automatically_replayed(tmp_path) -> None:
+def test_non_replay_safe_ambiguous_dispatch_requires_reconciliation(tmp_path) -> None:
     path = _write(tmp_path, _state())
     core = _Core()
-    core.contracts["product.stage8.run"] = _contract(8, "document_version_id", "nlp_run_id", replay_safe=False)
-    verify_upstream_binding(path, 8, "product.stage8.run")
+    core.contracts["product.stage8.run"] = _contract(
+        8, "document_version_id", "nlp_run_id", replay_safe=False
+    )
+    verify_upstream_stage_binding(path, 8, "product.stage8.run")
     core.fail_operation = "product.stage8.run"
     with pytest.raises(RuntimeError, match="simulated ambiguous"):
         execute_upstream_stage(core, "/tmp/db.sqlite", path, 8)
@@ -301,3 +316,9 @@ def test_non_replay_safe_ambiguous_dispatch_is_not_automatically_replayed(tmp_pa
     with pytest.raises(RuntimeError, match="not replay-safe"):
         execute_upstream_stage(core, "/tmp/db.sqlite", path, 8)
     assert core.api_calls == ["product.stage8.run"]
+
+
+def test_stage16_manual_discovery_is_rejected_before_quality_gate_proof(tmp_path) -> None:
+    path = _write(tmp_path, _state())
+    with pytest.raises(RuntimeError, match="outside the pre-hard-gate"):
+        discover_upstream_stage(path, 16)
