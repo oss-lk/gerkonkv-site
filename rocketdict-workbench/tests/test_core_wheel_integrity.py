@@ -21,6 +21,7 @@ def _wheel(
     version: str = "0.30.34",
     metadata_version: str | None = None,
     corrupt_record: bool = False,
+    wheel_tag: str = "py3-none-any",
 ) -> Path:
     metadata_version = metadata_version or version
     files: dict[str, bytes] = {
@@ -39,7 +40,7 @@ def _wheel(
             "Wheel-Version: 1.0\n"
             "Generator: rocketdict-test\n"
             "Root-Is-Purelib: true\n"
-            "Tag: py3-none-any\n"
+            f"Tag: {wheel_tag}\n"
         ).encode("utf-8"),
     }
     record_name = f"rocketdict-{version}.dist-info/RECORD"
@@ -64,7 +65,7 @@ def test_wheel_metadata_and_record_are_verified_read_only(tmp_path: Path) -> Non
 
     report = inspect_wheel_integrity(wheel)
 
-    assert report["schema"] == "rocketdict-workbench-wheel-integrity/1"
+    assert report["schema"] == "rocketdict-workbench-wheel-integrity/2"
     assert report["status"] == "wheel_integrity_verified"
     assert report["ok"] is True
     assert report["promotion_allowed"] is False
@@ -72,7 +73,9 @@ def test_wheel_metadata_and_record_are_verified_read_only(tmp_path: Path) -> Non
     assert report["distribution_is_rocketdict"] is True
     assert report["filename_metadata_name_consistent"] is True
     assert report["filename_metadata_version_consistent"] is True
+    assert report["filename_wheel_tag_consistent"] is True
     assert report["py3_none_any_tag_present"] is True
+    assert report["filename"]["tag"] == "py3-none-any"
     assert report["metadata"]["name"] == "rocketdict"
     assert report["metadata"]["version"] == "0.30.34"
     assert report["metadata"]["requires_python"] == ">=3.11"
@@ -83,6 +86,7 @@ def test_wheel_metadata_and_record_are_verified_read_only(tmp_path: Path) -> Non
     assert report["record"]["hash_mismatches"] == []
     assert report["record"]["size_mismatches"] == []
     assert report["record"]["unrecorded_members"] == []
+    assert report["hard_failures"] == []
     assert len(report["wheel_sha256"]) == 64
     assert report["wheel_bytes"] == wheel.stat().st_size
     assert len(report["identity"]["fingerprint"]) == 64
@@ -120,7 +124,23 @@ def test_filename_metadata_version_drift_is_hard_failure(tmp_path: Path) -> None
     assert report["promotion_allowed"] is False
 
 
-def test_missing_record_is_visible_but_not_invented(tmp_path: Path) -> None:
+def test_filename_wheel_tag_drift_is_hard_failure(tmp_path: Path) -> None:
+    wheel = _wheel(
+        tmp_path / "rocketdict-0.30.34-py3-none-any.whl",
+        wheel_tag="cp313-cp313-manylinux_2_39_x86_64",
+    )
+
+    report = inspect_wheel_integrity(wheel)
+
+    assert report["record"]["verified"] is True
+    assert report["filename"]["tag"] == "py3-none-any"
+    assert report["filename_wheel_tag_consistent"] is False
+    assert "filename_wheel_tag_mismatch" in report["hard_failures"]
+    assert report["ok"] is False
+    assert report["promotion_allowed"] is False
+
+
+def test_missing_record_fails_closed_and_is_not_invented(tmp_path: Path) -> None:
     wheel = tmp_path / "rocketdict-0.30.34-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as zf:
         zf.writestr("rocketdict/__init__.py", '__version__ = "0.30.34"\n')
@@ -137,6 +157,8 @@ def test_missing_record_is_visible_but_not_invented(tmp_path: Path) -> None:
 
     assert report["record"]["available"] is False
     assert report["record"]["verified"] is False
-    assert report["record"]["status"] == "record_unavailable"
+    assert report["record"]["status"] == "record_missing"
+    assert "wheel_record_missing" in report["hard_failures"]
     assert "wheel_record_verification_failed" not in report["hard_failures"]
-    assert report["ok"] is True
+    assert report["ok"] is False
+    assert report["promotion_allowed"] is False
