@@ -4,13 +4,14 @@ from __future__ import annotations
 
 Evidence order is strict:
 1. wheel container/METADATA/WHEEL/RECORD integrity;
-2. packaged RocketDict structural source inspection;
-3. exact historical-base -> recovered-0.30.40 compatibility plan;
-4. optional isolated/network-denied runtime import proof.
+2. known historical checkpoint identity, when the basename matches the catalog;
+3. packaged RocketDict structural source inspection;
+4. exact historical-base -> recovered-0.30.40 compatibility plan;
+5. optional isolated/network-denied runtime import proof.
 
-No layer authorizes Product execution.  Runtime is never attempted when wheel
-integrity fails, and every layer that observes the artifact must agree on the
-same SHA-256 before a runtime proof can count as valid recovery evidence.
+No layer authorizes Product execution. Runtime is never attempted when package
+integrity fails, when a known historical basename disagrees with its exact
+catalog SHA-256, or when cross-layer artifact/version identities disagree.
 """
 
 import argparse
@@ -23,11 +24,13 @@ import zipfile
 
 from .core_compatibility import RecoveryCompatibilityError
 from .core_recovery import RecoveryCandidateError
+from .core_scan import RecoveryScanError, _load_checkpoint_catalog
+from .core_scan_artifacts import _validate_wheel_catalog, _wheel_matches
 from .core_wheel_integrity import inspect_wheel_integrity
 from .core_wheel_recovery import build_wheel_recovery_plan, inspect_wheel_candidate
 from .core_wheel_runtime import RUNTIME_SCHEMA, probe_wheel_runtime
 
-SCHEMA = "rocketdict-workbench-core-wheel-recovery/4"
+SCHEMA = "rocketdict-workbench-core-wheel-recovery/5"
 
 
 def _canonical_sha(value: Any) -> str:
@@ -52,6 +55,7 @@ def recover_wheel_candidate(
     candidate: Path | str,
     *,
     target_evidence_root: Path | str | None = None,
+    checkpoint_catalog: Path | str | None = None,
     probe_runtime: bool = False,
     python: str | Path | None = None,
     timeout: float = 30.0,
@@ -64,7 +68,33 @@ def recover_wheel_candidate(
         target_evidence_root=target_evidence_root,
     )
 
+    catalog, catalog_identity = _load_checkpoint_catalog(
+        target_evidence_root=target_evidence_root,
+        checkpoint_catalog=checkpoint_catalog,
+    )
+    _validate_wheel_catalog(catalog)
+
     integrity_sha = integrity.get("wheel_sha256")
+    integrity_bytes = integrity.get("wheel_bytes")
+    catalog_matches = _wheel_matches(
+        path,
+        {
+            "archive_sha256": integrity_sha,
+            "archive_bytes": integrity_bytes,
+        },
+        catalog,
+    )
+    catalog_name_match = bool(catalog_matches)
+    catalog_exact_identity_expected = any(
+        bool(row.get("exact_identity_available")) for row in catalog_matches
+    )
+    catalog_exact_identity_match = any(
+        bool(row.get("exact_identity_match")) for row in catalog_matches
+    )
+    catalog_exact_identity_mismatch = bool(
+        catalog_exact_identity_expected and not catalog_exact_identity_match
+    )
+
     structural_sha = ((structural.get("candidate") or {}).get("archive_sha256"))
     plan_sha = (((plan.get("candidate") or {}).get("source") or {}).get("archive_sha256"))
     pre_runtime_hashes = [integrity_sha, structural_sha, plan_sha]
@@ -79,21 +109,35 @@ def recover_wheel_candidate(
         and structural_version
         and str(integrity_version) == str(structural_version)
     )
+    exact_catalog_versions = {
+        str(row.get("version"))
+        for row in catalog_matches
+        if row.get("exact_identity_match") and row.get("version") is not None
+    }
+    catalog_version_consistent = bool(
+        not exact_catalog_versions
+        or (structural_version is not None and str(structural_version) in exact_catalog_versions)
+    )
 
     if not integrity.get("ok"):
         runtime = _not_run(
             "blocked_by_wheel_integrity",
             "wheel integrity must pass before any historical code import is attempted",
         )
+    elif catalog_exact_identity_mismatch:
+        runtime = _not_run(
+            "blocked_by_historical_catalog_identity",
+            "candidate basename matches a checkpoint with a known exact wheel identity but SHA-256/size does not match",
+        )
     elif not pre_runtime_identity_consistent:
         runtime = _not_run(
             "blocked_by_cross_layer_artifact_identity",
             "integrity, structural and compatibility layers did not observe one exact wheel SHA-256",
         )
-    elif not version_consistent:
+    elif not version_consistent or not catalog_version_consistent:
         runtime = _not_run(
             "blocked_by_cross_layer_version_identity",
-            "wheel METADATA version and packaged rocketdict.__version__ disagree",
+            "wheel METADATA, packaged rocketdict.__version__ and exact catalog version do not agree",
         )
     elif probe_runtime:
         runtime = probe_wheel_runtime(path, python=python, timeout=timeout)
@@ -117,7 +161,9 @@ def recover_wheel_candidate(
         and runtime.get("ok")
         and artifact_identity_consistent
         and integrity.get("ok")
+        and not catalog_exact_identity_mismatch
         and version_consistent
+        and catalog_version_consistent
     )
 
     blockers: list[str] = []
@@ -125,9 +171,11 @@ def recover_wheel_candidate(
         blockers.extend(
             f"wheel_integrity:{item}" for item in (integrity.get("hard_failures") or [])
         )
+    if catalog_exact_identity_mismatch:
+        blockers.append("historical_catalog_exact_identity_mismatch")
     if not pre_runtime_identity_consistent or not artifact_identity_consistent:
         blockers.append("cross_layer_wheel_identity_mismatch")
-    if not version_consistent:
+    if not version_consistent or not catalog_version_consistent:
         blockers.append("cross_layer_wheel_version_mismatch")
     if not structural_complete:
         blockers.append("base_required_workbench_modules_missing")
@@ -142,9 +190,11 @@ def recover_wheel_candidate(
 
     if not integrity.get("ok"):
         status = "blocked_wheel_integrity"
+    elif catalog_exact_identity_mismatch:
+        status = "blocked_historical_catalog_identity"
     elif not artifact_identity_consistent:
         status = "blocked_cross_layer_identity"
-    elif not version_consistent:
+    elif not version_consistent or not catalog_version_consistent:
         status = "blocked_cross_layer_version"
     elif not structural_complete:
         status = "blocked_incomplete_base_core"
@@ -155,10 +205,23 @@ def recover_wheel_candidate(
     else:
         status = "verified_structural_base_candidate"
 
+    historical_catalog = {
+        "catalog": catalog_identity,
+        "name_match": catalog_name_match,
+        "matches": catalog_matches,
+        "exact_identity_expected": catalog_exact_identity_expected,
+        "exact_identity_match": catalog_exact_identity_match,
+        "exact_identity_mismatch": catalog_exact_identity_mismatch,
+        "exact_match_versions": sorted(exact_catalog_versions),
+        "version_consistent": catalog_version_consistent,
+        "promotion_allowed": False,
+    }
+
     identity_payload = {
         "schema": SCHEMA,
         "artifact_sha256": integrity_sha,
         "integrity_fingerprint": ((integrity.get("identity") or {}).get("fingerprint")),
+        "historical_catalog": historical_catalog,
         "structural_fingerprint": ((structural.get("identity") or {}).get("fingerprint")),
         "compatibility_plan_fingerprint": ((plan.get("identity") or {}).get("fingerprint")),
         "runtime_fingerprint": ((runtime.get("identity") or {}).get("fingerprint")),
@@ -177,12 +240,13 @@ def recover_wheel_candidate(
         "artifact": {
             "path": str(path),
             "sha256": integrity_sha,
-            "bytes": integrity.get("wheel_bytes"),
+            "bytes": integrity_bytes,
             "artifact_identity_consistent": artifact_identity_consistent,
             "version_consistent": version_consistent,
             "version": structural_version,
         },
         "integrity": integrity,
+        "historical_catalog": historical_catalog,
         "structural_candidate": structural,
         "compatibility_plan": plan,
         "runtime_probe": runtime,
@@ -190,10 +254,11 @@ def recover_wheel_candidate(
         "remaining_product_blockers": blockers,
         "identity": {"fingerprint": _canonical_sha(identity_payload)},
         "rule": (
-            "Wheel runtime evidence is subordinate to exact package integrity and cross-layer "
-            "artifact identity. Even a fully proven historical base runtime remains non-Product "
-            "until exact 0.30.40 compatibility/API evidence and the normal immutable Product "
-            "verification chain pass."
+            "Wheel runtime evidence is subordinate to package integrity, known historical "
+            "artifact identity and cross-layer SHA/version agreement. A known checkpoint name "
+            "with the wrong exact SHA is never executed as that checkpoint. Even a fully proven "
+            "historical base runtime remains non-Product until exact 0.30.40 compatibility/API "
+            "evidence and the normal immutable Product verification chain pass."
         ),
     }
 
@@ -202,12 +267,13 @@ def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rocketdict-recover-wheel",
         description=(
-            "Fail-closed RocketDict historical wheel recovery: integrity -> structure -> "
-            "0.30.40 compatibility plan -> optional isolated runtime proof"
+            "Fail-closed RocketDict historical wheel recovery: integrity -> known artifact "
+            "identity -> structure -> 0.30.40 compatibility plan -> optional isolated runtime proof"
         ),
     )
     p.add_argument("candidate", type=Path)
     p.add_argument("--target-evidence-root", type=Path)
+    p.add_argument("--checkpoint-catalog", type=Path)
     p.add_argument("--probe-runtime", action="store_true")
     p.add_argument("--python", default=sys.executable)
     p.add_argument("--timeout", type=float, default=30.0)
@@ -221,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
         report = recover_wheel_candidate(
             args.candidate,
             target_evidence_root=args.target_evidence_root,
+            checkpoint_catalog=args.checkpoint_catalog,
             probe_runtime=args.probe_runtime,
             python=args.python,
             timeout=args.timeout,
@@ -229,6 +296,7 @@ def main(argv: list[str] | None = None) -> int:
         OSError,
         RecoveryCandidateError,
         RecoveryCompatibilityError,
+        RecoveryScanError,
         RuntimeError,
         zipfile.BadZipFile,
     ) as exc:
