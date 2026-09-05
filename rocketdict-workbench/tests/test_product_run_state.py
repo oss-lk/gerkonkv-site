@@ -27,6 +27,22 @@ class _Core:
             "api_modules": [{"module": "rocketdict.api.cli", "imported": True, "source_sha256": "b" * 64}],
             "parser_commands": ["call", "experiments run"],
             "callable_mapping_keys": ["lab.config.validate"],
+            "callable_operations": [
+                {
+                    "mapping_module": "rocketdict.api.cli",
+                    "mapping_name": "OPERATIONS",
+                    "operation": "lab.config.validate",
+                    "callable_module": "rocketdict.api.operations",
+                    "callable_qualname": "validate_lab_config",
+                    "signature": "(*, database, config)",
+                    "parameters": [
+                        {"name": "database", "kind": "KEYWORD_ONLY", "required": True},
+                        {"name": "config", "kind": "KEYWORD_ONLY", "required": True},
+                    ],
+                    "source_sha256": "c" * 64,
+                    "binding_metadata": {},
+                }
+            ],
             "operation_candidates": ["call", "experiments run", "lab.config.validate"],
             "fingerprint": "a" * 64,
         }
@@ -84,6 +100,8 @@ def test_initialize_product_run_binds_preflight_root_and_caches_probe(tmp_path) 
     assert first["root_identity"]["preflight_fingerprint"] == "5" * 64
     assert first["root_identity"]["document_version_id"] == 11
     assert first["operation_candidates"] == ["call", "experiments run", "lab.config.validate"]
+    assert first["callable_operations"][0]["operation"] == "lab.config.validate"
+    assert first["callable_operations"][0]["source_sha256"] == "c" * 64
     assert first["upstream_execution"]["status"] == "pending"
     assert first["upstream_execution"]["blocked_reason"] == "no_verified_stage8_19_operation_binding"
     assert first["probe_cache_hit"] is False
