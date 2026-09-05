@@ -4,7 +4,7 @@ from typing import Any
 
 from .product_policy import ProductPolicyError, product_parameter_overrides, select_product_implementation
 
-PROFILE_SCHEMA = "rocketdict-workbench-product-profile/6"
+PROFILE_SCHEMA = "rocketdict-workbench-product-profile/7"
 QUALITY_GATES = (
     "rocketdict-numeric-symbol-preservation",
     "rocketdict-punctuation-preservation",
@@ -47,14 +47,7 @@ def _defaults(implementation: dict[str, Any]) -> dict[str, Any]:
 
 
 def _required_inputs(stage: dict[str, Any], implementation: dict[str, Any]) -> list[str] | None:
-    """Copy an execution-input contract only when the live registry publishes one.
-
-    Older RocketDict runners exposed ``required_inputs`` as an explicit stage
-    execution contract. Workbench does not infer the contract from stage numbers or
-    historical implementation names: implementation-level metadata wins, stage-level
-    metadata is accepted when explicitly present, and absence remains visible as
-    ``None`` so Product preflight can fail closed.
-    """
+    """Copy execution inputs only when the live registry publishes them."""
     if "required_inputs" in implementation:
         raw = implementation.get("required_inputs")
     elif "required_inputs" in stage:
@@ -115,7 +108,6 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
             if number <= 19:
                 raise
 
-    # Diagnostic fixtures never become product evidence.
     if 21 in selected:
         selected[21]["parameters"]["use_builtin_smoke_sources"] = False
         selected[21]["selection_reason"] = "workbench_real_cefr_source_only"
@@ -131,13 +123,20 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
         selected[23]["selection_reason"] = "workbench_document_examples_only"
 
     stage15 = _stage(lab_manifest, 15)
+    stage15_key = str(stage15.get("key") or "")
+    if not stage15_key:
+        raise ProductPolicyError("Live Lab Registry Stage15 lacks stage key")
     gates = []
     for key in QUALITY_GATES:
         impl = _implementation(stage15, key)
         gates.append({
+            "stage_number": 15,
+            "stage_key": stage15_key,
             "implementation": key,
             "parameters": _defaults(impl),
             "adapter_descriptor_hash": impl.get("descriptor_hash"),
+            "required_inputs": _required_inputs(stage15, impl),
+            "availability": impl.get("availability"),
             "hard_gate": True,
             "requires_reference": False,
         })
