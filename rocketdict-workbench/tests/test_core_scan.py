@@ -80,7 +80,7 @@ def test_batch_scan_ranks_exact_version_structural_candidate_before_old_base(tmp
     assert report["promotion_allowed"] is False
     assert report["checkpoint_catalog"]["available"] is True
     assert report["checkpoint_catalog"]["schema"] == "rocketdict-historical-checkpoint-catalog/1"
-    assert report["checkpoint_catalog"]["entry_count"] >= 7
+    assert report["checkpoint_catalog"]["entry_count"] >= 9
     assert report["discovered_candidate_count"] == 2
     assert report["analyzed_candidate_count"] == 2
     assert report["error_count"] == 0
@@ -138,9 +138,9 @@ def test_candidate_limit_fails_closed(tmp_path: Path) -> None:
         discover_core_candidates(tmp_path, max_candidates=1)
 
 
-def test_historical_name_only_match_is_visible_but_never_byte_identity(tmp_path: Path) -> None:
+def test_known_03032_exact_filename_with_wrong_bytes_fails_identity(tmp_path: Path) -> None:
     source = _candidate(tmp_path / "source", "0.30.32")
-    name = "RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_SQLITE_COMPACTION_COMPLETE.zip"
+    name = "RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_COMPACTION_COMPLETE.zip"
     archive = _zip(source, tmp_path / name)
 
     report = scan_core_candidates(tmp_path)
@@ -152,10 +152,13 @@ def test_historical_name_only_match_is_visible_but_never_byte_identity(tmp_path:
     match = zip_row["historical_checkpoint_matches"][0]
     assert match["catalog_id"] == "rocketdict-0.30.32-stage6w"
     assert match["version"] == "0.30.32"
-    assert match["evidence_level"] == "historical_archive_name_only"
+    assert match["evidence_level"] == "exact_archive_and_wheel_sha_recovered_from_project_handoff_record"
     assert match["name_match"] is True
-    assert match["exact_identity_available"] is False
+    assert match["exact_identity_available"] is True
     assert match["exact_identity_match"] is False
+    assert match["exact_identity_mismatch"] is True
+    assert match["expected_archive_sha256"] == "c86bf534f78dfb84b7b2ecb9acb7fb03ab89ee4c9933cd393df7cdd2c5a9ddf6"
+    assert match["expected_archive_bytes"] == 135428241
 
 
 def test_known_0308_name_with_wrong_bytes_fails_exact_identity_match(tmp_path: Path) -> None:
@@ -176,12 +179,12 @@ def test_known_0308_name_with_wrong_bytes_fails_exact_identity_match(tmp_path: P
 
 
 def test_checkpoint_without_proven_filename_gets_no_guessed_name_match(tmp_path: Path) -> None:
-    source = _candidate(tmp_path / "source", "0.30.29")
-    archive = _zip(source, tmp_path / "RocketDict_0.30.29.zip")
+    source = _candidate(tmp_path / "source", "0.30.34")
+    archive = _zip(source, tmp_path / "RocketDict_0.30.34.zip")
 
     report = scan_core_candidates(archive)
     row = report["candidates"][0]
-    assert row["rocketdict_version"] == "0.30.29"
+    assert row["rocketdict_version"] == "0.30.34"
     assert row["historical_checkpoint_name_match"] is False
     assert row["historical_checkpoint_matches"] == []
 
