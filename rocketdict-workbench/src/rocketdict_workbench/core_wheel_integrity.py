@@ -3,8 +3,8 @@ from __future__ import annotations
 """Read-only Python wheel metadata and RECORD verification for recovery.
 
 This module never imports, extracts or installs the candidate. It validates the
-wheel container's package metadata and, when present, verifies RECORD hashes and
-sizes against the exact archived member bytes.
+wheel container's package metadata, filename tags, ZIP CRC and the mandatory
+RECORD inventory/hashes/sizes against the exact archived member bytes.
 """
 
 import base64
@@ -21,7 +21,7 @@ import zipfile
 
 from .core_recovery import RecoveryCandidateError
 
-SCHEMA = "rocketdict-workbench-wheel-integrity/1"
+SCHEMA = "rocketdict-workbench-wheel-integrity/2"
 _WHEEL_FILENAME = re.compile(
     r"^(?P<name>.+?)-(?P<version>[^-]+)-(?P<python>[^-]+)-(?P<abi>[^-]+)-(?P<platform>[^-]+)\.whl$",
     re.IGNORECASE,
@@ -87,32 +87,42 @@ def _filename_identity(path: Path) -> dict[str, Any]:
             "python_tag": None,
             "abi_tag": None,
             "platform_tag": None,
+            "tag": None,
         }
+    python_tag = match.group("python")
+    abi_tag = match.group("abi")
+    platform_tag = match.group("platform")
     return {
         "parsed": True,
         "name": match.group("name"),
         "version": match.group("version"),
-        "python_tag": match.group("python"),
-        "abi_tag": match.group("abi"),
-        "platform_tag": match.group("platform"),
+        "python_tag": python_tag,
+        "abi_tag": abi_tag,
+        "platform_tag": platform_tag,
+        "tag": f"{python_tag}-{abi_tag}-{platform_tag}",
     }
 
 
-def _verify_record(zf: zipfile.ZipFile, names: list[str], record_name: str | None) -> dict[str, Any]:
+def _verify_record(
+    zf: zipfile.ZipFile,
+    names: list[str],
+    record_name: str | None,
+) -> dict[str, Any]:
     if record_name is None:
         return {
             "available": False,
             "verified": False,
-            "status": "record_unavailable",
+            "status": "record_missing",
             "entry_count": 0,
             "hashed_entry_count": 0,
             "unhashed_entry_count": 0,
+            "unhashed_paths": [],
             "missing_members": [],
             "size_mismatches": [],
             "hash_mismatches": [],
             "unsupported_hash_algorithms": [],
             "duplicate_paths": [],
-            "unrecorded_members": [],
+            "unrecorded_members": sorted(names),
         }
 
     raw = zf.read(record_name).decode("utf-8")
@@ -129,7 +139,9 @@ def _verify_record(zf: zipfile.ZipFile, names: list[str], record_name: str | Non
     name_set = set(names)
     for row in rows:
         if len(row) != 3:
-            raise RecoveryCandidateError(f"wheel RECORD row does not have three columns: {row!r}")
+            raise RecoveryCandidateError(
+                f"wheel RECORD row does not have three columns: {row!r}"
+            )
         member, digest_spec, size_text = row
         if member in seen:
             duplicate_paths.append(member)
@@ -147,14 +159,22 @@ def _verify_record(zf: zipfile.ZipFile, names: list[str], record_name: str | Non
                 ) from exc
             if declared_size != info.file_size:
                 size_mismatches.append(
-                    {"path": member, "declared": declared_size, "observed": info.file_size}
+                    {
+                        "path": member,
+                        "declared": declared_size,
+                        "observed": info.file_size,
+                    }
                 )
         if not digest_spec:
             unhashed.append(member)
             continue
         if "=" not in digest_spec:
             unsupported_hash_algorithms.append(
-                {"path": member, "digest": digest_spec, "reason": "missing_algorithm_separator"}
+                {
+                    "path": member,
+                    "digest": digest_spec,
+                    "reason": "missing_algorithm_separator",
+                }
             )
             continue
         algorithm, expected = digest_spec.split("=", 1)
@@ -162,12 +182,18 @@ def _verify_record(zf: zipfile.ZipFile, names: list[str], record_name: str | Non
             digest = hashlib.new(algorithm)
         except ValueError:
             unsupported_hash_algorithms.append(
-                {"path": member, "algorithm": algorithm, "reason": "unsupported_algorithm"}
+                {
+                    "path": member,
+                    "algorithm": algorithm,
+                    "reason": "unsupported_algorithm",
+                }
             )
             continue
         member_raw = zf.read(member)
         digest.update(member_raw)
-        observed = base64.urlsafe_b64encode(digest.digest()).rstrip(b"=").decode("ascii")
+        observed = (
+            base64.urlsafe_b64encode(digest.digest()).rstrip(b"=").decode("ascii")
+        )
         hashed_count += 1
         if observed != expected:
             hash_mismatches.append(
@@ -179,8 +205,6 @@ def _verify_record(zf: zipfile.ZipFile, names: list[str], record_name: str | Non
                 }
             )
 
-    # RECORD itself is expected to have an empty hash. Signature companions may
-    # also be intentionally unhashed. They remain visible rather than guessed.
     unrecorded = sorted(name_set - seen)
     verified = not (
         missing_members
@@ -252,7 +276,10 @@ def inspect_wheel_integrity(candidate: Path | str) -> dict[str, Any]:
         and str(metadata["version"]) == str(filename["version"])
     )
     expected_distribution = normalized_metadata_name == "rocketdict"
-    py3_none_any = "py3-none-any" in set(wheel_headers["tags"])
+    filename_tag = filename.get("tag")
+    wheel_tags = set(wheel_headers["tags"])
+    filename_tag_consistent = bool(filename_tag and filename_tag in wheel_tags)
+    py3_none_any = "py3-none-any" in wheel_tags
 
     hard_failures: list[str] = []
     if bad_crc is not None:
@@ -263,7 +290,11 @@ def inspect_wheel_integrity(candidate: Path | str) -> dict[str, Any]:
         hard_failures.append("filename_metadata_name_mismatch")
     if not version_consistent:
         hard_failures.append("filename_metadata_version_mismatch")
-    if record["available"] and not record["verified"]:
+    if not filename_tag_consistent:
+        hard_failures.append("filename_wheel_tag_mismatch")
+    if not record["available"]:
+        hard_failures.append("wheel_record_missing")
+    elif not record["verified"]:
         hard_failures.append("wheel_record_verification_failed")
 
     status = "wheel_integrity_verified" if not hard_failures else "wheel_integrity_failed"
@@ -288,11 +319,14 @@ def inspect_wheel_integrity(candidate: Path | str) -> dict[str, Any]:
         "distribution_is_rocketdict": expected_distribution,
         "filename_metadata_name_consistent": name_consistent,
         "filename_metadata_version_consistent": version_consistent,
+        "filename_wheel_tag_consistent": filename_tag_consistent,
         "py3_none_any_tag_present": py3_none_any,
         "hard_failures": hard_failures,
         "rule": (
-            "Wheel metadata/RECORD integrity proves archived package consistency only. It does "
-            "not prove exact 0.30.40 source compatibility or runtime/Product readiness."
+            "Wheel metadata/RECORD integrity proves archived package consistency only. "
+            "A missing RECORD, CRC failure, package identity mismatch, filename/WHEEL tag "
+            "mismatch or RECORD mismatch fails closed. This still does not prove exact "
+            "0.30.40 source compatibility or runtime/Product readiness."
         ),
     }
     payload["identity"] = {
