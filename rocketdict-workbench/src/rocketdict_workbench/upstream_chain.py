@@ -16,6 +16,7 @@ from .upstream_binding import (
     _selected_stage,
     _valid_sha256,
 )
+from .upstream_execution import EXECUTION_RECORD_SCHEMA
 
 CHAIN_DISCOVERY_SCHEMA = "rocketdict-workbench-upstream-chain-discovery/1"
 PRE_HARD_GATE_MAX_STAGE = 14
@@ -46,13 +47,39 @@ def _scalar_identity(value: Any, *, name: str, source: str) -> Any:
     return value
 
 
+def _verified_execution_identities(stage_key: str, record: dict[str, Any]) -> dict[str, Any]:
+    if record.get("schema") != EXECUTION_RECORD_SCHEMA:
+        raise RuntimeError(
+            f"Completed upstream stage {stage_key} has unsupported execution schema {record.get('schema')!r}"
+        )
+    result = record.get("result")
+    if not isinstance(result, dict):
+        raise RuntimeError(f"Completed upstream stage {stage_key} has no persisted result object")
+    result_sha = str(record.get("result_sha256") or "").casefold()
+    if not _valid_sha256(result_sha) or result_sha != _canonical_sha256(result):
+        raise RuntimeError(f"Completed upstream stage {stage_key} result evidence was mutated")
+    identities = record.get("durable_identities")
+    if not isinstance(identities, dict) or not identities:
+        raise RuntimeError(f"Completed upstream stage {stage_key} has no durable identity evidence")
+    verified: dict[str, Any] = {}
+    for name, value in identities.items():
+        name = str(name)
+        scalar = _scalar_identity(value, name=name, source=f"stage{stage_key}.durable_identities")
+        if name not in result or result[name] != scalar:
+            raise RuntimeError(
+                f"Completed upstream stage {stage_key} durable identity {name!r} is not backed by its hashed result"
+            )
+        verified[name] = scalar
+    return verified
+
+
 def _available_input_evidence(state: dict[str, Any], preflight: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Collect exact-name durable identities without semantic aliasing.
 
-    The immutable source identity is authoritative for keys it actually exposes.
-    Completed upstream executions contribute only their explicit durable_identities.
-    If the same name has different values across evidence, resolution becomes
-    ambiguous and the name is excluded rather than guessed.
+    Immutable source identity is authoritative for keys it actually exposes.
+    Completed upstream executions contribute only identities backed by the exact
+    persisted result hash. Conflicting same-name values are excluded rather than
+    guessed.
     """
     candidates: dict[str, list[tuple[str, Any]]] = {}
     source = (preflight.get("identity") or {}).get("source") or {}
@@ -67,19 +94,16 @@ def _available_input_evidence(state: dict[str, Any], preflight: dict[str, Any]) 
 
     upstream = ((state.get("steps") or {}).get("upstream_execution") or {})
     executions = upstream.get("executions") or {}
+    if not isinstance(executions, dict):
+        raise RuntimeError("Persisted upstream executions are not a JSON object")
     for stage_key, record in sorted(
         executions.items(), key=lambda item: int(item[0]) if str(item[0]).isdigit() else 10**9
     ):
         if not isinstance(record, dict) or record.get("status") != "completed":
             continue
-        identities = record.get("durable_identities") or {}
-        if not isinstance(identities, dict):
-            raise RuntimeError(f"Completed upstream stage {stage_key} durable_identities is not an object")
-        for name, value in identities.items():
-            scalar = _scalar_identity(
-                value, name=str(name), source=f"stage{stage_key}.durable_identities"
-            )
-            candidates.setdefault(str(name), []).append(
+        identities = _verified_execution_identities(str(stage_key), record)
+        for name, scalar in identities.items():
+            candidates.setdefault(name, []).append(
                 (f"stage{stage_key}.durable_identities", scalar)
             )
 
@@ -310,7 +334,7 @@ def verify_upstream_stage_binding(
             "api_probe_fingerprint": str(probe["fingerprint"]).casefold(),
             "execution_contract_sha256": expected["execution_contract_sha256"],
             "proof_mode": "live-registry-plus-exact-runtime-callable-v1",
-            "input_resolution_mode": "exact-name-source-or-completed-durable-identity-v1",
+            "input_resolution_mode": "exact-name-source-or-hash-verified-completed-identity-v2",
         },
         "verified_at": verified_at,
     }
