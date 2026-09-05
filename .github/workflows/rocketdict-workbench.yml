@@ -30,5 +30,13 @@ jobs:
           python -m pip install -e ./rocketdict-workbench
       - name: Compile package
         run: python -m compileall -q rocketdict-workbench/src
+      - name: Smoke installed CLI entrypoints
+        run: |
+          rocketdict-recover-core --help >/dev/null
+          rocketdict-recover-plan --help >/dev/null
+          rocketdict-recover-checkpoint --help >/dev/null
+          rocketdict-recover-wheel --help >/dev/null
+          rocketdict-recover-scan --help >/dev/null
+          rocketdict-product-run --help >/dev/null
       - name: Run dependency-light tests
         run: pytest -q rocketdict-workbench/tests
