@@ -6,14 +6,16 @@ A full checkpoint may preserve much more than the installable package: exact
 source, the built RocketDict wheel, reports, manifests and continuation files.
 This verifier never extracts or executes the checkpoint. It inventories the
 outer ZIP, verifies historical catalog identity, reads the unique RocketDict
-source package, validates any nested RocketDict wheel in memory, compares
-source↔wheel package bytes, records public-API hashes, and attaches the existing
-historical-base→0.30.40 compatibility plan.
+source package, validates any nested RocketDict wheel in memory, binds that
+nested wheel to the historical catalog when an exact wheel identity exists,
+compares source↔wheel package bytes, records public-API hashes, and attaches the
+existing historical-base→0.30.40 compatibility plan.
 """
 
 import argparse
 from email.parser import BytesParser
 from email.policy import default as email_policy
+import fnmatch
 import hashlib
 import io
 import json
@@ -42,7 +44,7 @@ from .core_wheel_integrity import (
     _verify_record,
 )
 
-SCHEMA = "rocketdict-workbench-full-checkpoint-recovery/1"
+SCHEMA = "rocketdict-workbench-full-checkpoint-recovery/2"
 MAX_NESTED_WHEEL_BYTES = 64 * 1024 * 1024
 MAX_EVIDENCE_MEMBER_BYTES = 8 * 1024 * 1024
 MAX_EVIDENCE_MEMBERS = 200
@@ -167,6 +169,69 @@ def _wheel_package_files(zf: zipfile.ZipFile) -> dict[str, bytes]:
             )
         files[logical] = raw
     return files
+
+
+def _wheel_catalog_matches(
+    basename: str,
+    wheel_sha256: str,
+    wheel_bytes: int,
+    catalog: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if catalog is None:
+        return []
+    lowered = basename.casefold()
+    matches: list[dict[str, Any]] = []
+    for row in catalog.get("entries") or []:
+        patterns = list(row.get("wheel_name_patterns") or [])
+        matched_patterns = [
+            pattern
+            for pattern in patterns
+            if fnmatch.fnmatchcase(lowered, pattern.casefold())
+        ]
+        if not matched_patterns:
+            continue
+        expected_sha = row.get("wheel_sha256")
+        expected_bytes = row.get("wheel_bytes")
+        exact_identity_available = expected_sha is not None
+        sha_match = bool(
+            exact_identity_available
+            and wheel_sha256.casefold() == str(expected_sha).casefold()
+        )
+        size_match = bool(expected_bytes is None or wheel_bytes == expected_bytes)
+        exact_identity_match = bool(sha_match and size_match)
+        matches.append(
+            {
+                "catalog_id": row.get("id"),
+                "version": row.get("version"),
+                "stage": row.get("stage"),
+                "candidate_role": row.get("candidate_role"),
+                "evidence_level": row.get("evidence_level"),
+                "matched_patterns": matched_patterns,
+                "name_match": True,
+                "exact_identity_available": exact_identity_available,
+                "exact_identity_match": exact_identity_match,
+                "exact_identity_mismatch": bool(
+                    exact_identity_available and not exact_identity_match
+                ),
+                "sha256_match": sha_match,
+                "size_constraint_available": expected_bytes is not None,
+                "size_match": size_match,
+                "expected_wheel_sha256": expected_sha,
+                "expected_wheel_bytes": expected_bytes,
+                "observed_wheel_sha256": wheel_sha256,
+                "observed_wheel_bytes": wheel_bytes,
+                "promotion_allowed": False,
+            }
+        )
+    matches.sort(
+        key=lambda row: (
+            1 if row["exact_identity_match"] else 0,
+            str(row.get("version") or ""),
+            str(row.get("catalog_id") or ""),
+        ),
+        reverse=True,
+    )
+    return matches
 
 
 def _inspect_nested_wheel(raw: bytes, logical_name: str) -> dict[str, Any]:
@@ -324,6 +389,10 @@ def _api_inventory(files: dict[str, bytes]) -> dict[str, Any]:
     return out
 
 
+def _api_complete(inventory: dict[str, Any]) -> bool:
+    return all(bool((inventory.get(path) or {}).get("present")) for path in _API_LOGICAL_PATHS)
+
+
 def _evidence_inventory(
     zf: zipfile.ZipFile,
     infos: list[zipfile.ZipInfo],
@@ -412,8 +481,13 @@ def inspect_full_checkpoint(
                 nested_wheels.append(
                     {
                         "logical_path": info.filename,
+                        "basename": PurePosixPath(info.filename).name,
                         "wheel_bytes": info.file_size,
                         "ok": False,
+                        "historical_catalog_matches": [],
+                        "historical_catalog_name_match": False,
+                        "historical_catalog_exact_identity_match": False,
+                        "historical_catalog_exact_identity_mismatch": False,
                         "promotion_allowed": False,
                         "hard_failures": ["nested_wheel_over_recovery_size_limit"],
                     }
@@ -426,6 +500,22 @@ def inspect_full_checkpoint(
                 )
             wheel = _inspect_nested_wheel(raw, info.filename)
             package_files = wheel.pop("_package_files")
+            wheel_matches = _wheel_catalog_matches(
+                wheel["basename"],
+                wheel["wheel_sha256"],
+                wheel["wheel_bytes"],
+                catalog,
+            )
+            wheel["historical_catalog_matches"] = wheel_matches
+            wheel["historical_catalog_name_match"] = bool(wheel_matches)
+            wheel["historical_catalog_exact_identity_match"] = any(
+                row["exact_identity_match"] for row in wheel_matches
+            )
+            wheel["historical_catalog_exact_identity_mismatch"] = bool(
+                wheel_matches
+                and any(row["exact_identity_available"] for row in wheel_matches)
+                and not wheel["historical_catalog_exact_identity_match"]
+            )
             wheel["source_parity"] = (
                 _parity(source_files, package_files)
                 if len(roots) == 1
@@ -435,6 +525,7 @@ def inspect_full_checkpoint(
                 }
             )
             wheel["api_inventory"] = _api_inventory(package_files)
+            wheel["api_complete"] = _api_complete(wheel["api_inventory"])
             nested_wheels.append(wheel)
 
         evidence = _evidence_inventory(zf, infos)
@@ -450,8 +541,9 @@ def inspect_full_checkpoint(
         else None
     )
     source_api = _api_inventory(source_files) if source_files else {
-        path: {"present": False} for path in _API_LOGICAL_PATHS
+        api_path: {"present": False} for api_path in _API_LOGICAL_PATHS
     }
+    source_api_complete = _api_complete(source_api)
 
     core_candidate: dict[str, Any] | None = None
     compatibility_plan: dict[str, Any] | None = None
@@ -478,6 +570,18 @@ def inspect_full_checkpoint(
         blockers.append("rocketdict_source_root_ambiguous")
     if core_error:
         blockers.append("generic_core_compatibility_plan_failed")
+    if any(not bool(wheel.get("ok")) for wheel in nested_wheels):
+        blockers.append("nested_rocketdict_wheel_integrity_failed")
+    if any(
+        bool(wheel.get("historical_catalog_exact_identity_mismatch"))
+        for wheel in nested_wheels
+    ):
+        blockers.append("nested_rocketdict_wheel_historical_catalog_exact_identity_mismatch")
+    if any(
+        not bool((wheel.get("source_parity") or {}).get("complete"))
+        for wheel in nested_wheels
+    ):
+        blockers.append("source_wheel_parity_incomplete")
 
     if blockers:
         status = "blocked_checkpoint_candidate"
@@ -511,8 +615,27 @@ def inspect_full_checkpoint(
             "package_file_count": len(source_files),
             "package_bytes": sum(map(len, source_files.values())),
             "api_inventory": source_api,
+            "api_complete": source_api_complete,
         },
         "nested_rocketdict_wheel_count": len(nested_wheels),
+        "nested_rocketdict_wheel_integrity_ok_count": sum(
+            1 for wheel in nested_wheels if wheel.get("ok")
+        ),
+        "nested_rocketdict_wheel_catalog_exact_match_count": sum(
+            1
+            for wheel in nested_wheels
+            if wheel.get("historical_catalog_exact_identity_match")
+        ),
+        "nested_rocketdict_wheel_catalog_exact_mismatch_count": sum(
+            1
+            for wheel in nested_wheels
+            if wheel.get("historical_catalog_exact_identity_mismatch")
+        ),
+        "source_wheel_parity_complete_count": sum(
+            1
+            for wheel in nested_wheels
+            if (wheel.get("source_parity") or {}).get("complete")
+        ),
         "other_wheel_count": other_wheel_count,
         "nested_rocketdict_wheels": nested_wheels,
         "evidence_inventory_count": len(evidence),
@@ -523,8 +646,9 @@ def inspect_full_checkpoint(
         "blockers": blockers,
         "rule": (
             "This proof is read-only and never executes or extracts checkpoint bytes. Exact "
-            "historical ZIP identity, source↔wheel parity and historical API hashes still do "
-            "not substitute for missing exact 0.30.40 targets or authorize Product execution."
+            "historical ZIP identity, exact nested-wheel identity, source↔wheel parity and "
+            "historical API hashes still do not substitute for missing exact 0.30.40 targets "
+            "or authorize Product execution."
         ),
     }
     payload["identity"] = {
