@@ -74,33 +74,48 @@ def _stage_inputs(number: int) -> list[str]:
     }[number]
 
 
-def _profile(*, unavailable_stage: int | None = None, missing_contract_stage: int | None = None) -> dict:
+def _profile(
+    *,
+    unavailable_stage: int | None = None,
+    missing_contract_stage: int | None = None,
+    unavailable_gate: int | None = None,
+    missing_gate_contract: int | None = None,
+) -> dict:
     stages = {}
     for number in preflight.REQUIRED_CORE_STAGES:
         row = {
             "stage_key": f"stage-{number}-key",
             "implementation": "opus-en-ru-ct2" if number == 12 else f"stage-{number}",
             "parameters": {"compute_type": "float32"} if number == 12 else {},
-            "adapter_descriptor_hash": f"descriptor-{number}",
+            "adapter_descriptor_hash": str(number % 10) * 64,
             "availability": {"available": number != unavailable_stage},
             "required_inputs": _stage_inputs(number),
         }
         if number == missing_contract_stage:
             row.pop("required_inputs")
         stages[str(number)] = row
+    gates = []
+    for index, key in enumerate(preflight.QUALITY_GATES):
+        row = {
+            "stage_number": preflight.HARD_QUALITY_STAGE,
+            "stage_key": "quality_evaluation",
+            "implementation": key,
+            "parameters": {"threshold": index},
+            "adapter_descriptor_hash": "abcdef"[index] * 64,
+            "required_inputs": ["assembly_id"],
+            "availability": {"available": index != unavailable_gate},
+            "hard_gate": True,
+            "requires_reference": False,
+        }
+        if index == missing_gate_contract:
+            row.pop("required_inputs")
+        gates.append(row)
     return {
         "schema": preflight.PROFILE_SCHEMA,
         "source_kind": "text",
         "registry_hash": "registry-1",
         "stages": stages,
-        "quality_gates": [
-            {
-                "implementation": key,
-                "parameters": {},
-                "adapter_descriptor_hash": f"gate-{index}",
-            }
-            for index, key in enumerate(preflight.QUALITY_GATES)
-        ],
+        "quality_gates": gates,
     }
 
 
@@ -109,6 +124,8 @@ def _install_profile_stubs(
     *,
     unavailable_stage: int | None = None,
     missing_contract_stage: int | None = None,
+    unavailable_gate: int | None = None,
+    missing_gate_contract: int | None = None,
 ) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(
         preflight,
@@ -116,6 +133,8 @@ def _install_profile_stubs(
         lambda manifest, source_kind: _profile(
             unavailable_stage=unavailable_stage,
             missing_contract_stage=missing_contract_stage,
+            unavailable_gate=unavailable_gate,
+            missing_gate_contract=missing_gate_contract,
         ),
     )
     monkeypatch.setattr(preflight, "validate_product_configuration", lambda config, manifest: [])
@@ -148,12 +167,23 @@ def test_product_preflight_freezes_source_runtime_profile_and_execution_contract
     assert first["network_required_during_processing"] is False
 
 
+def test_product_preflight_freezes_complete_stage15_gate_set(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    _install_profile_stubs(monkeypatch)
+    payload = preflight.build_product_preflight(_Project(tmp_path, [_source(tmp_path)]))
+    gates = payload["identity"]["quality_gates"]
+    assert [row["implementation"] for row in gates] == list(preflight.QUALITY_GATES)
+    assert all(row["stage_number"] == 15 for row in gates)
+    assert all(row["stage_key"] == "quality_evaluation" for row in gates)
+    assert all(row["required_inputs"] == ["assembly_id"] for row in gates)
+    assert all(len(row["execution_contract_sha256"]) == 64 for row in gates)
+    assert len(payload["identity"]["quality_gate_set_sha256"]) == 64
+
+
 def test_product_preflight_rejects_mutated_immutable_source(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
     _install_profile_stubs(monkeypatch)
     source = _source(tmp_path)
     copied = tmp_path / source["copied_path"]
     copied.write_text("mutated", encoding="utf-8")
-
     with pytest.raises(RuntimeError, match="SHA changed"):
         preflight.build_product_preflight(_Project(tmp_path, [source]))
 
@@ -163,27 +193,32 @@ def test_product_preflight_requires_explicit_source_when_project_has_multiple(mo
     first = _source(tmp_path, "one")
     second = _source(tmp_path, "two")
     project = _Project(tmp_path, [first, second])
-
     with pytest.raises(RuntimeError, match="multiple imported sources"):
         preflight.build_product_preflight(project)
-
     selected = preflight.build_product_preflight(project, source_sha256=second["sha256"])
     assert selected["identity"]["source"]["sha256"] == second["sha256"]
 
 
 def test_product_preflight_fails_closed_on_unavailable_required_stage(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
     _install_profile_stubs(monkeypatch, unavailable_stage=12)
-    source = _source(tmp_path)
-
     with pytest.raises(RuntimeError, match="stage 12.*not locally available"):
-        preflight.build_product_preflight(_Project(tmp_path, [source]))
+        preflight.build_product_preflight(_Project(tmp_path, [_source(tmp_path)]))
 
 
 def test_product_preflight_rejects_missing_live_required_inputs(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
     _install_profile_stubs(monkeypatch, missing_contract_stage=8)
-    source = _source(tmp_path)
     with pytest.raises(RuntimeError, match="stage 8 lacks live registry required_inputs"):
-        preflight.build_product_preflight(_Project(tmp_path, [source]))
+        preflight.build_product_preflight(_Project(tmp_path, [_source(tmp_path)]))
+
+
+def test_product_preflight_rejects_unavailable_or_contractless_hard_gate(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    _install_profile_stubs(monkeypatch, unavailable_gate=1)
+    with pytest.raises(RuntimeError, match="hard gate.*not locally available"):
+        preflight.build_product_preflight(_Project(tmp_path, [_source(tmp_path)]))
+
+    _install_profile_stubs(monkeypatch, missing_gate_contract=2)
+    with pytest.raises(RuntimeError, match="hard gate.*required_inputs"):
+        preflight.build_product_preflight(_Project(tmp_path, [_source(tmp_path)]))
 
 
 def test_required_inputs_change_preflight_fingerprint(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
@@ -201,10 +236,25 @@ def test_required_inputs_change_preflight_fingerprint(monkeypatch, tmp_path) -> 
     second = preflight.build_product_preflight(project)
 
     assert first["identity"]["fingerprint"] != second["identity"]["fingerprint"]
-    assert (
-        first["identity"]["required_core_stages"]["8"]["execution_contract_sha256"]
-        != second["identity"]["required_core_stages"]["8"]["execution_contract_sha256"]
-    )
+    assert first["identity"]["required_core_stages"]["8"]["execution_contract_sha256"] != second["identity"]["required_core_stages"]["8"]["execution_contract_sha256"]
+
+
+def test_hard_gate_required_inputs_change_gate_set_and_preflight_fingerprints(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    source = _source(tmp_path)
+    project = _Project(tmp_path, [source])
+    monkeypatch.setattr(preflight, "validate_product_configuration", lambda config, manifest: [])
+
+    baseline = _profile()
+    monkeypatch.setattr(preflight, "build_product_profile", lambda manifest, source_kind: baseline)
+    first = preflight.build_product_preflight(project)
+
+    changed = _profile()
+    changed["quality_gates"][0]["required_inputs"] = ["assembly_id", "source_snapshot_id"]
+    monkeypatch.setattr(preflight, "build_product_profile", lambda manifest, source_kind: changed)
+    second = preflight.build_product_preflight(project)
+
+    assert first["identity"]["quality_gate_set_sha256"] != second["identity"]["quality_gate_set_sha256"]
+    assert first["identity"]["fingerprint"] != second["identity"]["fingerprint"]
 
 
 def test_product_preflight_rejects_source_kind_mismatch(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
