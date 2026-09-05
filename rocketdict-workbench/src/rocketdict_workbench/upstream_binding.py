@@ -118,6 +118,21 @@ def _operation(probe: dict[str, Any], operation_key: str) -> dict[str, Any]:
     return row
 
 
+def _verified_at_from_previous(previous: Any) -> str:
+    if previous is None:
+        return _now()
+    if not isinstance(previous, dict):
+        raise RuntimeError("Persisted Stage8 binding is not a JSON object")
+    fingerprint = str(previous.get("fingerprint") or "").casefold()
+    expected = _canonical_sha256({key: value for key, value in previous.items() if key != "fingerprint"})
+    if not _valid_sha256(fingerprint) or fingerprint != expected:
+        raise RuntimeError("Persisted Stage8 binding evidence was mutated")
+    verified_at = str(previous.get("verified_at") or "")
+    if not verified_at:
+        raise RuntimeError("Persisted Stage8 binding lacks verified_at")
+    return verified_at
+
+
 def verify_stage8_binding(state_path: Path | str, operation_key: str) -> dict[str, Any]:
     """Promote one Stage8 API callable only when exact runtime metadata proves identity.
 
@@ -160,6 +175,11 @@ def verify_stage8_binding(state_path: Path | str, operation_key: str) -> dict[st
             f"Stage8 binding requires exact inputs {FIRST_STAGE_REQUIRED_INPUTS}, observed {tuple(required_inputs)}"
         )
 
+    upstream = state["steps"]["upstream_execution"]
+    bindings = upstream.setdefault("bindings", {})
+    previous = bindings.get(str(FIRST_UPSTREAM_STAGE))
+    verified_at = _verified_at_from_previous(previous)
+
     identity = preflight["identity"]
     source = identity["source"]
     binding = {
@@ -191,20 +211,13 @@ def verify_stage8_binding(state_path: Path | str, operation_key: str) -> dict[st
             "api_probe_fingerprint": str(probe["fingerprint"]).casefold(),
             "proof_mode": "exact-runtime-callable-metadata-v1",
         },
-        "verified_at": _now(),
+        "verified_at": verified_at,
     }
     binding["fingerprint"] = _canonical_sha256(binding)
 
-    upstream = state["steps"]["upstream_execution"]
-    bindings = upstream.setdefault("bindings", {})
-    previous = bindings.get(str(FIRST_UPSTREAM_STAGE))
-    if previous is not None:
-        previous_fingerprint = str((previous or {}).get("fingerprint") or "")
-        if previous_fingerprint != binding["fingerprint"]:
-            raise RuntimeError("Stage8 already has a different verified binding in this immutable Product run")
-        binding = dict(previous)
-    else:
-        bindings[str(FIRST_UPSTREAM_STAGE)] = binding
+    if previous is not None and str(previous.get("fingerprint") or "") != binding["fingerprint"]:
+        raise RuntimeError("Stage8 already has a different verified binding in this immutable Product run")
+    bindings[str(FIRST_UPSTREAM_STAGE)] = binding
     upstream["status"] = "binding_verified"
     upstream["blocked_reason"] = "verified_stage8_binding_not_yet_executed"
     state["status"] = "ready_for_stage8_execution"
