@@ -1,0 +1,179 @@
+{
+  "schema": "rocketdict-stage8-core-recovery-history/1",
+  "date_utc": "2026-09-05",
+  "promotion_allowed": false,
+  "active_product_core_recovered": false,
+  "historical_handoff_chain": {
+    "entrypoint_commit": {
+      "sha": "d680de754937b99e69ea4d35eb26c8049f42c465",
+      "message": "Add self-contained RocketDict public handoff entrypoint",
+      "declared_line": "RocketDict 0.30.40 / Stage 8 experimental-research branch"
+    },
+    "materializer_commits": [
+      {
+        "sha": "bd329e91e3f158c9dca1ce1de12c062be58c444e",
+        "message": "Add verified RocketDict handoff materializer"
+      },
+      {
+        "sha": "3c7114fb8617ab76147b556f99d1ddb9e9060f1d",
+        "message": "Add RocketDict handoff payload verifier and materializer"
+      }
+    ],
+    "first_payload_commit": {
+      "sha": "471669fe697b9044216c8b522fa9de73345cfba0",
+      "message": "Upload RocketDict Stage 8 overlay payload part 1/8",
+      "parent": "3c7114fb8617ab76147b556f99d1ddb9e9060f1d",
+      "path": "rocketdict/payload/stage8-overlay/part-000.b64",
+      "blob_sha": "e48daa4f04bd7b01b1fab7f6aa8112564f15e43e",
+      "encoded_characters": 15000
+    },
+    "immediate_following_commit": {
+      "sha": "89c11bc89aa017b91f646adcc5da1da9481532dd",
+      "message": "Add RocketDict Stage 8 G n-best integrity probe",
+      "parent": "471669fe697b9044216c8b522fa9de73345cfba0",
+      "interpretation": "No payload-part commit exists between part-000 and the next direct main-chain commit."
+    },
+    "health_commit": {
+      "sha": "5955d0814765696defc09ba7947849612adf01c5",
+      "message": "Document incomplete RocketDict handoff payload health",
+      "observation": {
+        "present_overlay_parts": [
+          "rocketdict/payload/stage8-overlay/part-000.b64"
+        ],
+        "missing_overlay_parts": 7,
+        "missing_research_vault_parts": 11,
+        "fresh_clone_materialization_possible": false
+      }
+    }
+  },
+  "historical_materializer_contract": {
+    "observed_at_commit": "471669fe697b9044216c8b522fa9de73345cfba0",
+    "overlay_parts": 8,
+    "overlay_tar_gz_sha256": "ddf5f409a5690fa4d2141c8a3bd30ef73f82cc9e75c27b66716791afbc6f97b7",
+    "research_vault_parts": 11,
+    "research_vault_xz_sha256": "394ffcfe399deb1f83ad445cc3ac2e727c8f684a29fd06c757eee16612cfe4ab",
+    "research_vault_sqlite_sha256": "106fc9d7bee42a53b34412267923d17b3331019d2eef16300b539de8929927a1",
+    "expected_overlay_members": [
+      "scripts/stage8_rescore_integrity_doe.py",
+      "src/rocketdict/__init__.py",
+      "src/rocketdict/lab/builtin_adapters.py",
+      "src/rocketdict/lab/stage12_pilot.py",
+      "src/rocketdict/nlp/registry.py",
+      "src/rocketdict/research/__init__.py",
+      "src/rocketdict/research/integrity_doe.py",
+      "src/rocketdict/research/vault.py",
+      "src/rocketdict/translation/adaptive_batch.py",
+      "src/rocketdict/translation/backends.py",
+      "src/rocketdict/translation/integrity.py",
+      "src/rocketdict/translation/opus_runtime_bundle.py",
+      "src/rocketdict/translation/planner.py",
+      "src/rocketdict/translation/registry.py",
+      "src/rocketdict/translation/service.py",
+      "src/rocketdict/translation/structural.py",
+      "tests/test_stage7c_opus_runtime_bundle.py",
+      "tests/test_stage8_integrity_research.py",
+      "tests/test_stage8_readonly_registries.py"
+    ],
+    "expected_overlay_member_count": 19,
+    "contains_rocketdict_api_package": false,
+    "interpretation": "Even a byte-perfect restoration of all eight Stage8 overlay chunks would restore this research/translation overlay, not the complete RocketDict base core or public API package."
+  },
+  "reachable_path_history_checks": {
+    "rocketdict/payload/stage8-overlay/part-001.b64": "no reachable commits returned",
+    "rocketdict/payload/stage8-overlay/part-002.b64": "no reachable commits returned",
+    "rocketdict/payload/research-vault/part-000.b85": "no reachable commits returned",
+    "interpretation": "The explicit historical health commit is authoritative for the full missing count. Selected path-history checks independently found no later reachable commit for representative missing chunks."
+  },
+  "actions_public_api_recovery_scan": {
+    "scanner_commit": "d487dadfd281ff0698b5ae25478955dd116d0e20",
+    "scanner_schema": "rocketdict-stage8-api-artifact-recovery/3",
+    "workflow_run_id": 33962396201,
+    "result_artifact_id": 9968352199,
+    "inventory_count": 120,
+    "downloaded_count": 96,
+    "expired_count": 17,
+    "over_size_limit_count": 7,
+    "direct_rocketdict_api_python_path_hits": 0,
+    "truncated_overlay_recovery_artifact_ids": [
+      9681838606,
+      9690729802,
+      9690741914
+    ],
+    "truncated_next_member": "src/rocketdict/lab/stage12_pilot.py",
+    "truncated_member_errors": 6,
+    "oversized_artifacts": {
+      "stanza_model_bundles": [
+        9714691744,
+        9714699350,
+        9714743603,
+        9714805472
+      ],
+      "offline_opus_runtime_bundles": [
+        9614516505,
+        9614524252,
+        9614728610
+      ]
+    },
+    "oversized_upload_contract_evidence": {
+      "stanza_workflow_commit": "3681a012fe6db6d8f463003839b6cb86993b1c5f",
+      "stanza_uploaded_path": "rocketdict-workbench-offline-nlp",
+      "opus_workflow_commit": "eb907da64e94022f5dcfdaa0823c58a6068da83d",
+      "opus_uploaded_paths": [
+        "work/opus-2020-02-11.zip",
+        "work/runtime-wheelhouse/**"
+      ],
+      "interpretation": "The seven nonexpired oversized artifacts are model/runtime supplies by their upload contracts, not RocketDict core source bundles."
+    }
+  },
+  "documented_historical_full_checkpoint_candidate": {
+    "version": "0.30.8",
+    "archive_name": "RocketDict_CURRENT_COMPACT.zip",
+    "archive_bytes": 125875993,
+    "archive_sha256": "f948a9b59e4deb7b00a606fdb88973dd9a435c087c132f32f03d2d0c863b51ac",
+    "manifest_files": 666,
+    "documented_contents": [
+      "full RocketDict source project",
+      "installable wheel",
+      "en_core_web_sm 3.8.0",
+      "Opticks corpus",
+      "object store",
+      "compressed working SQLite",
+      "Windows installer",
+      "recovery and validation tooling",
+      "stage report and audit",
+      "continuation instructions"
+    ],
+    "current_byte_status": "archive bytes not recovered in current runtime or File Library search",
+    "candidate_role": "historical full-base candidate only; it is older than 0.30.40 and must pass rocketdict-recover-core plus explicit compatibility proof before any reuse",
+    "promotion_allowed": false
+  },
+  "current_recovery_strategy": {
+    "tool": "rocketdict-recover-core",
+    "candidate_report_schema": "rocketdict-workbench-core-recovery-candidate/1",
+    "accepts": [
+      "source directory",
+      "ZIP checkpoint"
+    ],
+    "zip_execution_policy": "structural audit only; ZIP is never executed or extracted by the verifier",
+    "directory_execution_policy": "isolated subprocess import probe with module-origin verification",
+    "required_workbench_bridge_modules": [
+      "rocketdict.api.contracts",
+      "rocketdict.api.client",
+      "rocketdict.api.cli",
+      "rocketdict.database",
+      "rocketdict.importing.cli",
+      "rocketdict.interpretation.cli"
+    ],
+    "exact_03040_hash_anchors": [
+      "src/rocketdict/__init__.py",
+      "src/rocketdict/nlp/registry.py"
+    ],
+    "promotion_rule": "No candidate report authorizes Product dispatch. Exact compatible runtime must still pass Workbench doctor, immutable Product preflight, live registry/API probe, exact binding/execution-contract proof and quality PASS semantics."
+  },
+  "conclusion": [
+    "The missing seven Stage8 overlay chunks are real historical losses, but restoring them alone cannot restore the public API/base core because rocketdict.api was never part of that overlay contract.",
+    "The surviving Actions artifact inventory contains no direct recovered src/rocketdict/api/*.py member among the 96 scanned artifacts; the seven oversized nonexpired artifacts are structurally identified as Stanza or OPUS model/runtime supplies.",
+    "A documented older full checkpoint exists as a recovery lead, but its bytes are currently unavailable and its older version can only be treated as a base candidate.",
+    "The active recovery task is therefore to recover any full historical RocketDict checkpoint/core bytes and run rocketdict-recover-core before attempting any source-level compatibility reconstruction."
+  ]
+}
