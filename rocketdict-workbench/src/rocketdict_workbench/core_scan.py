@@ -9,12 +9,14 @@ promote".
 """
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
+import zipfile
 
 from .core_compatibility import build_core_recovery_plan
 from .core_recovery import RecoveryCandidateError
@@ -43,6 +45,24 @@ def _depth(root: Path, path: Path) -> int:
         return 10**9
 
 
+def _candidate_root_from_package_init(init: Path) -> Path | None:
+    """Map a discovered package __init__ to one supported candidate root.
+
+    This deliberately canonicalizes `root/src/rocketdict/__init__.py` to
+    `root`, rather than also reporting `root/src` as a second direct-layout
+    candidate.  `root/active_source/src/rocketdict/__init__.py` similarly maps
+    to `root`.
+    """
+    if init.name != "__init__.py" or init.parent.name != "rocketdict":
+        return None
+    package_parent = init.parent.parent
+    if package_parent.name == "src":
+        if package_parent.parent.name == "active_source":
+            return package_parent.parent.parent.resolve()
+        return package_parent.parent.resolve()
+    return init.parent.parent.resolve()
+
+
 def discover_core_candidates(
     root: Path | str,
     *,
@@ -64,9 +84,9 @@ def discover_core_candidates(
         current_path = Path(current)
         rel_depth = _depth(root, current_path)
         dirs[:] = [
-            name for name in dirs
-            if not (current_path / name).is_symlink()
-            and rel_depth < max_depth
+            name
+            for name in dirs
+            if not (current_path / name).is_symlink() and rel_depth < max_depth
         ]
 
         for filename in files:
@@ -75,16 +95,10 @@ def discover_core_candidates(
                 continue
             if filename.casefold().endswith(".zip"):
                 found.add(path.resolve())
-
-        init = current_path / "src" / "rocketdict" / "__init__.py"
-        if init.is_file() and not init.is_symlink():
-            found.add(current_path.resolve())
-        direct = current_path / "rocketdict" / "__init__.py"
-        if direct.is_file() and not direct.is_symlink():
-            found.add(current_path.resolve())
-        active = current_path / "active_source" / "src" / "rocketdict" / "__init__.py"
-        if active.is_file() and not active.is_symlink():
-            found.add(current_path.resolve())
+            if filename == "__init__.py" and current_path.name == "rocketdict":
+                candidate_root = _candidate_root_from_package_init(path)
+                if candidate_root is not None and _depth(root, candidate_root) <= max_depth:
+                    found.add(candidate_root)
 
         if len(found) > max_candidates:
             raise RecoveryScanError(
@@ -174,7 +188,7 @@ def scan_core_candidates(
                 python=python,
                 probe_runtime=runtime,
             )
-        except (OSError, RecoveryCandidateError, RuntimeError) as exc:
+        except (OSError, RecoveryCandidateError, RuntimeError, zipfile.BadZipFile) as exc:
             errors.append(
                 {
                     "path": str(path),
@@ -199,20 +213,18 @@ def scan_core_candidates(
     fingerprint_payload = {
         "schema": SCHEMA,
         "root": str(root_path),
-        "target_evidence_root": str(Path(target_evidence_root).resolve()) if target_evidence_root else None,
+        "target_evidence_root": str(Path(target_evidence_root).resolve())
+        if target_evidence_root
+        else None,
         "probe_directories": probe_directories,
         "max_depth": max_depth,
         "candidate_paths": [str(path) for path in candidates],
         "summaries": [
-            {
-                key: value for key, value in row.items()
-                if key not in {"recovery_priority_rank"}
-            }
+            {key: value for key, value in row.items() if key != "recovery_priority_rank"}
             for row in summaries
         ],
         "errors": errors,
     }
-    import hashlib
     raw = json.dumps(
         fingerprint_payload,
         ensure_ascii=False,
