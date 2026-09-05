@@ -318,8 +318,29 @@ def _journal_line_payload(record: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in record.items() if k != "record_sha256"}
 
 
+def _truncate_incomplete_journal_tail(path: Path) -> None:
+    """Discard only the uncommitted partial tail left by an interrupted append.
+
+    A durable journal record always ends in ``\n`` after its full JSON payload was
+    written and fsynced. Bytes after the last newline can therefore never be a
+    committed success record. Truncate them before a future append.
+    """
+    if not path.is_file():
+        return
+    raw = path.read_bytes()
+    if not raw or raw.endswith(b"\n"):
+        return
+    last_newline = raw.rfind(b"\n")
+    durable_size = last_newline + 1 if last_newline >= 0 else 0
+    with path.open("r+b") as fh:
+        fh.truncate(durable_size)
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
 def _append_journal(path: Path, record: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    _truncate_incomplete_journal_tail(path)
     record = dict(record)
     record["record_sha256"] = _canonical_sha256(_journal_line_payload(record))
     data = (json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
@@ -591,6 +612,9 @@ def discover_set_assembly(
     database_path = Path(database).expanduser().resolve()
     state, preflight, probe = _load_verified_evidence(state_path)
     require_quality_gate_pass(state_path)
+    probe_database = Path(str((probe.get("database") or {}).get("path") or "")).expanduser().resolve()
+    if probe_database != database_path:
+        raise RuntimeError("Card-set assembly database differs from immutable API probe database")
     manifest = _load_complete_card_manifest(state_path, state)
     available = {
         "card_revision_ids": list(manifest["card_revision_ids"]),
@@ -635,7 +659,16 @@ def discover_set_assembly(
                     reasons.append("set_revision_id_not_required")
                 if not isinstance(identity_fields, list) or "set_revision_id" not in identity_fields:
                     reasons.append("set_revision_id_not_identity")
-        candidate = {"operation": operation, "reasons": reasons, "contract": contract if not reasons else None}
+        candidate = {
+            "operation": operation,
+            "mapping_module": row.get("mapping_module"),
+            "mapping_name": row.get("mapping_name"),
+            "callable_module": row.get("callable_module"),
+            "callable_qualname": row.get("callable_qualname"),
+            "source_sha256": str(row.get("source_sha256") or "").casefold(),
+            "reasons": reasons,
+            "contract": contract if not reasons else None,
+        }
         candidates.append(candidate)
         if not reasons:
             exact.append(candidate)
@@ -666,10 +699,26 @@ def execute_set_assembly(
     candidate = discovery["exact_matches"][0]
     operation = candidate["operation"]
     contract = candidate["contract"]
-    row = [row for row in _operation_rows(probe) if str(row.get("operation") or "") == operation][0]
+    runtime_rows = [
+        row
+        for row in _operation_rows(probe)
+        if str(row.get("operation") or "") == operation
+        and str(row.get("mapping_module") or "") == str(candidate.get("mapping_module") or "")
+        and str(row.get("mapping_name") or "") == str(candidate.get("mapping_name") or "")
+        and str(row.get("callable_module") or "") == str(candidate.get("callable_module") or "")
+        and str(row.get("callable_qualname") or "") == str(candidate.get("callable_qualname") or "")
+        and str(row.get("source_sha256") or "").casefold() == str(candidate.get("source_sha256") or "").casefold()
+    ]
+    if len(runtime_rows) != 1:
+        raise RuntimeError("Card-set assembly structured callable identity is no longer unique")
+    row = runtime_rows[0]
     binding = {
         "schema": SET_ASSEMBLY_BINDING_SCHEMA,
         "operation": operation,
+        "mapping_module": str(row.get("mapping_module") or ""),
+        "mapping_name": str(row.get("mapping_name") or ""),
+        "callable_module": str(row.get("callable_module") or ""),
+        "callable_qualname": str(row.get("callable_qualname") or ""),
         "callable_source_sha256": str(row.get("source_sha256") or "").casefold(),
         "execution_contract_sha256": _canonical_sha256(contract),
         "stage24_manifest_fingerprint": discovery["stage24_manifest_fingerprint"],
