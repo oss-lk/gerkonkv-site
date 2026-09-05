@@ -12,6 +12,7 @@ dependencies = []
 [project.scripts]
 rocketdict-workbench = "rocketdict_workbench.cli:main"
 rocketdict-product-run = "rocketdict_workbench.product_run_cli:main"
+rocketdict-recover-core = "rocketdict_workbench.core_recovery:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
