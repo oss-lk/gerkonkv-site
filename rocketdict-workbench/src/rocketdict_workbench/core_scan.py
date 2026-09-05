@@ -2,10 +2,13 @@ from __future__ import annotations
 
 """Batch discovery/ranking of historical RocketDict recovery candidates.
 
-The scanner is intentionally recovery-only. It can inspect ZIPs without
-extracting them and source directories without importing them by default. A
-higher ranking means "inspect this recovery lead first", never "this is safe to
-promote".
+The scanner is recovery-only. It can inspect ZIPs without extracting them and
+source directories without importing them by default. A higher ranking means
+"inspect this recovery lead first", never "this is safe to promote".
+
+Historical artifact identity is SHA-first. A known SHA-256 is sufficient to
+identify an archive when its old byte-size record was lost; if an expected size
+is also known, the observed size must match as an additional guard.
 """
 
 import argparse
@@ -22,7 +25,7 @@ import zipfile
 from .core_compatibility import build_core_recovery_plan
 from .core_recovery import RecoveryCandidateError
 
-SCHEMA = "rocketdict-workbench-core-recovery-scan/2"
+SCHEMA = "rocketdict-workbench-core-recovery-scan/3"
 CATALOG_SCHEMA = "rocketdict-historical-checkpoint-catalog/1"
 MAX_DEFAULT_CANDIDATES = 500
 MAX_DEFAULT_DEPTH = 8
@@ -49,7 +52,6 @@ def _depth(root: Path, path: Path) -> int:
 
 
 def _candidate_root_from_package_init(init: Path) -> Path | None:
-    """Map a discovered package __init__ to one supported candidate root."""
     if init.name != "__init__.py" or init.parent.name != "rocketdict":
         return None
     package_parent = init.parent.parent
@@ -85,7 +87,6 @@ def discover_core_candidates(
             for name in dirs
             if not (current_path / name).is_symlink() and rel_depth < max_depth
         ]
-
         for filename in files:
             path = current_path / filename
             if path.is_symlink():
@@ -96,12 +97,10 @@ def discover_core_candidates(
                 candidate_root = _candidate_root_from_package_init(path)
                 if candidate_root is not None and _depth(root, candidate_root) <= max_depth:
                     found.add(candidate_root)
-
         if len(found) > max_candidates:
             raise RecoveryScanError(
                 f"candidate count exceeded limit {max_candidates}; narrow the scan root"
             )
-
     return sorted(found, key=lambda path: str(path).casefold())
 
 
@@ -132,20 +131,23 @@ def _load_checkpoint_catalog(
             "sha256": None,
             "entry_count": 0,
         }
+
     try:
         raw = path.read_bytes()
         payload = json.loads(raw.decode("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RecoveryScanError(f"cannot load checkpoint catalog {path}: {exc}") from exc
+
     if not isinstance(payload, dict) or payload.get("schema") != CATALOG_SCHEMA:
-        raise RecoveryScanError(
-            f"unexpected checkpoint catalog schema: {payload.get('schema') if isinstance(payload, dict) else type(payload).__name__}"
-        )
+        observed = payload.get("schema") if isinstance(payload, dict) else type(payload).__name__
+        raise RecoveryScanError(f"unexpected checkpoint catalog schema: {observed}")
     if payload.get("promotion_allowed") is not False:
         raise RecoveryScanError("checkpoint catalog unexpectedly permits promotion")
+
     entries = payload.get("entries")
     if not isinstance(entries, list):
         raise RecoveryScanError("checkpoint catalog entries must be a list")
+
     seen_ids: set[str] = set()
     for row in entries:
         if not isinstance(row, dict):
@@ -156,20 +158,29 @@ def _load_checkpoint_catalog(
         seen_ids.add(entry_id)
         if row.get("promotion_allowed") is not False:
             raise RecoveryScanError(f"checkpoint catalog entry permits promotion: {entry_id}")
+
         patterns = row.get("archive_name_patterns")
         if not isinstance(patterns, list) or not all(isinstance(item, str) for item in patterns):
             raise RecoveryScanError(f"checkpoint catalog patterns invalid: {entry_id}")
         for pattern in patterns:
             if not pattern or "/" in pattern or "\\" in pattern:
-                raise RecoveryScanError(f"checkpoint catalog pattern must be a basename glob: {entry_id}: {pattern!r}")
+                raise RecoveryScanError(
+                    f"checkpoint catalog pattern must be a basename glob: {entry_id}: {pattern!r}"
+                )
+
         expected_sha = row.get("archive_sha256")
         if expected_sha is not None and not _SHA256.fullmatch(str(expected_sha).casefold()):
             raise RecoveryScanError(f"checkpoint catalog SHA-256 invalid: {entry_id}")
         expected_bytes = row.get("archive_bytes")
-        if expected_bytes is not None and (not isinstance(expected_bytes, int) or expected_bytes < 1):
+        if expected_bytes is not None and (
+            not isinstance(expected_bytes, int) or expected_bytes < 1
+        ):
             raise RecoveryScanError(f"checkpoint catalog byte size invalid: {entry_id}")
-        if expected_sha is not None and expected_bytes is None:
-            raise RecoveryScanError(f"checkpoint catalog exact SHA lacks byte size: {entry_id}")
+        if expected_bytes is not None and expected_sha is None:
+            raise RecoveryScanError(
+                f"checkpoint catalog archive byte size lacks SHA-256: {entry_id}"
+            )
+
     return payload, {
         "available": True,
         "path": str(path),
@@ -186,10 +197,12 @@ def _checkpoint_matches(
 ) -> list[dict[str, Any]]:
     if catalog is None or source.get("kind") != "zip":
         return []
+
     basename = path.name.casefold()
     observed_sha = str(source.get("archive_sha256") or "").casefold() or None
     observed_bytes = source.get("archive_bytes")
     matches: list[dict[str, Any]] = []
+
     for row in catalog["entries"]:
         patterns = list(row.get("archive_name_patterns") or [])
         matched_patterns = [
@@ -199,14 +212,17 @@ def _checkpoint_matches(
         ]
         if not matched_patterns:
             continue
+
         expected_sha = row.get("archive_sha256")
         expected_bytes = row.get("archive_bytes")
         exact_identity_available = expected_sha is not None
-        exact_identity_match = bool(
+        sha_match = bool(
             exact_identity_available
             and observed_sha == str(expected_sha).casefold()
-            and observed_bytes == expected_bytes
         )
+        size_match = bool(expected_bytes is None or observed_bytes == expected_bytes)
+        exact_identity_match = bool(sha_match and size_match)
+
         matches.append(
             {
                 "catalog_id": row["id"],
@@ -218,7 +234,12 @@ def _checkpoint_matches(
                 "matched_patterns": matched_patterns,
                 "exact_identity_available": exact_identity_available,
                 "exact_identity_match": exact_identity_match,
-                "exact_identity_mismatch": bool(exact_identity_available and not exact_identity_match),
+                "exact_identity_mismatch": bool(
+                    exact_identity_available and not exact_identity_match
+                ),
+                "sha256_match": sha_match,
+                "size_constraint_available": expected_bytes is not None,
+                "size_match": size_match,
                 "expected_archive_sha256": expected_sha,
                 "expected_archive_bytes": expected_bytes,
                 "observed_archive_sha256": observed_sha,
@@ -226,6 +247,7 @@ def _checkpoint_matches(
                 "promotion_allowed": False,
             }
         )
+
     matches.sort(
         key=lambda item: (
             1 if item["exact_identity_match"] else 0,
@@ -395,7 +417,9 @@ def scan_core_candidates(
         "ranking_semantics": (
             "Recovery triage only: exact documented archive identity, candidate structural status, "
             "historical catalog name match, bridge completeness, optional runtime probe, exact target "
-            "evidence count, then version. A name-only match never becomes byte identity or promotion proof."
+            "evidence count, then version. Name-only matching never becomes byte identity. A known "
+            "SHA-256 is sufficient exact ZIP identity; a known historical byte size is an additional "
+            "mandatory match."
         ),
         "candidates": summaries,
         "errors": errors,
