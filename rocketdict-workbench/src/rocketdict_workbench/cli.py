@@ -43,6 +43,9 @@ def parser() -> argparse.ArgumentParser:
     product_run.add_argument("--source-sha256", help="Required when the project contains multiple imported sources")
     product_run.add_argument("--source-kind", choices=("subtitle", "text"), help="Optional assertion; otherwise inferred from the imported source")
     product_run.add_argument("--state", type=Path, help="Durable unified Product run state JSON")
+    product_discover = sub.add_parser("product-run-discover-stage8", help="Compare every structured runtime callable with the frozen live-registry Stage8 contract")
+    product_discover.add_argument("root", type=Path)
+    product_discover.add_argument("--state", type=Path, required=True, help="Unified Product run state produced by product-run-init")
     product_bind = sub.add_parser("product-run-bind-stage8", help="Promote an exact-runtime callable to the verified Stage8 Product binding")
     product_bind.add_argument("root", type=Path)
     product_bind.add_argument("--state", type=Path, required=True, help="Unified Product run state produced by product-run-init")
@@ -137,6 +140,9 @@ def main(argv: list[str] | None = None) -> int:
             fingerprint = str(preflight["identity"]["fingerprint"])
             state_path = args.state or (project.paths.experiments / "product-run" / f"{fingerprint[:16]}.json")
             _json(initialize_product_run(core, project.paths.database, preflight, state_path=state_path)); return 0
+        if args.command == "product-run-discover-stage8":
+            from .upstream_binding import discover_stage8_bindings
+            _json(discover_stage8_bindings(args.state)); return 0
         if args.command == "product-run-bind-stage8":
             from .upstream_binding import verify_stage8_binding
             _json(verify_stage8_binding(args.state, args.operation)); return 0
