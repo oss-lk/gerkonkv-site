@@ -1,18 +1,16 @@
 # CURRENT — RocketDict public continuation state
 
-Last synchronized: **2026-09-04**.
+Last synchronized: **2026-09-05**.
 
-## 0. Latest continuation increment — unified Product run root and real-core API surface probe
+## 0. Latest continuation increment — structured runtime proof and fail-closed Stage8 binding gate
 
-The active Workbench/Product line now has a single durable Product-run root above the previously separate preflight and downstream slices.
+The active Workbench/Product line has advanced from a discovery-only API probe to a proof-oriented binding gate for the first upstream Product stage.
 
-`rocketdict-workbench product-run-init` rebuilds the strict Product preflight, binds the run to that immutable fingerprint and captures evidence about the exact `rocketdict.api` surface present in the selected real runtime.
-
-The new state schema is:
+The unified Product state remains:
 
 `rocketdict-workbench-product-run/1`
 
-Its initial ordered steps are:
+with ordered steps:
 
 1. `preflight`;
 2. `upstream_contract_probe`;
@@ -21,212 +19,248 @@ Its initial ordered steps are:
 5. `cards`;
 6. `export`.
 
-The root identity is fail-closed and contains:
+### API probe v2
 
-- the Product preflight fingerprint;
-- immutable source SHA-256;
-- durable `import_event_id`;
-- durable `document_version_id`;
-- selected source format;
-- live registry hash;
-- real RocketDict version/API identity;
-- a canonical root fingerprint over those values.
+`product-run-init` now produces `rocketdict-core-api-surface-probe/2`. It no longer records only parser paths and string keys. For each callable found in a public callable mapping under `rocketdict.api`, it records structured evidence:
 
-The Product preflight was hardened at the same time: it now refuses a source record that lacks positive `import_event_id`, positive `document_version_id` or selected interpretation format. These IDs are no longer represented only indirectly by payload hashes; the upstream runner can address the exact imported/interpreted document revision without guessing.
+- mapping module and mapping name;
+- exact operation key;
+- callable module and qualname;
+- `inspect.signature` text;
+- structured parameter names, kinds and required flags;
+- SHA-256 of inspectable callable source;
+- explicit binding metadata published by that callable when present:
+  - `stage_number`;
+  - `stage_key`;
+  - `implementation_key`;
+  - `adapter_descriptor_hash` / `descriptor_hash`;
+  - `required_inputs`.
 
-### Real-core API surface probe
+The probe fingerprint covers these observations. Persisted probe output is also protected by the Product-run state's result hash.
 
-`upstream_contract_probe` executes inside the exact real RocketDict runtime selected by Workbench. It observes only the `rocketdict.api` package and records evidence rather than importing guessed Stage8–19 internal services.
+Parser paths and mapping-key strings remain discovery evidence only. They are never treated as proof that an operation may execute Product work.
 
-The probe records:
+### Stage8 binding verifier
 
-- RocketDict version and API version;
-- direct modules exposed under `rocketdict.api`;
-- source SHA-256 for those modules when source introspection is available;
-- discoverable argparse parser command paths;
-- string keys from public callable mappings;
-- a canonical fingerprint over the observed surface.
+New module:
 
-Completed probe evidence is persisted atomically, reused on resume, and revalidated. Mutation of persisted probe output is detected by a separate canonical result hash. A changed Product preflight root or changed real core/API identity also fails closed.
+`rocketdict-workbench/src/rocketdict_workbench/upstream_binding.py`
 
-**Critical boundary:** parser paths and callable mapping keys are only observed operation candidates. Their presence is **not** treated as proof that they are valid Product Stage8–19 execution calls. Therefore `upstream_execution` deliberately remains `pending` with:
+New durable binding schema:
 
-`no_verified_stage8_19_operation_binding`
+`rocketdict-workbench-upstream-binding/1`
 
-until a concrete registry/API binding has been demonstrated against the exact runtime.
+New CLI command:
 
-CLI addition:
+```text
+rocketdict-workbench product-run-bind-stage8 <project> --state <product-run.json> --operation <exact-operation-key>
+```
 
-`rocketdict-workbench product-run-init <project> [--source-sha256 ...] [--source-kind subtitle|text] [--state ...]`
+`verify_stage8_binding(...)` fails closed unless all exact identities agree:
+
+- completed Product preflight is present and unmodified;
+- Product-run root still matches that preflight fingerprint;
+- completed probe-v2 evidence is present and unmodified;
+- the probe's own fingerprint recomputes exactly;
+- probed RocketDict/API versions equal the frozen preflight versions;
+- the requested operation occurs exactly once as structured callable evidence;
+- parser/candidate strings alone are insufficient;
+- callable module, qualname, structured signature and inspectable source SHA-256 exist;
+- frozen Product Stage8 implementation and adapter descriptor identities are internally consistent;
+- callable metadata explicitly identifies Stage **8**;
+- callable `stage_key`, implementation and descriptor hash exactly equal the frozen Product profile/preflight;
+- required inputs are exactly `document_version_id`;
+- the exact frozen `document_version_id` is written into binding evidence.
+
+The binding additionally freezes:
+
+- Product preflight fingerprint;
+- Product-run root fingerprint;
+- registry hash;
+- RocketDict version/API version;
+- API-probe fingerprint;
+- operation/mapping/callable identities;
+- callable signature and source SHA-256;
+- Product implementation, adapter descriptor and parameter hash;
+- proof mode `exact-runtime-callable-metadata-v1`.
+
+Repeated verification of identical immutable evidence is idempotent. Mutation of a persisted binding is detected; a different Stage8 binding cannot silently replace an already verified one in the same immutable Product run.
+
+When a real callable passes this verifier, state advances to:
+
+`ready_for_stage8_execution`
+
+while `upstream_execution` remains explicitly `binding_verified` / `verified_stage8_binding_not_yet_executed`. Binding verification therefore does **not** masquerade as actual Stage8 execution.
+
+### Critical evidence boundary
+
+The verifier and state transition are implemented and tested, but an exact Stage8 callable from the newer Product core has **not yet been observed** in the incomplete public handoff/runtime payload.
+
+The dependency-light CI uses controlled callable evidence to test the verifier. That proves the Workbench contract, not the existence of a particular callable in the missing newer core.
+
+Historical LAB evidence confirms that Stage8 execution was bound to `document_version_id` in that older lineage. It does **not** prove that its old Stage8 implementation or API surface is identical to the current Product line. In particular, do not substitute the historical `nltk-whitespace-en` implementation for the current registry-derived Product Stage8 choice.
 
 Relevant commits in this increment:
 
-- `71899cc66356892c7f0923e22a7d53052c91476a` — `Expose durable source revision identities in Product preflight`;
-- `58cf7b571639aba1999059f8072b790cc2795580` — `Add unified Product run state and API surface probe`;
-- `7cda9528f0aee0bc18b9de23c530a6eaba323e28` — `Test unified Product run state and API surface probe`;
-- `8639f1664a13322f4a3689a89814172827c6d4b8` — `Test durable source revision identities in Product preflight`;
-- `1f844d1a021dea1229047cc60bcea161b6fca444` — `Expose unified Product run initialization in Workbench CLI`;
-- `4bd4e438c4a5767d686bdc8332755edf36d6aea1` — `Test Product run initialization CLI contract`;
-- `26c0bcbc7dac3d0c6a1a9c66e3ab5b76f6cc784a` — `Document unified Product run root and API probe`.
+- `34981e80d1f87cb78622cdca557afc25554f69a1` — `Strengthen Product API probe with callable contract evidence`;
+- `6870a20161d7bb52b505e6e347b6dbd119300c70` — `Add fail-closed Stage8 upstream binding verifier`;
+- `0a0081ae6844bb94d29d4f19034868c413d4d378` — `Make verified Stage8 bindings resumably idempotent`;
+- `522e64b724a0941042075a4da667b8304415cbe2` — `Test structured callable evidence in Product API probe`;
+- `e84dc9c3d8a536deb7d361d078dde57d07eb22d5` — `Test fail-closed Stage8 upstream binding verification`;
+- `98d0bbc3d15456422acf3932323997312f16375d` — `Expose verified Stage8 binding promotion in Workbench CLI`;
+- `95bd198f76a0d42eb84579f776d529142eba95dc` — `Test Stage8 binding CLI exposure`;
+- `0e57b4a5aa3ada0c047d008eb933bd3a14204c51` — `Document exact-runtime Stage8 binding proof contract`;
+- `f90543754f0aae9e61ec5ff41a20775de2ac568c` — `Document structured Stage8 binding verification`.
 
-Verified GitHub Actions evidence for the code/test checkpoint:
+Verified GitHub Actions evidence for the complete code/CLI checkpoint:
 
-- commit: `4bd4e438c4a5767d686bdc8332755edf36d6aea1`;
-- workflow: `RocketDict Workbench`, run `33876212769`;
+- commit: `95bd198f76a0d42eb84579f776d529142eba95dc`;
+- workflow: `RocketDict Workbench`, run `33952044681`;
 - Python: 3.13.15;
 - package compile: success;
-- tests: **47 passed, 1 skipped**.
+- tests: **54 passed, 1 skipped**.
 
-### Exact continuation after this increment
+Detailed proof rules are documented in:
 
-Do **not** spend the next stage designing another orchestration abstraction. The next active Product task is concrete:
+`rocketdict-workbench/docs/PRODUCT_STAGE8_BINDING.md`
 
-1. run/use the persisted `upstream_contract_probe` evidence from an exact real RocketDict runtime;
-2. identify one specific public registry/API operation path that can execute the first upstream Product slice for the frozen `document_version_id` and Product profile;
-3. prove its input/output contract and bind it by exact operation name/API version/implementation descriptor identity rather than by guessed imports;
-4. add that proven operation as the first resumable `upstream_execution` step with durable input/result hashes and revision IDs;
-5. only then expand through source preparation → real MT → hard integrity gates → approved translation revision → alignment → lexical extraction/sense induction;
-6. join the resulting real Stage20 inputs to the existing Stage20→Stage23 downstream runner;
-7. add Stage24 cards and Stage25 export last.
+### Exact next continuation
 
-Do not promote a parser/mapping string merely because the probe observed it. Evidence of actual invocation semantics is required before Product execution may advance.
+Do not invent an operation name and do not write Stage8 execution around a fake fixture.
 
-## 1. Immutable Product source/runtime preflight
+The next active Product task is:
 
-`rocketdict-workbench product-preflight` creates a durable `rocketdict-workbench-product-preflight/1` record and refuses to declare the Product run ready unless the exact source and current real runtime are compatible with the Product Profile.
+1. obtain/recover the exact newer RocketDict core runtime compatible with the Product preflight;
+2. run `product-run-init` against that exact runtime to create real probe-v2 evidence;
+3. inspect its structured `callable_operations`;
+4. if a unique callable publishes the exact Stage8/Product metadata, promote it with `product-run-bind-stage8`;
+5. if no callable passes, recover/add the missing **public core execution contract** first rather than infer it from names/history;
+6. only after a real binding is persisted, implement resumable Stage8 invocation;
+7. bind Stage8 invocation to exact `document_version_id`, Product parameters and binding fingerprint;
+8. validate and persist the real Stage8 output revision/run IDs plus content/result hashes;
+9. then continue the same proof pattern through real MT → hard integrity gates → approved translation → alignment → lexical extraction/sense induction;
+10. reuse the existing Stage20→Stage23 downstream runner and add Stage24/25 only after upstream continuity is proven.
 
-The preflight freezes and validates:
+## 1. Unified Product root and immutable preflight
 
-- selected imported source SHA-256, byte size, suffix and project-relative immutable-copy path;
-- a fresh SHA-256 of the copied source, rejecting mutation after import;
-- durable `import_event_id`, `document_version_id` and selected format plus canonical import/interpretation payload hashes;
-- source kind (`subtitle`/`text`), with optional explicit assertion;
-- real RocketDict core version and API identity;
-- live Lab Registry hash with runtime probing enabled;
-- Product Profile rebuilt from that live registry;
-- locally available selected implementations for required upstream core stages **8, 10, 12, 14, 16, 17 and 19**;
-- exact implementation keys, adapter descriptor hashes and parameter hashes;
-- exact Stage15 hard-gate set: numeric/symbol preservation, punctuation preservation and length-ratio proxy;
-- Product policy validation including fake/identity MT prohibition and accepted OPUS float32 rule;
-- one immutable preflight fingerprint.
+`product-run-init` rebuilds `rocketdict-workbench-product-preflight/1` and anchors the unified run to it.
 
-Projects with multiple imported sources must supply the exact `--source-sha256`; Product Mode does not guess. Source-path escape, missing/mutated source, missing durable document identity, missing registry hash, changed gate identity, unavailable required implementation or incompatible Product policy all fail closed before expensive processing.
+The root freezes:
 
-Previous preflight checkpoint CI:
+- source SHA-256;
+- `import_event_id`;
+- `document_version_id`;
+- selected source format;
+- source kind;
+- real RocketDict/API identity;
+- live registry hash;
+- selected required Product stages **8, 10, 12, 14, 16, 17, 19**;
+- selected implementation keys, adapter descriptor hashes and parameter hashes;
+- exact Stage15 hard-gate set;
+- Product profile hash;
+- preflight/root fingerprints.
 
-- commit `50afdd84ec99f55ca0fb940de517034419014c49`;
-- workflow run `33872766481`;
-- **40 passed, 1 skipped**.
+The hard Stage15 gates remain:
 
-## 2. Existing resumable Product downstream runner
+- `rocketdict-numeric-symbol-preservation`;
+- `rocketdict-punctuation-preservation`;
+- `rocketdict-length-ratio-proxy`.
 
-A strict/resumable downstream Product runner exists in `rocketdict-workbench/src/rocketdict_workbench/product_runner.py` and is exposed through `rocketdict-workbench lexical-opus --apply-stage20 --continue-product`.
+Product Mode forbids fake/identity MT and requires the accepted real OPUS float32 path when Stage12 is selected.
 
-Current executable downstream order:
+## 2. Existing executable downstream Product slice
+
+The downstream Product runner already executes and resumes:
 
 1. Stage20 `lexical-primary-arbitration-v1`;
-2. pinned CEFR-J Vocabulary Profile 1.5 assessment;
+2. pinned CEFR-J Vocabulary Profile 1.5;
 3. exact CMUdict pronunciation with generated fallback forbidden;
 4. Stage23 sense-scoped document examples.
 
-The downstream runner is fail-closed and evidence-preserving:
+It preserves exact provider/Stage20 revision identity, validates coverage/order and requires Stage23 to reference the exact approved Stage20 revision produced/validated by arbitration.
 
-- every step is persisted atomically in `rocketdict-workbench-product-downstream/1` state;
-- successful steps are reused on resume;
-- immutable input identity includes lexical-provider `entries_sha256`, exact Stage20 sense/entry/generation/selection revision identities, pinned CEFR-J SHA-256 and output-affecting settings;
-- changed immutable inputs/settings reject state reuse;
-- Stage20 arbitration requires the desired dictionary headword to already exist as an accepted model-evidenced candidate;
-- CEFR coverage/order and pinned source identity are checked;
-- pronunciation coverage/order is checked and generated fallback is forbidden;
-- Stage23 coverage/order and `stage23-sense-scope-v2` are checked;
-- every Stage23 row must reference exactly the approved Stage20 selection revision validated by lexical-primary arbitration;
-- failed steps are recorded and remain resumable.
+Do not duplicate this logic in the upstream runner.
 
-Previous verified downstream checkpoint:
+## 3. Active Product profile facts
 
-- commit `cc43068b052761c0e1be66cfc9c5202732a241f5`;
-- workflow run `33872151299`;
-- **34 passed, 1 skipped**.
+Current Workbench Product profile schema:
 
-## 3. Do not regress the repository
+`rocketdict-workbench-product-profile/5`
 
-The active `main` history is newer than several archived LAB checkpoints. At the 2026-09-02 synchronization, HEAD before the handoff update was:
+Important preferred implementations include:
 
-`e9124f57698ebb1e36e1708f27be23374215560c` — **Add resumable Stage20 lexical primary arbitration**.
+- Stage10: `structural-entity-term-discourse-pronoun-v1`;
+- Stage14: `glossary_refinement-current`;
+- Stage16: `approve-if-clean-finalization`;
+- Stage17: `deterministic-structural-global`;
+- Stage19: `deterministic-context-target-graph`;
+- Stage21: `cefrj-vocabulary-1.5`;
+- Stage22: `cmudict-production`;
+- Stage23: `examples-current`;
+- Stage24: `cards-current`;
+- Stage25: `export-json`.
 
-Recent repository work after the original Stage 8 handoff includes Product/Workbench alignment-aware lexical extraction, dictionary-shaped lexical OPUS, exact pronunciation policy, pinned CEFR-J policy, Stage20 lexical-primary arbitration, the resumable downstream Product runner, immutable Product preflight, and the unified Product-run/API-probe root described above.
+Workbench-specific contracts remain:
 
-Therefore an older LAB archive/version number must never overwrite this active line merely because it is a complete ZIP.
+- Stage18: `workbench-aligned-content-pos-v4`;
+- Stage20 provider: `contextual-lexical-opus-v3`;
+- generated pronunciation fallback forbidden;
+- smoke/frequency-only CEFR forbidden for Product output;
+- fake/identity MT forbidden;
+- network dependency during processing forbidden.
 
-## 4. Active real-OPUS / experimental line
+## 4. Do not regress the repository
 
-The public Stage 8 handoff remains the active real-model research context:
+The active `main` line is newer than archived LAB checkpoints. Older complete ZIPs or maintenance branches must not overwrite current Product/Workbench work merely because they are self-contained.
 
-- development version recorded by the Stage 8 snapshot: **0.30.40**;
+Historical repositories/checkpoints may be used as evidence to recover contracts, but compatibility with the newer Product source must be proved explicitly.
+
+## 5. Active real-OPUS / Stage8 research evidence
+
+The public Stage8 research handoff remains important context:
+
+- Stage8 development snapshot: **0.30.40**;
 - official model: `opus-2020-02-11.zip`;
 - official ZIP SHA-256 observed in successful GitHub execution: `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`;
-- backend: CTranslate2 Marian, quality acceptance compute type `float32`;
-- successful real-model GitHub gate: 120 representative sentences / 4,488 words;
-- Stage 8 DOE frontier in `STATE.json`: F96, failing only the zero-numeric-loss gate with 3 numeric mismatches at that snapshot;
-- current commits extend Product/Workbench dictionary work beyond that snapshot.
+- backend: CTranslate2 Marian;
+- quality acceptance compute type: `float32`;
+- successful real-model gate: 120 representative sentences / 4,488 words;
+- Stage8 DOE F96 snapshot: roughly 5k challenge words, 3 numeric mismatches, zero critical-symbol mismatches, zero length-ratio mismatches, zero empty outputs and no backend-error units; at that snapshot the remaining gate failure was zero-numeric-loss.
 
-Read `START_HERE.md`, `STATE.json` and `RESEARCH_STATUS.md` for this line. Do not restart its DOE from variant A.
+Do not restart DOE from variant A and do not reconstruct the missing F96 selector merely from aggregate similarity.
 
-A surviving Stage8 diagnostic proves that the ordinary source-proven Stage12 pilot selector and historical F96 challenge selector are distinct. Aggregate similarity to old ~5k-word/occurrence counts is not proof of F96 identity. Do not reconstruct the missing F96 selector by coincidence.
+## 6. Payload health
 
-## 5. Verified maintenance-hardening lineage
+The Stage8 public payload is incomplete. Exact newer core source/runtime and exact Research Vault material cannot currently be assumed to exist in `rocketdict/payload/`.
 
-A separate fully verified maintenance checkpoint is preserved under `checkpoints/stage6y/`:
+`HANDOFF_HEALTH.md` remains authoritative for payload survivability.
 
-**RocketDict 0.30.34 / LAB Stage 6Y**.
+Never invent missing Stage8 source files, API calls or Research Vault rows.
 
-It proves on its own lineage:
+## 7. Separate verified Stage6Y maintenance lineage
+
+A separate verified maintenance checkpoint is preserved under `checkpoints/stage6y/`:
+
+**RocketDict 0.30.34 / LAB Stage6Y**.
+
+It proves, on its own lineage:
 
 - `translation-offline-sqlite-compaction-v1`;
 - `translation-offline-sqlite-compaction-recovery-v1`;
 - `translation-offline-sqlite-compaction-io-fault-safety-v1`.
 
-Stage 6Y covers journal ENOSPC/short-write, VACUUM disk-full, hardlink→copy backup ENOSPC, ambiguous atomic-replace I/O before/after namespace transition, recovery-cleanup I/O faults and ambiguous partial-journal fail-closed behavior.
-
-Heavy challenge facts:
+Heavy challenge facts retained for continuity:
 
 - baseline working SQLite: 881,905,664 bytes;
 - baseline working SHA-256: `a0128b802930d350679c7d135bea9197fb9e202d863260c31a68d49681fbeafb`;
-- after forced backup-copy ENOSPC, recovery restored the working DB byte-for-byte;
-- canonical immutable heavy SHA-256 remained `3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274`;
+- canonical immutable heavy SHA-256: `3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274`;
+- recovery restored the working DB byte-for-byte after forced backup-copy ENOSPC;
 - `quick_check=ok`, FK=0, Alembic head `8b4e7c2a91d0`;
-- lexical entries = 35,743;
-- translation runs/candidates/batch metrics/inference results/leases = 0/0/0/0/0;
+- lexical entries: 35,743;
+- translation runs/candidates/batch metrics/inference results/leases: 0/0/0/0/0;
 - 301 packaged runtime files matched source byte-for-byte.
 
-**Important:** the public repository does not contain enough exact source payload to prove these Stage 6Y maintenance changes are merged into newer 0.30.40/Stage8/Product source. Treat Stage 6Y as verified parallel evidence until an exact source merge/comparison is performed.
-
-## 6. Payload health
-
-The Stage 8 public binary/text payload is still incomplete. `HANDOFF_HEALTH.md` is authoritative for what survives in `rocketdict/payload/` and what cannot be materialized bit-for-bit.
-
-Do not invent missing Stage 8 source files or Research Vault rows. Mechanism experiments may continue only when clearly labelled non-promotional and evidence-backed.
-
-## 7. Exact continuation choices
-
-### Continue the active Stage 8/Product line
-
-Use current GitHub HEAD, Workbench/Product commits, `START_HERE.md`, `STATE.json` and `RESEARCH_STATUS.md`. Preserve official OPUS identity and existing DOE/evidence rules. Do not reset to an older LAB ZIP.
-
-Immediate continuation after the unified Product-run/API-probe checkpoint:
-
-- obtain actual `product-run-init` probe evidence from the exact real runtime available for Product work;
-- prove one concrete Stage8–19 public operation binding from that evidence/runtime;
-- encode that binding with exact API/core/registry/adapter identities and durable input/output hashes;
-- execute only proven real-core calls and preserve exact revision/content identities across boundaries;
-- enforce zero hard-quality failures before translation approval/alignment;
-- reuse `workbench-aligned-content-pos-v4`, lexical OPUS, Stage20 arbitration and current downstream runner rather than duplicating them;
-- add Stage24 cards and Stage25 export only after upstream/downstream continuity is proven;
-- keep one-button Product UI disabled until the full path is executable and validated without synthetic fallbacks.
-
-### Continue the Stage 6 maintenance-hardening line
-
-Start from **0.30.34 / Stage 6Y**, read `checkpoints/stage6y/CONTINUE_STAGE6Z.md`, and execute Stage 6Z. To merge this line into active Stage8/Product source, first recover/materialize exact newer source and perform an explicit source-level merge plus full affected regressions; do not infer compatibility from version numbers.
+Do not assume these maintenance changes are source-merged into Stage8/Product. An exact source-level comparison/merge plus regression is required.
 
 ## 8. Privacy boundary
 
