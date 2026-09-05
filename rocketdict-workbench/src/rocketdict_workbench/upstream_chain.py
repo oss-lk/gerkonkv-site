@@ -67,19 +67,25 @@ def _available_input_evidence(state: dict[str, Any], preflight: dict[str, Any]) 
 
     upstream = ((state.get("steps") or {}).get("upstream_execution") or {})
     executions = upstream.get("executions") or {}
-    for stage_key, record in sorted(executions.items(), key=lambda item: int(item[0]) if str(item[0]).isdigit() else 10**9):
+    for stage_key, record in sorted(
+        executions.items(), key=lambda item: int(item[0]) if str(item[0]).isdigit() else 10**9
+    ):
         if not isinstance(record, dict) or record.get("status") != "completed":
             continue
         identities = record.get("durable_identities") or {}
         if not isinstance(identities, dict):
             raise RuntimeError(f"Completed upstream stage {stage_key} durable_identities is not an object")
         for name, value in identities.items():
-            scalar = _scalar_identity(value, name=str(name), source=f"stage{stage_key}.durable_identities")
-            candidates.setdefault(str(name), []).append((f"stage{stage_key}.durable_identities", scalar))
+            scalar = _scalar_identity(
+                value, name=str(name), source=f"stage{stage_key}.durable_identities"
+            )
+            candidates.setdefault(str(name), []).append(
+                (f"stage{stage_key}.durable_identities", scalar)
+            )
 
     resolved: dict[str, dict[str, Any]] = {}
     for name, rows in candidates.items():
-        unique = []
+        unique: list[tuple[str, Any]] = []
         for source_name, value in rows:
             if not any(value == existing for _existing_source, existing in unique):
                 unique.append((source_name, value))
@@ -88,7 +94,9 @@ def _available_input_evidence(state: dict[str, Any], preflight: dict[str, Any]) 
         value = unique[0][1]
         resolved[name] = {
             "value": value,
-            "evidence_sources": [source_name for source_name, row_value in rows if row_value == value],
+            "evidence_sources": [
+                source_name for source_name, row_value in rows if row_value == value
+            ],
         }
     return resolved
 
@@ -97,7 +105,9 @@ def resolve_stage_inputs(
     state: dict[str, Any], preflight: dict[str, Any], stage_number: int
 ) -> dict[str, Any]:
     selected, _profile_stage = _selected_stage(preflight, stage_number)
-    required = _required_inputs(selected.get("required_inputs"), context=f"Stage {stage_number} frozen identity")
+    required = _required_inputs(
+        selected.get("required_inputs"), context=f"Stage {stage_number} frozen identity"
+    )
     available = _available_input_evidence(state, preflight)
     missing = [name for name in required if name not in available]
     if missing:
@@ -119,7 +129,9 @@ def _expected(preflight: dict[str, Any], stage_number: int) -> dict[str, Any]:
         "implementation": str(selected["implementation"]),
         "adapter_descriptor_hash": str(selected["adapter_descriptor_hash"]).casefold(),
         "parameters_sha256": str(selected["parameters_sha256"]).casefold(),
-        "required_inputs": _required_inputs(selected.get("required_inputs"), context=f"Stage {stage_number} frozen identity"),
+        "required_inputs": _required_inputs(
+            selected.get("required_inputs"), context=f"Stage {stage_number} frozen identity"
+        ),
         "execution_contract_sha256": str(selected["execution_contract_sha256"]).casefold(),
     }
 
@@ -150,7 +162,9 @@ def _evaluate(row: dict[str, Any], expected: dict[str, Any]) -> list[str]:
     if str(descriptor or "").casefold() != expected["adapter_descriptor_hash"]:
         reasons.append("adapter_descriptor_hash_mismatch")
     required_inputs = metadata.get("required_inputs")
-    if not isinstance(required_inputs, list) or any(not isinstance(item, str) or not item for item in required_inputs):
+    if not isinstance(required_inputs, list) or any(
+        not isinstance(item, str) or not item for item in required_inputs
+    ):
         reasons.append("missing_or_invalid_required_inputs")
     elif list(required_inputs) != expected["required_inputs"]:
         reasons.append("required_inputs_mismatch")
@@ -213,8 +227,8 @@ def discover_upstream_stage(state_path: Path | str, stage_number: int) -> dict[s
         "candidates": candidates,
         "product_run_root_fingerprint": str(state["root_identity"]["fingerprint"]).casefold(),
         "api_probe_fingerprint": str(probe["fingerprint"]).casefold(),
-        "semantic_input_aliasing_allowed": false,
-        "post_stage14_execution_allowed_by_this_module": false,
+        "semantic_input_aliasing_allowed": False,
+        "post_stage14_execution_allowed_by_this_module": False,
     }
 
 
@@ -222,7 +236,9 @@ def _verified_at(previous: Any, stage_number: int) -> str:
     if previous is None:
         return _now()
     if not isinstance(previous, dict) or previous.get("schema") != BINDING_SCHEMA:
-        raise RuntimeError(f"Persisted Stage {stage_number} binding is missing/current-schema-incompatible")
+        raise RuntimeError(
+            f"Persisted Stage {stage_number} binding is missing/current-schema-incompatible"
+        )
     fingerprint = str(previous.get("fingerprint") or "").casefold()
     expected = _canonical_sha256({key: value for key, value in previous.items() if key != "fingerprint"})
     if not _valid_sha256(fingerprint) or fingerprint != expected:
@@ -245,7 +261,9 @@ def verify_upstream_stage_binding(
         )
     expected = _expected(preflight, stage_number)
     input_resolution = resolve_stage_inputs(state, preflight, stage_number)
-    rows = [row for row in _operation_rows(probe) if str(row.get("operation") or "") == operation_key]
+    rows = [
+        row for row in _operation_rows(probe) if str(row.get("operation") or "") == operation_key
+    ]
     if len(rows) != 1:
         raise RuntimeError(
             f"Operation {operation_key!r} must occur exactly once as structured runtime evidence, observed {len(rows)}"
@@ -298,9 +316,10 @@ def verify_upstream_stage_binding(
     }
     binding["fingerprint"] = _canonical_sha256(binding)
     if previous is not None and str(previous.get("fingerprint") or "") != binding["fingerprint"]:
-        raise RuntimeError(f"Stage {stage_number} already has a different verified binding in this immutable Product run")
+        raise RuntimeError(
+            f"Stage {stage_number} already has a different verified binding in this immutable Product run"
+        )
     bindings[str(stage_number)] = binding
-    # Binding is evidence-only. Do not change a completed/failed execution status.
     executions = upstream.get("executions") or {}
     if str(stage_number) not in executions:
         upstream["last_binding_verified_stage"] = stage_number
