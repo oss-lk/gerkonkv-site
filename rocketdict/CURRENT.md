@@ -2,15 +2,161 @@
 
 Last synchronized: **2026-09-05**.
 
-## 0. Latest continuation increment — structured runtime proof and fail-closed Stage8 binding gate
+## 0. Latest continuation increment — live registry execution contracts + Stage8 discovery
 
-The active Workbench/Product line has advanced from a discovery-only API probe to a proof-oriented binding gate for the first upstream Product stage.
+The active Product/Workbench line has moved beyond a hard-coded Stage8 input assumption. The current execution proof chain is now:
 
-The unified Product state remains:
+**live Lab Registry → Product Profile → immutable Product preflight → exact-runtime API probe → Stage8 discovery → verified binding → future execution**.
+
+No historical stage contract, parser command, operation-looking string, or controlled unit-test callable is allowed to skip a link in that chain.
+
+### New schema/contracts
+
+- Product Profile: `rocketdict-workbench-product-profile/6`;
+- Product preflight: `rocketdict-workbench-product-preflight/2`;
+- unified Product run root remains `rocketdict-workbench-product-run/1`;
+- runtime API probe remains `rocketdict-core-api-surface-probe/2`;
+- Stage8 discovery: `rocketdict-workbench-stage8-binding-discovery/1`;
+- verified upstream binding: `rocketdict-workbench-upstream-binding/2`.
+
+### Live execution-input contract is now authoritative
+
+`product_profile.py` now copies explicit `required_inputs` from the **current live registry** for every selected Product stage. Implementation-level metadata wins when explicitly published; an explicit stage-level field is accepted as a fallback. Missing metadata remains unknown (`None`) rather than being inferred from a stage number or old runner behavior.
+
+`product_preflight.py` now requires every selected upstream core stage **8, 10, 12, 14, 16, 17 and 19** to expose:
+
+- non-empty `stage_key`;
+- selected implementation;
+- adapter descriptor identity;
+- Product parameters;
+- explicit ordered `required_inputs` list.
+
+For each stage, immutable preflight identity stores:
+
+- `stage_key`;
+- implementation;
+- adapter descriptor hash;
+- parameters SHA-256;
+- exact `required_inputs`;
+- `execution_contract_sha256` over stage number/key, implementation, descriptor, complete Product parameters and required inputs.
+
+Changing `required_inputs` changes both the stage execution-contract hash and the overall Product preflight fingerprint. Missing, malformed or duplicate required-input metadata is a hard stop before execution.
+
+Historical heavy-run evidence did show `required_inputs` as a real RocketDict runner concept, including `document_version_id` for its historical Stage8. That evidence motivated recovering the contract from the live registry, but **its historical values are not copied into current Product identity and are not proof of the newer core**.
+
+### Read-only exact Stage8 binding discovery
+
+New CLI:
+
+```text
+rocketdict-workbench product-run-discover-stage8 <project> --state <product-run.json>
+```
+
+It reads the immutable preflight + probe-v2 evidence and compares every structured callable against the frozen current Stage8 contract.
+
+The discovery record reports:
+
+- frozen Stage8 stage key;
+- Product implementation;
+- descriptor hash;
+- parameter hash;
+- `required_inputs`;
+- `execution_contract_sha256`;
+- every structured callable candidate;
+- exact match count;
+- per-candidate mismatch reasons such as stage, implementation, descriptor or required-input drift.
+
+Statuses are:
+
+- `unique_exact_match`;
+- `no_exact_match`;
+- `ambiguous_exact_matches`.
+
+Discovery is read-only. Parser paths and bare mapping strings are explicitly not execution proof.
+
+### Stage8 binding v2
+
+`product-run-bind-stage8` now promotes a callable only when three independent evidence layers agree exactly:
+
+1. live registry → Product Profile/preflight execution contract;
+2. immutable preflight hashes including `execution_contract_sha256`;
+3. exact-runtime callable metadata/source SHA from API probe v2.
+
+The first Workbench Stage8 resolver currently knows how to bind only the already frozen Product source `document_version_id`. Therefore the **current live registry itself** must say `required_inputs=["document_version_id"]` for the selected Stage8 adapter before binding can proceed. If the live registry says something different, Workbench stops with an explicit unsupported-input-contract error. This is a Workbench resolver limitation, not a claim copied from history.
+
+Binding proof mode is now:
+
+`live-registry-plus-exact-runtime-callable-v1`
+
+and the persisted record uses `rocketdict-workbench-upstream-binding/2`.
+
+Obsolete `/1` binding evidence is intentionally rejected rather than silently reused.
+
+### Verified CI evidence
+
+Code/test checkpoint:
+
+- commit: `38cbd47663fa40802e25555dc0adeb0f29712b0c` — `Test live registry execution input propagation`;
+- workflow: `RocketDict Workbench`;
+- run: `33957485543`;
+- Python: 3.13.15;
+- package compile: success;
+- tests: **63 passed, 1 skipped**.
+
+The dependency-light skipped test is the real-core smoke path gated by `ROCKETDICT_TEST_CORE`; this CI run does **not** contain the missing exact newer RocketDict runtime.
+
+Relevant commits in this increment:
+
+- `6e918fafadac22803b0f509e6d8cc50cd93beef9` — `Freeze registry execution inputs in Product profile`;
+- `c9ecac4b94eb8f4bb283415cf941d9871ec22f01` — `Freeze live stage execution contracts in Product preflight`;
+- `747b0a465798123e8751b86e58cc93c2b79154cc` — `Bind Stage8 verification to frozen live registry contract`;
+- `3a732e1ba94f461c643c60de5f07f50283d09915` — `Expose Stage8 exact binding discovery in Workbench CLI`;
+- `19100373bb1c60b2e49c3c6f3a1d632bf13d5989` — `Test immutable live execution contracts in Product preflight`;
+- `be83900a3a55aa454c94698072979b2ace8187f4` — `Test live-registry Stage8 binding discovery and proof`;
+- `38cbd47663fa40802e25555dc0adeb0f29712b0c` — `Test live registry execution input propagation`;
+- `a1c09c6a214a460b667fe337570644ef40a69589` — `Document live-registry Stage8 execution contract discovery`;
+- `cc34e437bbb4bbf799af0b2ad2afdb00c7917f41` — `Document live-registry Stage8 binding proof chain`.
+
+### Critical current boundary
+
+**A real newer-core Stage8 callable is still not proven or executed.**
+
+The public Stage8 payload remains incomplete, so the current CI can validate the Workbench proof machinery but cannot legitimately claim a specific newer RocketDict Stage8 callable. Controlled test operations such as `product.stage8.run` are fixtures only.
+
+Do not mark Stage8 executed until an exact newer/recovered runtime has produced all of the following in one Product run:
+
+1. live registry with explicit Stage8 `required_inputs`;
+2. successful Product preflight `/2`;
+3. API probe v2 from the same core/API identity;
+4. Stage8 discovery with one exact structured callable;
+5. persisted binding `/2` for that callable;
+6. only then a real Stage8 invocation with durable output revision/run identities and hashes.
+
+### Exact continuation from here
+
+Do **not** build another abstract orchestration layer. The next task is concrete:
+
+1. recover/obtain the exact newer RocketDict core runtime compatible with the active Product line;
+2. run live Product Profile/preflight `/2`; if current registry does not expose `required_inputs`, add/recover that public core registry contract first;
+3. run `product-run-init` to produce probe v2 from the same runtime;
+4. run `product-run-discover-stage8`;
+5. if and only if it returns one unique exact match, persist it with `product-run-bind-stage8`;
+6. inspect/prove the exact API invocation envelope and result identity for that callable;
+7. implement one resumable real Stage8 execution step bound to `document_version_id`, Product parameters, binding fingerprint and execution-contract hash;
+8. persist/validate Stage8 result IDs and output/content hashes before advancing;
+9. repeat the same proof pattern through real MT → hard integrity gates → approved translation revision → alignment → lexical/sense induction;
+10. join the resulting real Stage20 inputs to the existing Stage20→Stage23 downstream runner;
+11. add Stage24 cards and Stage25 export last.
+
+If the exact newer core cannot be recovered, record that limitation explicitly. Do not use Stage6Y source, historical heavy-run contracts or guessed operation names as if they were newer Product-runtime proof.
+
+## 1. Unified Product run root and API evidence
+
+The unified state schema is:
 
 `rocketdict-workbench-product-run/1`
 
-with ordered steps:
+Ordered steps remain:
 
 1. `preflight`;
 2. `upstream_contract_probe`;
@@ -19,249 +165,145 @@ with ordered steps:
 5. `cards`;
 6. `export`.
 
-### API probe v2
+The root identity is fail-closed and contains the Product preflight fingerprint, immutable source SHA-256, durable `import_event_id`, durable `document_version_id`, selected source format, live registry hash and real RocketDict/API identity.
 
-`product-run-init` now produces `rocketdict-core-api-surface-probe/2`. It no longer records only parser paths and string keys. For each callable found in a public callable mapping under `rocketdict.api`, it records structured evidence:
+API probe v2 observes only the exact runtime's public `rocketdict.api` surface and records:
 
-- mapping module and mapping name;
-- exact operation key;
-- callable module and qualname;
-- `inspect.signature` text;
-- structured parameter names, kinds and required flags;
-- SHA-256 of inspectable callable source;
-- explicit binding metadata published by that callable when present:
-  - `stage_number`;
-  - `stage_key`;
-  - `implementation_key`;
-  - `adapter_descriptor_hash` / `descriptor_hash`;
-  - `required_inputs`.
+- RocketDict/API version;
+- API modules and inspectable module SHA-256;
+- argparse command paths;
+- callable mapping keys;
+- structured callable rows with mapping/module/qualname/signature/parameters/source SHA-256;
+- only explicit binding metadata published by that callable/runtime.
 
-The probe fingerprint covers these observations. Persisted probe output is also protected by the Product-run state's result hash.
+Completed probe evidence is persisted atomically and mutation-checked. A changed preflight root or core/API identity fails closed.
 
-Parser paths and mapping-key strings remain discovery evidence only. They are never treated as proof that an operation may execute Product work.
+## 2. Existing resumable Product downstream runner
 
-### Stage8 binding verifier
-
-New module:
-
-`rocketdict-workbench/src/rocketdict_workbench/upstream_binding.py`
-
-New durable binding schema:
-
-`rocketdict-workbench-upstream-binding/1`
-
-New CLI command:
+A strict/resumable downstream Product runner exists in `rocketdict-workbench/src/rocketdict_workbench/product_runner.py` and is exposed through:
 
 ```text
-rocketdict-workbench product-run-bind-stage8 <project> --state <product-run.json> --operation <exact-operation-key>
+rocketdict-workbench lexical-opus ... --apply-stage20 --continue-product
 ```
 
-`verify_stage8_binding(...)` fails closed unless all exact identities agree:
+Current executable downstream order:
 
-- completed Product preflight is present and unmodified;
-- Product-run root still matches that preflight fingerprint;
-- completed probe-v2 evidence is present and unmodified;
-- the probe's own fingerprint recomputes exactly;
-- probed RocketDict/API versions equal the frozen preflight versions;
-- the requested operation occurs exactly once as structured callable evidence;
-- parser/candidate strings alone are insufficient;
-- callable module, qualname, structured signature and inspectable source SHA-256 exist;
-- frozen Product Stage8 implementation and adapter descriptor identities are internally consistent;
-- callable metadata explicitly identifies Stage **8**;
-- callable `stage_key`, implementation and descriptor hash exactly equal the frozen Product profile/preflight;
-- required inputs are exactly `document_version_id`;
-- the exact frozen `document_version_id` is written into binding evidence.
+1. Stage20 `lexical-primary-arbitration-v1`;
+2. pinned CEFR-J Vocabulary Profile 1.5 assessment;
+3. exact CMUdict pronunciation with generated fallback forbidden;
+4. Stage23 sense-scoped document examples.
 
-The binding additionally freezes:
+The downstream runner is fail-closed and evidence-preserving:
 
-- Product preflight fingerprint;
-- Product-run root fingerprint;
-- registry hash;
-- RocketDict version/API version;
-- API-probe fingerprint;
-- operation/mapping/callable identities;
-- callable signature and source SHA-256;
-- Product implementation, adapter descriptor and parameter hash;
-- proof mode `exact-runtime-callable-metadata-v1`.
+- atomic `rocketdict-workbench-product-downstream/1` state;
+- successful steps reused on resume;
+- immutable provider hash and exact Stage20 sense/entry/generation/selection identities;
+- pinned CEFR-J identity;
+- output-affecting settings in fingerprint;
+- exact Stage20 arbitration evidence;
+- exact CEFR/pronunciation/example coverage and order checks;
+- generated pronunciation fallback forbidden;
+- Stage23 `stage23-sense-scope-v2` required;
+- every Stage23 row bound to the exact approved Stage20 selection revision from arbitration.
 
-Repeated verification of identical immutable evidence is idempotent. Mutation of a persisted binding is detected; a different Stage8 binding cannot silently replace an already verified one in the same immutable Product run.
+Verified downstream checkpoint:
 
-When a real callable passes this verifier, state advances to:
+- commit `cc43068b052761c0e1be66cfc9c5202732a241f5`;
+- workflow run `33872151299`;
+- **34 passed, 1 skipped**.
 
-`ready_for_stage8_execution`
+## 3. Product policy that must not regress
 
-while `upstream_execution` remains explicitly `binding_verified` / `verified_stage8_binding_not_yet_executed`. Binding verification therefore does **not** masquerade as actual Stage8 execution.
-
-### Critical evidence boundary
-
-The verifier and state transition are implemented and tested, but an exact Stage8 callable from the newer Product core has **not yet been observed** in the incomplete public handoff/runtime payload.
-
-The dependency-light CI uses controlled callable evidence to test the verifier. That proves the Workbench contract, not the existence of a particular callable in the missing newer core.
-
-Historical LAB evidence confirms that Stage8 execution was bound to `document_version_id` in that older lineage. It does **not** prove that its old Stage8 implementation or API surface is identical to the current Product line. In particular, do not substitute the historical `nltk-whitespace-en` implementation for the current registry-derived Product Stage8 choice.
-
-Relevant commits in this increment:
-
-- `34981e80d1f87cb78622cdca557afc25554f69a1` — `Strengthen Product API probe with callable contract evidence`;
-- `6870a20161d7bb52b505e6e347b6dbd119300c70` — `Add fail-closed Stage8 upstream binding verifier`;
-- `0a0081ae6844bb94d29d4f19034868c413d4d378` — `Make verified Stage8 bindings resumably idempotent`;
-- `522e64b724a0941042075a4da667b8304415cbe2` — `Test structured callable evidence in Product API probe`;
-- `e84dc9c3d8a536deb7d361d078dde57d07eb22d5` — `Test fail-closed Stage8 upstream binding verification`;
-- `98d0bbc3d15456422acf3932323997312f16375d` — `Expose verified Stage8 binding promotion in Workbench CLI`;
-- `95bd198f76a0d42eb84579f776d529142eba95dc` — `Test Stage8 binding CLI exposure`;
-- `0e57b4a5aa3ada0c047d008eb933bd3a14204c51` — `Document exact-runtime Stage8 binding proof contract`;
-- `f90543754f0aae9e61ec5ff41a20775de2ac568c` — `Document structured Stage8 binding verification`.
-
-Verified GitHub Actions evidence for the complete code/CLI checkpoint:
-
-- commit: `95bd198f76a0d42eb84579f776d529142eba95dc`;
-- workflow: `RocketDict Workbench`, run `33952044681`;
-- Python: 3.13.15;
-- package compile: success;
-- tests: **54 passed, 1 skipped**.
-
-Detailed proof rules are documented in:
-
-`rocketdict-workbench/docs/PRODUCT_STAGE8_BINDING.md`
-
-### Exact next continuation
-
-Do not invent an operation name and do not write Stage8 execution around a fake fixture.
-
-The next active Product task is:
-
-1. obtain/recover the exact newer RocketDict core runtime compatible with the Product preflight;
-2. run `product-run-init` against that exact runtime to create real probe-v2 evidence;
-3. inspect its structured `callable_operations`;
-4. if a unique callable publishes the exact Stage8/Product metadata, promote it with `product-run-bind-stage8`;
-5. if no callable passes, recover/add the missing **public core execution contract** first rather than infer it from names/history;
-6. only after a real binding is persisted, implement resumable Stage8 invocation;
-7. bind Stage8 invocation to exact `document_version_id`, Product parameters and binding fingerprint;
-8. validate and persist the real Stage8 output revision/run IDs plus content/result hashes;
-9. then continue the same proof pattern through real MT → hard integrity gates → approved translation → alignment → lexical extraction/sense induction;
-10. reuse the existing Stage20→Stage23 downstream runner and add Stage24/25 only after upstream continuity is proven.
-
-## 1. Unified Product root and immutable preflight
-
-`product-run-init` rebuilds `rocketdict-workbench-product-preflight/1` and anchors the unified run to it.
-
-The root freezes:
-
-- source SHA-256;
-- `import_event_id`;
-- `document_version_id`;
-- selected source format;
-- source kind;
-- real RocketDict/API identity;
-- live registry hash;
-- selected required Product stages **8, 10, 12, 14, 16, 17, 19**;
-- selected implementation keys, adapter descriptor hashes and parameter hashes;
-- exact Stage15 hard-gate set;
-- Product profile hash;
-- preflight/root fingerprints.
-
-The hard Stage15 gates remain:
+Hard quality gates:
 
 - `rocketdict-numeric-symbol-preservation`;
 - `rocketdict-punctuation-preservation`;
 - `rocketdict-length-ratio-proxy`.
 
-Product Mode forbids fake/identity MT and requires the accepted real OPUS float32 path when Stage12 is selected.
+Current Product preferences include:
 
-## 2. Existing executable downstream Product slice
-
-The downstream Product runner already executes and resumes:
-
-1. Stage20 `lexical-primary-arbitration-v1`;
-2. pinned CEFR-J Vocabulary Profile 1.5;
-3. exact CMUdict pronunciation with generated fallback forbidden;
-4. Stage23 sense-scoped document examples.
-
-It preserves exact provider/Stage20 revision identity, validates coverage/order and requires Stage23 to reference the exact approved Stage20 revision produced/validated by arbitration.
-
-Do not duplicate this logic in the upstream runner.
-
-## 3. Active Product profile facts
-
-Current Workbench Product profile schema:
-
-`rocketdict-workbench-product-profile/5`
-
-Important preferred implementations include:
-
+- Stage8: full offline English NLP, preferred `en-sm` / `en_core_web_sm` 3.8.0;
 - Stage10: `structural-entity-term-discourse-pronoun-v1`;
+- Stage12: real `opus-en-ru-ct2`, CTranslate2, `float32` quality acceptance;
 - Stage14: `glossary_refinement-current`;
 - Stage16: `approve-if-clean-finalization`;
 - Stage17: `deterministic-structural-global`;
 - Stage19: `deterministic-context-target-graph`;
-- Stage21: `cefrj-vocabulary-1.5`;
-- Stage22: `cmudict-production`;
-- Stage23: `examples-current`;
-- Stage24: `cards-current`;
-- Stage25: `export-json`.
+- Workbench Stage18: `workbench-aligned-content-pos-v4`;
+- Workbench Stage20 provider: `contextual-lexical-opus-v3`;
+- Stage21: pinned CEFR-J Vocabulary Profile 1.5;
+- Stage22: exact CMUdict, no generated fallback;
+- Stage23: sense-scoped reviewed examples;
+- Stage24: cards;
+- Stage25: export JSON.
 
-Workbench-specific contracts remain:
+Never allow:
 
-- Stage18: `workbench-aligned-content-pos-v4`;
-- Stage20 provider: `contextual-lexical-opus-v3`;
-- generated pronunciation fallback forbidden;
-- smoke/frequency-only CEFR forbidden for Product output;
-- fake/identity MT forbidden;
-- network dependency during processing forbidden.
+- fake/identity/mock MT in Product Mode;
+- silent source loss/truncation;
+- generated pronunciation presented as exact evidence;
+- smoke CEFR as Product assessment;
+- code-only/tokenizer NLP as final Product NLP;
+- alignment to override lexical headword-form evidence;
+- automatic quality-gate weakening;
+- research results overwriting approved Product output.
 
-## 4. Do not regress the repository
+## 4. Active real-OPUS / Stage8 research evidence
 
-The active `main` line is newer than archived LAB checkpoints. Older complete ZIPs or maintenance branches must not overwrite current Product/Workbench work merely because they are self-contained.
+Public Stage8 research context remains useful but is not a complete source runtime:
 
-Historical repositories/checkpoints may be used as evidence to recover contracts, but compatibility with the newer Product source must be proved explicitly.
-
-## 5. Active real-OPUS / Stage8 research evidence
-
-The public Stage8 research handoff remains important context:
-
-- Stage8 development snapshot: **0.30.40**;
+- development snapshot version: **0.30.40**;
 - official model: `opus-2020-02-11.zip`;
-- official ZIP SHA-256 observed in successful GitHub execution: `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`;
+- observed official ZIP SHA-256: `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`;
 - backend: CTranslate2 Marian;
-- quality acceptance compute type: `float32`;
-- successful real-model gate: 120 representative sentences / 4,488 words;
-- Stage8 DOE F96 snapshot: roughly 5k challenge words, 3 numeric mismatches, zero critical-symbol mismatches, zero length-ratio mismatches, zero empty outputs and no backend-error units; at that snapshot the remaining gate failure was zero-numeric-loss.
+- accepted compute type: `float32`;
+- successful real-model GitHub gate: 120 representative sentences / 4,488 words;
+- Stage8 DOE frontier in `STATE.json`: F96, snapshot failed only zero-numeric-loss with 3 numeric mismatches;
+- do not restart DOE from variant A.
 
-Do not restart DOE from variant A and do not reconstruct the missing F96 selector merely from aggregate similarity.
+A surviving Stage8 diagnostic proves ordinary Stage12 pilot selection and historical F96 challenge selection are distinct. Aggregate similarity does not prove F96 identity. Do not reconstruct missing selector/source by coincidence.
 
-## 6. Payload health
+## 5. Separate verified Stage6Y maintenance lineage
 
-The Stage8 public payload is incomplete. Exact newer core source/runtime and exact Research Vault material cannot currently be assumed to exist in `rocketdict/payload/`.
-
-`HANDOFF_HEALTH.md` remains authoritative for payload survivability.
-
-Never invent missing Stage8 source files, API calls or Research Vault rows.
-
-## 7. Separate verified Stage6Y maintenance lineage
-
-A separate verified maintenance checkpoint is preserved under `checkpoints/stage6y/`:
+Preserved under `rocketdict/checkpoints/stage6y/`:
 
 **RocketDict 0.30.34 / LAB Stage6Y**.
 
-It proves, on its own lineage:
+Verified maintenance contracts:
 
 - `translation-offline-sqlite-compaction-v1`;
 - `translation-offline-sqlite-compaction-recovery-v1`;
 - `translation-offline-sqlite-compaction-io-fault-safety-v1`.
 
-Heavy challenge facts retained for continuity:
+Heavy facts:
 
 - baseline working SQLite: 881,905,664 bytes;
 - baseline working SHA-256: `a0128b802930d350679c7d135bea9197fb9e202d863260c31a68d49681fbeafb`;
 - canonical immutable heavy SHA-256: `3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274`;
-- recovery restored the working DB byte-for-byte after forced backup-copy ENOSPC;
+- forced backup-copy ENOSPC recovery restored DB byte-for-byte;
 - `quick_check=ok`, FK=0, Alembic head `8b4e7c2a91d0`;
-- lexical entries: 35,743;
-- translation runs/candidates/batch metrics/inference results/leases: 0/0/0/0/0;
+- lexical entries = 35,743;
+- translation runs/candidates/batch metrics/inference results/leases = 0/0/0/0/0;
 - 301 packaged runtime files matched source byte-for-byte.
 
-Do not assume these maintenance changes are source-merged into Stage8/Product. An exact source-level comparison/merge plus regression is required.
+**Do not source-overwrite the active Product line with Stage6Y.** Exact source-level merge/regression is required before claiming compatibility.
+
+To continue that separate maintenance lineage specifically, read `rocketdict/checkpoints/stage6y/CONTINUE_STAGE6Z.md`.
+
+## 6. Payload health / recovery rule
+
+The public Stage8 binary/text payload is incomplete. `HANDOFF_HEALTH.md` remains authoritative for what survives and what cannot be materialized bit-for-bit.
+
+Do not invent missing Stage8 source files, Research Vault rows, adapter code, callable names or invocation semantics.
+
+Historical repositories/archives may be used to understand old contracts or recovery possibilities, but never as proof that the active newer Product runtime has the same source/API/descriptor identity.
+
+## 7. Do not regress repository lineage
+
+The active `main` contains Product/Workbench work newer than old LAB checkpoints and old Stage8 handoff snapshots. Do not reset it to an older complete ZIP merely because that archive is self-contained.
+
+The old `oss-lk/spacy-project-vault` heavy branches are historical evidence, not the active development branch.
 
 ## 8. Privacy boundary
 
-This is a public repository. Persist only project technical/research state. Do not add personal user data, private chats, credentials, unrelated account information, local personal paths or private datasets.
+This repository is public. Persist only project technical/research state. Do not add personal user data, private chats, credentials, unrelated account information, local personal paths or private datasets.
