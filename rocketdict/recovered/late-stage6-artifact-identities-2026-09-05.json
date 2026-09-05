@@ -4,108 +4,12 @@
   "promotion_allowed": false,
   "bytes_currently_recovered": false,
   "entries": [
-    {
-      "version": "0.30.29",
-      "stage": "LAB_STAGE6T_LEASE_PREFLIGHT_LIVENESS_COMPLETE",
-      "archive": {
-        "name": "RocketDict_0.30.29_LAB_STAGE6T_LEASE_PREFLIGHT_LIVENESS_COMPLETE.zip",
-        "bytes": 135746615,
-        "sha256": "199e44f5ef1584565d2c57d771e5723423f274131f686024c541754802a09fa3",
-        "identity": "exact"
-      },
-      "wheel": null,
-      "candidate_priority": 6,
-      "promotion_allowed": false
-    },
-    {
-      "version": "0.30.30",
-      "stage": "LAB_STAGE6U_LEASE_FENCED_FINALIZATION_COMPLETE",
-      "archive": {
-        "name": "RocketDict_0.30.30_LAB_STAGE6U_LEASE_FENCED_FINALIZATION_COMPLETE.zip",
-        "bytes": 135196224,
-        "sha256": "c08d6767fc006888cd94666434fec6c9eb9eb093419e5bc145dac127b984b14a",
-        "identity": "exact"
-      },
-      "wheel": {
-        "name": "rocketdict-0.30.30-py3-none-any.whl",
-        "bytes": null,
-        "sha256": "2bf600cecf0086c7786dad3f1fdf836672636663256b4ed8a4919ab679868f8c",
-        "identity": "exact_sha256"
-      },
-      "candidate_priority": 5,
-      "promotion_allowed": false
-    },
-    {
-      "version": "0.30.31",
-      "stage": "LAB_STAGE6V_SAFE_TRANSLATION_RETENTION_COMPLETE",
-      "archive": {
-        "name": "RocketDict_0.30.31_LAB_STAGE6V_SAFE_TRANSLATION_RETENTION_COMPLETE.zip",
-        "bytes": 135299680,
-        "sha256": "91efaba1e6844c82dc549b27b1f14f0584db426734bdac0970144b459b015652",
-        "identity": "exact"
-      },
-      "wheel": {
-        "name": "rocketdict-0.30.31-py3-none-any.whl",
-        "bytes": null,
-        "sha256": "84667ca70357c2be56cfa589611ab889d3ea5a87ed8e9e6e6239b06a2abcf790",
-        "identity": "exact_sha256"
-      },
-      "candidate_priority": 4,
-      "promotion_allowed": false
-    },
-    {
-      "version": "0.30.32",
-      "stage": "LAB_STAGE6W_OFFLINE_COMPACTION_COMPLETE",
-      "archive": {
-        "name": "RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_COMPACTION_COMPLETE.zip",
-        "bytes": 135428241,
-        "sha256": "c86bf534f78dfb84b7b2ecb9acb7fb03ab89ee4c9933cd393df7cdd2c5a9ddf6",
-        "identity": "exact",
-        "verified_manifest_files": 2130,
-        "zip_crc_ok": true,
-        "internal_sha256_ok": true
-      },
-      "wheel": {
-        "name": "rocketdict-0.30.32-py3-none-any.whl",
-        "bytes": null,
-        "sha256": "16c8a6015328ad623f008fc30f8ba13c7eb97de09ac60c6219be5f7f8d946013",
-        "identity": "exact_sha256"
-      },
-      "candidate_priority": 3,
-      "promotion_allowed": false
-    },
-    {
-      "version": "0.30.33",
-      "stage": "LAB_STAGE6X_COMPACTION_HARD_CRASH_RECOVERY_COMPLETE",
-      "archive": {
-        "name": "RocketDict_0.30.33_LAB_STAGE6X_COMPACTION_HARD_CRASH_RECOVERY_COMPLETE.zip",
-        "bytes": 135522258,
-        "sha256": "405d4339fc12b8046da4f5cb73c799b2d5c957a9b53dffdf8e2ed9a79cbeb152",
-        "identity": "exact"
-      },
-      "wheel": {
-        "name": "rocketdict-0.30.33-py3-none-any.whl",
-        "bytes": null,
-        "sha256": "4c64deb9cc48b68be1408ad52b4458b843453f89f60c84a72c688b5cb3f042c1",
-        "identity": "exact_sha256"
-      },
-      "candidate_priority": 2,
-      "promotion_allowed": false
-    },
-    {
-      "version": "0.30.34",
-      "stage": "LAB_STAGE6Y_ENGINEERING_COMPLETE_RELEASE_PACKAGING_INCOMPLETE",
-      "archive": null,
-      "wheel": {
-        "name": "rocketdict-0.30.34-py3-none-any.whl",
-        "bytes": null,
-        "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02",
-        "identity": "exact_sha256"
-      },
-      "release_zip_packaging_completed": false,
-      "candidate_priority": 1,
-      "promotion_allowed": false
-    }
+    {"version":"0.30.29","stage":"LAB_STAGE6T_LEASE_PREFLIGHT_LIVENESS_COMPLETE","archive":{"name":"RocketDict_0.30.29_LAB_STAGE6T_LEASE_PREFLIGHT_LIVENESS_COMPLETE.zip","bytes":135746615,"sha256":"199e44f5ef1584565d2c57d771e5723423f274131f686024c541754802a09fa3","identity":"exact"},"wheel":null,"candidate_priority":6,"promotion_allowed":false},
+    {"version":"0.30.30","stage":"LAB_STAGE6U_LEASE_FENCED_FINALIZATION_COMPLETE","archive":{"name":"RocketDict_0.30.30_LAB_STAGE6U_LEASE_FENCED_FINALIZATION_COMPLETE.zip","bytes":135196224,"sha256":"c08d6767fc006888cd94666434fec6c9eb9eb093419e5bc145dac127b984b14a","identity":"exact"},"wheel":{"name":"rocketdict-0.30.30-py3-none-any.whl","bytes":null,"sha256":"2bf600cecf0086c7786dad3f1fdf836672636663256b4ed8a4919ab679868f8c","identity":"exact_sha256"},"candidate_priority":5,"promotion_allowed":false},
+    {"version":"0.30.31","stage":"LAB_STAGE6V_SAFE_TRANSLATION_RETENTION_COMPLETE","archive":{"name":"RocketDict_0.30.31_LAB_STAGE6V_SAFE_TRANSLATION_RETENTION_COMPLETE.zip","bytes":135299680,"sha256":"91efaba1e6844c82dc549b27b1f14f0584db426734bdac0970144b459b015652","identity":"exact"},"wheel":{"name":"rocketdict-0.30.31-py3-none-any.whl","bytes":null,"sha256":"84667ca70357c2be56cfa589611ab889d3ea5a87ed8e9e6e6239b06a2abcf790","identity":"exact_sha256"},"candidate_priority":4,"promotion_allowed":false},
+    {"version":"0.30.32","stage":"LAB_STAGE6W_OFFLINE_COMPACTION_COMPLETE","archive":{"name":"RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_COMPACTION_COMPLETE.zip","bytes":135428241,"sha256":"c86bf534f78dfb84b7b2ecb9acb7fb03ab89ee4c9933cd393df7cdd2c5a9ddf6","identity":"exact","verified_manifest_files":2130,"zip_crc_ok":true,"internal_sha256_ok":true},"wheel":{"name":"rocketdict-0.30.32-py3-none-any.whl","bytes":null,"sha256":"16c8a6015328ad623f008fc30f8ba13c7eb97de09ac60c6219be5f7f8d946013","identity":"exact_sha256"},"candidate_priority":3,"promotion_allowed":false},
+    {"version":"0.30.33","stage":"LAB_STAGE6X_COMPACTION_HARD_CRASH_RECOVERY_COMPLETE","archive":{"name":"RocketDict_0.30.33_LAB_STAGE6X_COMPACTION_HARD_CRASH_RECOVERY_COMPLETE.zip","bytes":135522258,"sha256":"405d4339fc12b8046da4f5cb73c799b2d5c957a9b53dffdf8e2ed9a79cbeb152","identity":"exact"},"wheel":{"name":"rocketdict-0.30.33-py3-none-any.whl","bytes":null,"sha256":"4c64deb9cc48b68be1408ad52b4458b843453f89f60c84a72c688b5cb3f042c1","identity":"exact_sha256"},"candidate_priority":2,"promotion_allowed":false},
+    {"version":"0.30.34","stage":"LAB_STAGE6Y_ENGINEERING_COMPLETE_RELEASE_PACKAGING_INCOMPLETE","archive":null,"wheel":{"name":"rocketdict-0.30.34-py3-none-any.whl","bytes":null,"sha256":"76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a","identity":"exact_sha256"},"release_zip_packaging_completed":false,"candidate_priority":1,"promotion_allowed":false}
   ],
   "priority_rule": "Prefer the newest exact packaged-core artifact for recovery triage: 0.30.34 wheel, then 0.30.33, 0.30.32, 0.30.31, 0.30.30, 0.30.29. This ranking is not compatibility or Product promotion proof.",
   "rules": [
