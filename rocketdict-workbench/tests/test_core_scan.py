@@ -21,6 +21,10 @@ def _target() -> Path:
     return _repo() / "rocketdict" / "recovered" / "stage8-0.30.40"
 
 
+def _catalog() -> Path:
+    return _repo() / "rocketdict" / "recovered" / "checkpoint-catalog.json"
+
+
 def _candidate(root: Path, version: str) -> Path:
     pkg = root / "src" / "rocketdict"
     (pkg / "api").mkdir(parents=True)
@@ -46,6 +50,7 @@ def _candidate(root: Path, version: str) -> Path:
 
 
 def _zip(source: Path, destination: Path) -> Path:
+    destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, "w") as zf:
         for path in sorted(p for p in source.rglob("*") if p.is_file()):
             zf.write(path, "payload/" + path.relative_to(source).as_posix())
@@ -55,7 +60,6 @@ def _zip(source: Path, destination: Path) -> Path:
 def test_discovery_finds_source_roots_and_zips_without_duplicate_nested_roots(tmp_path: Path) -> None:
     exact = _candidate(tmp_path / "nested" / "exact", "0.30.40")
     old = _candidate(tmp_path / "old", "0.30.29")
-    (tmp_path / "archives").mkdir()
     archive = _zip(old, tmp_path / "archives" / "old.zip")
 
     found = discover_core_candidates(tmp_path)
@@ -71,8 +75,12 @@ def test_batch_scan_ranks_exact_version_structural_candidate_before_old_base(tmp
 
     report = scan_core_candidates(tmp_path)
 
+    assert report["schema"] == "rocketdict-workbench-core-recovery-scan/2"
     assert report["status"] == "completed"
     assert report["promotion_allowed"] is False
+    assert report["checkpoint_catalog"]["available"] is True
+    assert report["checkpoint_catalog"]["schema"] == "rocketdict-historical-checkpoint-catalog/1"
+    assert report["checkpoint_catalog"]["entry_count"] >= 7
     assert report["discovered_candidate_count"] == 2
     assert report["analyzed_candidate_count"] == 2
     assert report["error_count"] == 0
@@ -128,3 +136,68 @@ def test_candidate_limit_fails_closed(tmp_path: Path) -> None:
     _candidate(tmp_path / "b", "0.30.29")
     with pytest.raises(RecoveryScanError, match="exceeded"):
         discover_core_candidates(tmp_path, max_candidates=1)
+
+
+def test_historical_name_only_match_is_visible_but_never_byte_identity(tmp_path: Path) -> None:
+    source = _candidate(tmp_path / "source", "0.30.32")
+    name = "RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_SQLITE_COMPACTION_COMPLETE.zip"
+    archive = _zip(source, tmp_path / name)
+
+    report = scan_core_candidates(tmp_path)
+    zip_row = next(row for row in report["candidates"] if row["path"] == str(archive.resolve()))
+    assert zip_row["historical_checkpoint_name_match"] is True
+    assert zip_row["historical_checkpoint_exact_identity_match"] is False
+    assert zip_row["promotion_allowed"] is False
+    assert len(zip_row["historical_checkpoint_matches"]) == 1
+    match = zip_row["historical_checkpoint_matches"][0]
+    assert match["catalog_id"] == "rocketdict-0.30.32-stage6w"
+    assert match["version"] == "0.30.32"
+    assert match["evidence_level"] == "historical_archive_name_only"
+    assert match["name_match"] is True
+    assert match["exact_identity_available"] is False
+    assert match["exact_identity_match"] is False
+
+
+def test_known_0308_name_with_wrong_bytes_fails_exact_identity_match(tmp_path: Path) -> None:
+    source = _candidate(tmp_path / "source", "0.30.8")
+    archive = _zip(source, tmp_path / "RocketDict_CURRENT_COMPACT.zip")
+
+    report = scan_core_candidates(archive)
+    row = report["candidates"][0]
+    assert row["historical_checkpoint_name_match"] is True
+    assert row["historical_checkpoint_exact_identity_match"] is False
+    match = row["historical_checkpoint_matches"][0]
+    assert match["catalog_id"] == "rocketdict-0.30.8-current-compact"
+    assert match["exact_identity_available"] is True
+    assert match["exact_identity_match"] is False
+    assert match["exact_identity_mismatch"] is True
+    assert match["expected_archive_sha256"] == "f948a9b59e4deb7b00a606fdb88973dd9a435c087c132f32f03d2d0c863b51ac"
+    assert match["promotion_allowed"] is False
+
+
+def test_checkpoint_without_proven_filename_gets_no_guessed_name_match(tmp_path: Path) -> None:
+    source = _candidate(tmp_path / "source", "0.30.29")
+    archive = _zip(source, tmp_path / "RocketDict_0.30.29.zip")
+
+    report = scan_core_candidates(archive)
+    row = report["candidates"][0]
+    assert row["rocketdict_version"] == "0.30.29"
+    assert row["historical_checkpoint_name_match"] is False
+    assert row["historical_checkpoint_matches"] == []
+
+
+def test_explicit_unsafe_catalog_fails_closed(tmp_path: Path) -> None:
+    source = _candidate(tmp_path / "source", "0.30.29")
+    bad = tmp_path / "catalog.json"
+    bad.write_text(
+        json.dumps(
+            {
+                "schema": "rocketdict-historical-checkpoint-catalog/1",
+                "promotion_allowed": True,
+                "entries": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(RecoveryScanError, match="permits promotion"):
+        scan_core_candidates(source, checkpoint_catalog=bad)

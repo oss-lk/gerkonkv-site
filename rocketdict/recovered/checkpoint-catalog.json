@@ -1,0 +1,126 @@
+{
+  "schema": "rocketdict-historical-checkpoint-catalog/1",
+  "date_utc": "2026-09-05",
+  "promotion_allowed": false,
+  "entries": [
+    {
+      "id": "rocketdict-0.30.8-current-compact",
+      "version": "0.30.8",
+      "stage": "source-only lexical extraction checkpoint",
+      "archive_name_patterns": [
+        "RocketDict_CURRENT_COMPACT.zip"
+      ],
+      "archive_sha256": "f948a9b59e4deb7b00a606fdb88973dd9a435c087c132f32f03d2d0c863b51ac",
+      "archive_bytes": 125875993,
+      "manifest_files": 666,
+      "evidence_level": "exact_archive_identity_documented",
+      "bytes_recovered_now": false,
+      "candidate_role": "historical_full_base_candidate",
+      "notes": [
+        "Historical validation recorded a full RocketDict source project, installable wheel, en_core_web_sm 3.8.0, full Opticks corpus, object store, compressed working SQLite, Windows installer, recovery tooling, audit and continuation instructions.",
+        "The archive bytes are not currently present in the active recovery environment."
+      ],
+      "promotion_allowed": false
+    },
+    {
+      "id": "rocketdict-0.30.9-stage6a",
+      "version": "0.30.9",
+      "stage": "LAB_STAGE6A_CAPABILITY_COMPLETENESS_COMPLETE",
+      "archive_name_patterns": [
+        "RocketDict_0.30.9_LAB_STAGE6A_CAPABILITY_COMPLETENESS_COMPLETE*.zip"
+      ],
+      "archive_sha256": null,
+      "archive_bytes": null,
+      "manifest_files": null,
+      "evidence_level": "historical_archive_name_only",
+      "bytes_recovered_now": false,
+      "candidate_role": "historical_full_checkpoint_candidate",
+      "promotion_allowed": false
+    },
+    {
+      "id": "rocketdict-0.30.19-stage6j",
+      "version": "0.30.19",
+      "stage": "LAB_STAGE6J_REAL_MODEL_PILOT_GATE_COMPLETE",
+      "archive_name_patterns": [
+        "RocketDict_0.30.19_LAB_STAGE6J_REAL_MODEL_PILOT_GATE_COMPLETE*.zip"
+      ],
+      "archive_sha256": null,
+      "archive_bytes": null,
+      "manifest_files": null,
+      "evidence_level": "historical_archive_name_only",
+      "bytes_recovered_now": false,
+      "candidate_role": "historical_full_checkpoint_candidate",
+      "promotion_allowed": false
+    },
+    {
+      "id": "rocketdict-0.30.29-stage6t",
+      "version": "0.30.29",
+      "stage": "LAB Stage 6T",
+      "archive_name_patterns": [],
+      "archive_sha256": null,
+      "archive_bytes": null,
+      "manifest_files": null,
+      "evidence_level": "checkpoint_content_evidence_only",
+      "bytes_recovered_now": false,
+      "candidate_role": "preferred_late_base_if_bytes_are_recovered",
+      "notes": [
+        "Recovered README evidence identifies 0.30.29 / Stage 6T and documents RocketDictAPI, local CLI/REST/developer surfaces, durable queue and the broader Stage1-25 product lifecycle.",
+        "No archive filename or archive SHA-256 is currently proven, so the scanner must not invent one."
+      ],
+      "promotion_allowed": false
+    },
+    {
+      "id": "rocketdict-0.30.32-stage6w",
+      "version": "0.30.32",
+      "stage": "LAB_STAGE6W_OFFLINE_SQLITE_COMPACTION_COMPLETE",
+      "archive_name_patterns": [
+        "RocketDict_0.30.32_LAB_STAGE6W_OFFLINE_SQLITE_COMPACTION_COMPLETE*.zip"
+      ],
+      "archive_sha256": null,
+      "archive_bytes": null,
+      "manifest_files": null,
+      "evidence_level": "historical_archive_name_only",
+      "bytes_recovered_now": false,
+      "candidate_role": "preferred_late_full_checkpoint_candidate",
+      "promotion_allowed": false
+    },
+    {
+      "id": "rocketdict-0.30.34-stage6y",
+      "version": "0.30.34",
+      "stage": "LAB Stage 6Y",
+      "archive_name_patterns": [],
+      "archive_sha256": null,
+      "archive_bytes": null,
+      "manifest_files": null,
+      "evidence_level": "verified_parallel_checkpoint_without_archive_identity",
+      "bytes_recovered_now": false,
+      "candidate_role": "parallel_maintenance_lineage_not_product_replacement",
+      "notes": [
+        "Stage6Y maintenance evidence is preserved under rocketdict/checkpoints/stage6y/.",
+        "Do not infer an archive name or merge this lineage into Product without exact source comparison and regression."
+      ],
+      "promotion_allowed": false
+    },
+    {
+      "id": "rocketdict-stage15-to-stage16-handoff",
+      "version": null,
+      "stage": "Stage15 to Stage16 handoff",
+      "archive_name_patterns": [
+        "RocketDict_full_handoff_stage15_to_stage16*.zip"
+      ],
+      "archive_sha256": null,
+      "archive_bytes": null,
+      "manifest_files": null,
+      "evidence_level": "historical_archive_name_only",
+      "bytes_recovered_now": false,
+      "candidate_role": "early_full_handoff_candidate",
+      "promotion_allowed": false
+    }
+  ],
+  "rules": [
+    "Archive-name matching is recovery triage only and never proves byte identity.",
+    "Only an exact archive SHA-256/size match may be called an exact historical archive identity match.",
+    "A checkpoint with no proven archive name must not receive a guessed filename pattern.",
+    "No catalog entry authorizes Product promotion or replacement of missing 0.30.40 bytes."
+  ]
+}
