@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Final unified recovery scanner with opt-in wheel zipimport runtime evidence."""
+"""Unified recovery scanner with opt-in, hash-bound wheel runtime evidence."""
 
 import argparse
 import hashlib
@@ -19,7 +19,7 @@ from .core_scan import (
 from .core_scan_artifacts import scan_core_artifacts
 from .core_wheel_runtime import RUNTIME_SCHEMA, probe_wheel_runtime
 
-SCHEMA = "rocketdict-workbench-core-recovery-scan/4"
+SCHEMA = "rocketdict-workbench-core-recovery-scan/5"
 
 
 def _canonical_sha(value: Any) -> str:
@@ -56,6 +56,7 @@ def scan_recovery_frontier(
     candidates = [dict(row) for row in (base.get("candidates") or [])]
     wheel_probe_count = 0
     wheel_probe_ok_count = 0
+    wheel_probe_hash_consistent_count = 0
     for row in candidates:
         if row.get("kind") != "wheel":
             continue
@@ -66,11 +67,24 @@ def scan_recovery_frontier(
                 timeout=wheel_timeout,
             )
             wheel_probe_count += 1
-            if runtime.get("ok"):
+            scan_sha = row.get("archive_sha256")
+            runtime_sha = runtime.get("wheel_sha256")
+            identity_consistent = bool(
+                scan_sha and runtime_sha and str(scan_sha) == str(runtime_sha)
+            )
+            if identity_consistent:
+                wheel_probe_hash_consistent_count += 1
+            runtime_ok = bool(runtime.get("ok") and identity_consistent)
+            if runtime_ok:
                 wheel_probe_ok_count += 1
             row["wheel_runtime_probe"] = runtime
-            row["runtime_probe_ok"] = bool(runtime.get("ok"))
-            row["runtime_proof_status"] = runtime.get("status")
+            row["runtime_artifact_identity_consistent"] = identity_consistent
+            row["runtime_probe_ok"] = runtime_ok
+            row["runtime_proof_status"] = (
+                runtime.get("status")
+                if identity_consistent
+                else "rejected_cross_layer_wheel_identity_mismatch"
+            )
             row["runtime_probe_fingerprint"] = (
                 (runtime.get("identity") or {}).get("fingerprint")
             )
@@ -82,13 +96,11 @@ def scan_recovery_frontier(
                 "ok": False,
                 "promotion_allowed": False,
             }
+            row["runtime_artifact_identity_consistent"] = None
             row["runtime_probe_ok"] = False
             row["runtime_proof_status"] = "not_requested"
             row["runtime_probe_fingerprint"] = None
 
-    # Runtime proof is useful recovery triage evidence.  Re-rank after enriching
-    # wheel candidates, while retaining the exact same non-promotional priority
-    # semantics used by the base scanner.
     candidates.sort(key=_priority, reverse=True)
     for rank, row in enumerate(candidates, start=1):
         row["recovery_priority_rank"] = rank
@@ -122,17 +134,19 @@ def scan_recovery_frontier(
         "probe_directories": probe_directories,
         "probe_wheels": probe_wheels,
         "wheel_runtime_probe_count": wheel_probe_count,
+        "wheel_runtime_probe_hash_consistent_count": wheel_probe_hash_consistent_count,
         "wheel_runtime_probe_ok_count": wheel_probe_ok_count,
         "wheel_runtime_probe_policy": (
-            "opt_in_isolated_python_zipimport_no_install_no_extraction"
+            "opt_in_isolated_python_zipimport_hash_before_after_network_audit_denial_no_install_no_extraction"
             if probe_wheels
             else "not_requested_structural_only"
         ),
         "checkpoint_catalog": base.get("checkpoint_catalog"),
         "ranking_semantics": (
             "Recovery triage only. Exact artifact identity and structural status remain primary. "
-            "An opt-in successful wheel zipimport probe adds runtime import evidence but cannot "
-            "prove exact 0.30.40 compatibility or authorize Product execution."
+            "A wheel runtime proof counts as successful only when the runtime SHA matches the "
+            "structural scanner SHA. Even then it cannot prove exact 0.30.40 compatibility or "
+            "authorize Product execution."
         ),
         "candidates": candidates,
         "errors": base.get("errors") or [],
@@ -145,7 +159,7 @@ def parser() -> argparse.ArgumentParser:
         prog="rocketdict-recover-scan",
         description=(
             "Batch screening of historical RocketDict source roots, checkpoint ZIPs and wheels "
-            "with optional isolated runtime probes"
+            "with optional isolated hash-bound runtime probes"
         ),
     )
     p.add_argument("root", type=Path)
