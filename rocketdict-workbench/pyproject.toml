@@ -14,8 +14,8 @@ rocketdict-workbench = "rocketdict_workbench.cli:main"
 rocketdict-product-run = "rocketdict_workbench.product_run_cli:main"
 rocketdict-recover-core = "rocketdict_workbench.core_recovery:main"
 rocketdict-recover-plan = "rocketdict_workbench.core_compatibility:main"
-rocketdict-recover-wheel = "rocketdict_workbench.core_wheel_runtime:main"
-rocketdict-recover-scan = "rocketdict_workbench.core_scan_runtime:main"
+rocketdict-recover-wheel = "rocketdict_workbench.core_wheel_pipeline:main"
+rocketdict-recover-scan = "rocketdict_workbench.core_scan_pipeline:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
