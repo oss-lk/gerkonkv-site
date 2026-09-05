@@ -8,6 +8,11 @@ numeric-integrity/F96 terms, while this scanner targets the public API modules
 that now block real Product execution. Nested ZIP and TAR-family archives are
 inspected in memory so source bundles are not missed merely because they are
 wrapped inside an Actions ZIP.
+
+TAR recovery is deliberately member-by-member and fail-soft at an archive tail:
+complete members already read from a known truncated recovery stream remain
+valid evidence, while the read failure itself is recorded. An incomplete member
+is never reported as a path/content hit.
 """
 
 import io
@@ -121,8 +126,6 @@ def _archive_kind(name: str, raw: bytes) -> str | None:
         return "tar"
     if raw.startswith((b"\x1f\x8b", b"\xfd7zXZ\x00", b"BZh")):
         return "tar"
-    # Plain tar has no mandatory magic at byte zero; POSIX ustar normally has
-    # it at offset 257. The suffix check above catches non-ustar legacy tars.
     if len(raw) >= 262 and raw[257:262] == b"ustar":
         return "tar"
     return None
@@ -250,11 +253,28 @@ def scan_tar(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0):
     path_hits: list[dict] = []
     errors: list[dict] = []
     try:
-        tf = tarfile.open(fileobj=io.BytesIO(raw), mode="r:*")
+        # Streaming mode lets us retain complete members preceding an expected
+        # truncated recovery tail. Random-access mode may raise while building
+        # the member table and discard evidence that was already complete.
+        tf = tarfile.open(fileobj=io.BytesIO(raw), mode="r|*")
     except Exception as exc:
         return content_hits, path_hits, [{"where": prefix or "artifact", "archive_format": "tar", "error": repr(exc)}]
-    with tf:
-        for info in tf:
+    try:
+        while True:
+            try:
+                info = tf.next()
+            except (tarfile.TarError, EOFError, OSError) as exc:
+                errors.append(
+                    {
+                        "where": prefix or "artifact",
+                        "archive_format": "tar",
+                        "error": repr(exc),
+                        "partial_archive_tail": True,
+                    }
+                )
+                break
+            if info is None:
+                break
             if not info.isfile():
                 continue
             logical = f"{prefix}!{info.name}" if prefix else info.name
@@ -263,6 +283,8 @@ def scan_tar(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0):
                     row = _hit_row(artifact, logical, depth, "tar", member_size=info.size)
                     row["content_skipped"] = "member_over_size_limit"
                     path_hits.append(row)
+                # In streaming TAR mode the iterator consumes skipped member
+                # payload while advancing to the next header.
                 continue
             try:
                 extracted = tf.extractfile(info)
@@ -271,13 +293,24 @@ def scan_tar(raw: bytes, artifact: dict, prefix: str = "", depth: int = 0):
                 member = extracted.read(MAX_MEMBER_BYTES + 1)
                 if len(member) > MAX_MEMBER_BYTES:
                     raise RuntimeError("tar member exceeded declared recovery member limit while reading")
-            except Exception as exc:
-                errors.append({"where": logical, "archive_format": "tar", "error": repr(exc)})
-                continue
+            except (tarfile.TarError, EOFError, OSError, RuntimeError) as exc:
+                errors.append(
+                    {
+                        "where": logical,
+                        "archive_format": "tar",
+                        "error": repr(exc),
+                        "incomplete_member": True,
+                    }
+                )
+                # Never report a path/text hit for a member whose payload did
+                # not finish reading. The stream may be unable to advance.
+                break
             h2, p2, e2 = _scan_member(member, info.name, logical, artifact, depth, "tar")
             content_hits.extend(h2)
             path_hits.extend(p2)
             errors.extend(e2)
+    finally:
+        tf.close()
     return content_hits, path_hits, errors
 
 
@@ -346,16 +379,17 @@ def main() -> None:
                 {
                     "artifact_id": artifact.get("id"),
                     "artifact_name": artifact.get("name"),
-                    "where": "download",
+                    "where": "download_or_top_level_scan",
                     "error": repr(exc),
                 }
             )
 
     report = {
-        "schema": "rocketdict-stage8-api-artifact-recovery/2",
+        "schema": "rocketdict-stage8-api-artifact-recovery/3",
         "promotion_allowed": False,
         "search_terms": list(TERMS),
         "archive_formats": list(ARCHIVE_FORMATS),
+        "truncated_archive_policy": "retain_complete_members_reject_incomplete_member",
         "limits": {
             "max_artifact_bytes": MAX_ARTIFACT_BYTES,
             "max_member_bytes": MAX_MEMBER_BYTES,
@@ -373,8 +407,9 @@ def main() -> None:
         "interpretation": (
             "Recovery-only ZIP+TAR scan. Hits may identify exact source/evidence candidates, "
             "but no hit may be promoted until bytes, runtime identity and Workbench live "
-            "contracts verify. Absence is bounded by the recorded artifact inventory, expiry "
-            "state and size limits."
+            "contracts verify. Complete members before a truncated TAR tail remain evidence; "
+            "the incomplete member is never reported. Absence is bounded by the recorded "
+            "artifact inventory, expiry state and size limits."
         ),
     }
     (OUT / "artifact-inventory.json").write_text(
