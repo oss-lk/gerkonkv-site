@@ -1,0 +1,119 @@
+{
+  "schema": "rocketdict-stage8-runtime-recovery/1",
+  "date_utc": "2026-09-05",
+  "promotion_allowed": false,
+  "active_product_core_recovered": false,
+  "stage8_overlay_prefix": {
+    "source_artifact": {
+      "repository": "oss-lk/gerkonkv-site",
+      "artifact_id": 9681838606,
+      "artifact_name": "stage8-overlay-prefix"
+    },
+    "encoded_part": {
+      "path": "rocketdict/payload/stage8-overlay/part-000.b64",
+      "encoded_chars": 15000,
+      "decoded_bytes": 11250,
+      "decoded_sha256": "123f552ba73da62cff427d5978ec3f50a8250d88c11819e1b4496a3c1e91f5e4"
+    },
+    "decompressed_tar_prefix": {
+      "bytes": 51590,
+      "sha256": "a6af982f442fdedadc6ba6bb9e91d7ca3b519e6d0f893b21537498741f7bf67a",
+      "gzip_eof": false
+    },
+    "complete_members": [
+      {
+        "path": "src/rocketdict/__init__.py",
+        "bytes": 502,
+        "sha256": "7bf417eeda2104a06d9aaaaef4b79807698685ac4dc07539c2e887cd14e60b5c",
+        "preserved_in_repository": "rocketdict/recovered/stage8-0.30.40/src/rocketdict/__init__.py"
+      },
+      {
+        "path": "src/rocketdict/nlp/registry.py",
+        "bytes": 29072,
+        "sha256": "02cfbb2347f141d9b77f4fca143322a4e4d7773dcf535611b664473510fbaf69",
+        "preserved_in_repository": null,
+        "retrieval": "recover again from artifact 9681838606 / stage8-overlay-prefix; exact hash is frozen here"
+      }
+    ],
+    "next_incomplete_member": {
+      "path": "src/rocketdict/lab/stage12_pilot.py",
+      "declared_bytes": 51356,
+      "complete": false
+    },
+    "package_root_proves": {
+      "rocketdict_version": "0.30.40",
+      "lazy_public_exports": ["API_VERSION", "RocketDictAPI", "__version__"],
+      "api_version_module": "rocketdict.api.contracts",
+      "api_client_module": "rocketdict.api.client.RocketDictAPI"
+    },
+    "nlp_registry_proves": {
+      "registry_version": "spacy-registry/1.0",
+      "model_tree_sha256_supported": true,
+      "read_only_inspection_supported": true,
+      "persistent_compatibility_check_supported": true,
+      "loaded_spacy_model_supported": true
+    }
+  },
+  "actions_artifact_scan_boundary": {
+    "existing_scanner_already_paginates": true,
+    "accessible_inventory_count_observed": 102,
+    "oldest_observed_created_date": "2026-08-26",
+    "newest_observed_created_date": "2026-08-29",
+    "scanner_max_artifact_bytes": 52428800,
+    "large_artifacts_skipped_by_that_limit": 3,
+    "correction": "There is no pagination bug in recover_stage8_artifact_contents.py. Its material blind spot is the 50 MiB download limit. The three observed skipped large artifacts were inspected separately in this recovery pass."
+  },
+  "offline_opus_runtime": {
+    "source_artifact": {
+      "repository": "oss-lk/gerkonkv-site",
+      "artifact_id": 9614728610,
+      "artifact_name": "rocketdict-offline-opus-runtime-cp313"
+    },
+    "downloaded_artifact_zip_sha256": "c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c",
+    "downloaded_artifact_zip_bytes": 343401002,
+    "members": {
+      "official_opus_archive_bytes": 284142010,
+      "ctranslate2": "4.8.1 cp313",
+      "sentencepiece": "0.2.2 cp313",
+      "numpy": "2.5.2 cp313",
+      "pyyaml": "6.0.3",
+      "setuptools": "84.0.0"
+    },
+    "contains_rocketdict_core": false
+  },
+  "real_opus_gate": {
+    "source_artifact": {
+      "repository": "oss-lk/gerkonkv-site",
+      "artifact_id": 9614725980,
+      "artifact_name": "rocketdict-real-opus-gate"
+    },
+    "downloaded_artifact_zip_sha256": "7044b3f3cd6a1b625c06b97067d68da1f7999b118e9e6f63776df28f969c1e00",
+    "schema": "rocketdict-github-real-opus-gate/4",
+    "real_model": true,
+    "fake_or_identity_translation": false,
+    "official_opus_archive_sha256": "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677",
+    "ct2_compute_type": "float32",
+    "ctranslate2_version": "4.8.1",
+    "sentencepiece_version": "0.2.2",
+    "model_npz_sha256": "c92e6575c8ca7816926ca045149e8376758d39b24d6c228d2c685cc9a623226b",
+    "opticks_sha256": "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217",
+    "opticks_regex_words": 104275,
+    "representative_sentences": 120,
+    "representative_words": 4488
+  },
+  "private_research_repository_check": {
+    "repository": "oss-lk/spacy-project-vault",
+    "branch_checked": "rocketdict-heavy-opus",
+    "branch_role": "living real-OPUS research overlay",
+    "contains_production_src_rocketdict_core": false,
+    "contains_rocketdict_api_package": false,
+    "may_be_used_as_product_core": false
+  },
+  "conclusion": [
+    "Exact 0.30.40 package-root and NLP-registry bytes survive and are now hash-addressed as recovery evidence.",
+    "The exact recovered package root proves that 0.30.40 publicly exported API_VERSION and RocketDictAPI lazily from rocketdict.api.contracts and rocketdict.api.client.",
+    "The complete public API implementation needed for Product Stage8 invocation is still not present in the recovered overlay prefix.",
+    "The 343 MB offline OPUS runtime and real-model gate are recoverable and independently preserve the accepted real translation runtime/model evidence, but they do not contain the missing RocketDict core.",
+    "Therefore the active Workbench may use these files as immutable recovery evidence only. It must not fabricate the missing 0.30.40 public operation callable or claim a real Stage8 dispatch until an exact compatible core publishes the verified binding and execution contracts."
+  ]
+}
