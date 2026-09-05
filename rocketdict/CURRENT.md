@@ -37,9 +37,11 @@ Do not build another orchestration layer. The current hard blocker is the missin
 
 ## Product evidence identities
 
+- Product Profile: `rocketdict-workbench-product-profile/6`
 - Product preflight: `rocketdict-workbench-product-preflight/2`
 - Product state: `rocketdict-workbench-product-run/1`
 - API probe: `rocketdict-core-api-surface-probe/2`
+- Stage8 binding: `rocketdict-workbench-upstream-binding/2`
 - Stage20→23 downstream: `rocketdict-workbench-product-downstream/2`
 
 Required Stage15 gates:
@@ -50,7 +52,7 @@ Required Stage15 gates:
 
 Each gate must publish a valid execution contract and explicit PASS semantics before dispatch. Generic `status="ok"` is not PASS.
 
-Correct post-gate dependency is:
+Correct post-gate dependency:
 
 `16 finalization → 17 alignment → Workbench18 aligned extraction → 19 sense induction`.
 
@@ -101,7 +103,7 @@ Exact complete members preserved:
 
 Next member `src/rocketdict/lab/stage12_pilot.py` is truncated (declared 51,356 bytes).
 
-Historical materializer analysis proves the intended Stage8 overlay contained 19 research/translation files and **did not contain `rocketdict.api.*`**. Therefore restoring the missing seven overlay chunks alone cannot restore the complete base core/public API.
+Historical materializer analysis proves the intended Stage8 overlay contained 19 research/translation files and **did not contain `rocketdict.api.*`**. Restoring missing overlay chunks alone therefore cannot restore the base public API.
 
 Current overlay recovery math:
 
@@ -117,39 +119,78 @@ Exact 0.30.40 public API bytes still missing:
 
 No real Product Stage8 dispatch has been claimed from the recovered namespace.
 
-## Recovery tooling
+## Preferred historical recovery input
+
+The strongest known packaged-core lead is now exact and machine-readable:
+
+- version `0.30.34`
+- filename `rocketdict-0.30.34-py3-none-any.whl`
+- SHA-256 `76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a`
+- Stage6Y engineering completed historically, but final release ZIP packaging did **not** complete.
+- Never invent a Stage6Y release ZIP.
+
+Recovery priority:
+
+1. 0.30.34 exact wheel;
+2. 0.30.33 exact ZIP or wheel;
+3. 0.30.32 exact ZIP or wheel;
+4. 0.30.31;
+5. 0.30.30;
+6. 0.30.29;
+7. 0.30.8 exact ZIP.
+
+Exact identities are preserved in:
+
+- `rocketdict/recovered/checkpoint-catalog.json`
+- `rocketdict/recovered/late-stage6-artifact-identities-2026-09-05.json`
+- `rocketdict/recovered/recovery-frontier-2026-09-05.json`
+
+These records prove historical artifact identity only. Their bytes are **not currently recovered** in the active runtime.
+
+## Recovery tooling — current wheel-first proof chain
 
 Operational guide:
 
 `rocketdict-workbench/docs/CORE_RECOVERY.md`
 
-Implemented commands:
+Current evidence schemas:
+
+- directory/ZIP structural candidate: `rocketdict-workbench-core-recovery-candidate/1`
+- base→0.30.40 plan: `rocketdict-workbench-core-recovery-plan/1`
+- wheel integrity: `rocketdict-workbench-wheel-integrity/2`
+- wheel runtime probe: `rocketdict-workbench-core-wheel-runtime-probe/2`
+- full wheel recovery: `rocketdict-workbench-core-wheel-recovery/5`
+- unified scan: `rocketdict-workbench-core-recovery-scan/7`
+
+Commands:
 
 - `rocketdict-recover-core` — inspect one source directory/ZIP candidate;
 - `rocketdict-recover-plan` — deterministic read-only base→0.30.40 plan;
-- `rocketdict-recover-scan` — batch discovery/ranking of historical ZIP/checkouts.
+- `rocketdict-recover-wheel` — full wheel proof; `--probe-runtime` explicitly enables final runtime import proof;
+- `rocketdict-recover-scan` — batch directory/ZIP/wheel discovery; `--probe-wheels` explicitly enables final wheel runtime proofs.
 
-`rocketdict-recover-scan` schema is now `rocketdict-workbench-core-recovery-scan/2` and consumes:
+For wheels the proof order is fixed:
 
-`rocketdict/recovered/checkpoint-catalog.json`
+1. ZIP CRC + `METADATA` + `WHEEL` + mandatory `RECORD` integrity;
+2. historical checkpoint catalog identity when the basename is known;
+3. packaged RocketDict structural source inspection;
+4. deterministic base→0.30.40 compatibility plan;
+5. optional isolated/network-denied direct-zipimport runtime proof.
 
-Catalog rules:
+Fail-closed wheel rules:
 
-- exact SHA/size identity is distinct from filename matching;
-- a known filename alone is recovery triage only;
-- checkpoints with no proven archive filename receive no guessed pattern;
-- all entries retain `promotion_allowed=false`.
+- missing/corrupt `RECORD` blocks runtime;
+- filename↔METADATA name/version mismatch blocks runtime;
+- filename tag↔WHEEL `Tag:` mismatch blocks runtime;
+- known historical basename with cataloged exact SHA/size but wrong bytes blocks runtime **before historical code import**;
+- unknown intact wheels may be explored, but receive no known-checkpoint identity claim;
+- integrity/structural/plan/runtime SHA observations must agree;
+- runtime hashes the wheel before and after subprocess execution;
+- Python runs with `-I` and a socket/DNS audit-hook denial;
+- required and transitively loaded `rocketdict.*` modules must resolve from inside the wheel;
+- a successful historical runtime proof is still not exact 0.30.40 compatibility and not Product promotion.
 
-Known exact archive identity:
-
-- `RocketDict_CURRENT_COMPACT.zip`
-- version `0.30.8`
-- bytes `125875993`
-- SHA-256 `f948a9b59e4deb7b00a606fdb88973dd9a435c087c132f32f03d2d0c863b51ac`
-- manifest files 666
-- historical archive validation recorded a full source project, installable wheel, spaCy model, full Opticks, object store, compressed working SQLite, installer, recovery tooling and audit.
-
-Later catalog entries include historical 0.30.9 / 0.30.19 / 0.30.32 archive-name evidence and 0.30.29 / 0.30.34 checkpoint evidence without invented archive identities.
+All recovery outputs retain `promotion_allowed=false`; full wheel/scan outputs also retain `product_execution_allowed=false`.
 
 ## Exhausted recovery surfaces
 
@@ -164,8 +205,8 @@ Already checked and currently closed:
 - likely historical `api/client.py` Git paths under `src/`, `rocketdict/src/`, `rocketdict/active_source/src/`: zero reachable commits;
 - GitHub Releases in `gerkonkv-site` and `spacy-project-vault`: none;
 - checked `spacy-project-vault/rocketdict-stage06-spacy-model`: no RocketDict source package;
-- File Library: 0.30.29/Stage6T README + heavy evidence recovered, but no checkpoint ZIP/API source bytes;
-- the two currently preserved Stage31 transcript files: only one real sandbox checkpoint link, the known 0.30.8 `RocketDict_CURRENT_COMPACT.zip`;
+- File Library recovery evidence supplied historical checkpoint identities but not current checkpoint bytes/API source;
+- retained Stage31 transcripts yielded only the already-known 0.30.8 sandbox checkpoint link;
 - current ephemeral recovery workspace: ten ZIPs scanned by size/SHA/member inventory.
 
 Workspace ZIP result:
@@ -177,35 +218,42 @@ Workspace ZIP result:
 - with nested RocketDict checkpoint ZIP: 0
 - complete core candidates: 0
 
-The one package-root hit is `stage8-overlay-prefix.zip`, already classified as the known truncated 0.30.40 evidence.
+The one package-root hit is `stage8-overlay-prefix.zip`, already classified as known truncated 0.30.40 evidence.
 
 Do not repeat these searches unless new objects/refs/files become available.
 
-## Latest verified checkpoint
+## Latest verified recovery checkpoint
 
-Current latest evidence/code commit before this handoff update:
+Latest code/evidence checkpoint:
 
-`ff9018516d924d56de6e6c4d267a91e5b920a5a6` — `Record exhausted exact-core recovery search surfaces`
+`202fbf58b450f35ef631009f65356d5cdf562547` — `Test catalog-bound historical wheel recovery identities`
 
-Its parent functional scanner/catalog checkpoint:
-
-`30add956042f8c85e6c7fb9d1c70d319124f29ac` — `Bind recovery scanner to historical checkpoint catalog`
-
-Latest verified GitHub Actions:
+GitHub Actions:
 
 - workflow `RocketDict Workbench`
-- run `33965240536`
-- job `101304088386`
-- Ubuntu 24.04
+- run `33968651171`
+- job `101313136601`
+- Ubuntu 24.04.4
 - Python 3.13.15
 - compile success
-- **159 passed, 1 skipped in 2.11s**
+- **187 passed, 1 skipped in 3.29s**
 
-Earlier red scanner run remains preserved as failed-experiment evidence; its duplicate-root and corrupt-ZIP defects were fixed and regression-tested.
+This run proves, by regression tests, that:
+
+- an unknown intact wheel remains exploratory only;
+- a wheel using the known 0.30.34 basename but wrong SHA is blocked before runtime import;
+- an explicitly exact catalog identity may proceed to runtime proof;
+- corrupt `RECORD` blocks runtime;
+- blocked candidates stay visible with exact reasons in batch reports.
+
+Preserved failed evidence includes:
+
+- run `33967461124`: damaged 63-character historical SHA correctly rejected, then corrected from source evidence;
+- run `33967891342`: SyntaxError in a new test fixture caught at pytest collection and corrected without weakening wheel integrity semantics.
 
 ## Separate Stage6Y maintenance lineage
 
-RocketDict 0.30.34 / LAB Stage6Y is a verified parallel maintenance checkpoint, not Product source replacement.
+RocketDict 0.30.34 / LAB Stage6Y remains a verified historical maintenance lineage, not automatic Product source replacement.
 
 Key evidence:
 
@@ -218,21 +266,27 @@ Key evidence:
 - lexical entries 35,743
 - 301 packaged runtime files matched source byte-for-byte.
 
-Do not overwrite Product with Stage6Y without exact source-level compatibility and full regression.
+The newly recovered **0.30.34 wheel identity** is a valuable packaged-core recovery lead, but neither that identity nor a future successful runtime probe proves compatibility with missing exact 0.30.40 bytes.
 
 ## Immediate next Product task
 
-The next required input is **new provenance-verifiable full RocketDict checkpoint/core bytes**. Existing in-scope Git, Releases, current recovery ZIPs, retained transcripts and File Library evidence do not contain them.
+The next useful external input is provenance-verifiable historical RocketDict checkpoint/core **bytes**, preferably exactly:
+
+`rocketdict-0.30.34-py3-none-any.whl`
+
+SHA-256:
+
+`76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a`
 
 When new bytes become available:
 
 1. run `rocketdict-recover-scan` on the containing directory;
-2. run `rocketdict-recover-core` on the strongest candidate;
-3. run `rocketdict-recover-plan` and inspect every missing/exact replacement;
-4. never infer missing 0.30.40 overlay/API bytes;
-5. only for a complete exact-compatible runtime: Workbench doctor → real source import → immutable Product preflight → live registry/API probe → exact binding/execution contract;
+2. for wheel runtime evidence use `--probe-wheels`; the tool will not execute a wheel before integrity/catalog/identity checks pass;
+3. for a single wheel use `rocketdict-recover-wheel --probe-runtime`;
+4. never infer missing 0.30.40 overlay/API bytes from historical base similarity;
+5. only for a complete exact-compatible runtime: Workbench doctor → real source import → immutable Product preflight → live registry/API probe → exact callable binding/execution contract;
 6. perform the first genuine `rocketdict-product-run advance` Stage8 dispatch;
 7. continue the same immutable Product state through Stage25 with real OPUS + pinned CEFR-J;
 8. run the full 90k+ public-domain corpus without truncation and retain the complete translation/research evidence database.
 
-Until such bytes exist, keep `exact_core_incomplete` explicit. Do not spend another development turn rebuilding orchestration that is already implemented.
+Until those bytes exist, keep `exact_core_incomplete` explicit. Do not spend another development turn rebuilding orchestration that is already implemented.
