@@ -4,6 +4,7 @@ import base64
 import csv
 import hashlib
 import io
+import json
 from pathlib import Path
 import sys
 import zipfile
@@ -25,10 +26,18 @@ def _record_digest(raw: bytes) -> str:
     return "sha256=" + base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
-def _wheel(path: Path, *, corrupt_record: bool = False) -> Path:
-    version = "0.30.34"
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _wheel(
+    path: Path,
+    *,
+    version: str = "0.30.35",
+    corrupt_record: bool = False,
+) -> Path:
     init = (_target() / "src/rocketdict/__init__.py").read_bytes().replace(
-        b"0.30.40", b"0.30.34"
+        b"0.30.40", version.encode("ascii")
     )
     files: dict[str, bytes] = {
         "rocketdict/__init__.py": init,
@@ -75,18 +84,45 @@ def _wheel(path: Path, *, corrupt_record: bool = False) -> Path:
     return path
 
 
-def test_valid_wheel_builds_full_read_only_proof_without_runtime_by_default(tmp_path: Path) -> None:
-    wheel = _wheel(tmp_path / "rocketdict-0.30.34-py3-none-any.whl")
+def _catalog(path: Path, wheel: Path, *, version: str) -> Path:
+    payload = {
+        "schema": "rocketdict-historical-checkpoint-catalog/1",
+        "promotion_allowed": False,
+        "entries": [
+            {
+                "id": "test-exact-wheel",
+                "version": version,
+                "stage": "test",
+                "archive_name_patterns": [],
+                "archive_sha256": None,
+                "archive_bytes": None,
+                "wheel_name_patterns": [wheel.name],
+                "wheel_sha256": _sha256(wheel),
+                "wheel_bytes": wheel.stat().st_size,
+                "candidate_role": "test",
+                "evidence_level": "exact_test_identity",
+                "promotion_allowed": False,
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def test_unknown_valid_wheel_builds_full_read_only_proof_without_runtime(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path / "rocketdict-0.30.35-py3-none-any.whl")
 
     report = recover_wheel_candidate(wheel, probe_runtime=False)
 
-    assert report["schema"] == "rocketdict-workbench-core-wheel-recovery/4"
+    assert report["schema"] == "rocketdict-workbench-core-wheel-recovery/5"
     assert report["status"] == "verified_structural_base_candidate"
     assert report["promotion_allowed"] is False
     assert report["product_execution_allowed"] is False
     assert report["integrity"]["schema"] == "rocketdict-workbench-wheel-integrity/2"
     assert report["integrity"]["ok"] is True
-    assert report["structural_candidate"]["observed"]["rocketdict_version"] == "0.30.34"
+    assert report["historical_catalog"]["name_match"] is False
+    assert report["historical_catalog"]["exact_identity_expected"] is False
+    assert report["structural_candidate"]["observed"]["rocketdict_version"] == "0.30.35"
     assert report["compatibility_plan"]["target"]["exact_target_missing_count"] == 17
     assert report["runtime_probe"]["status"] == "not_requested"
     assert report["runtime_probe"]["attempted"] is False
@@ -96,8 +132,8 @@ def test_valid_wheel_builds_full_read_only_proof_without_runtime_by_default(tmp_
     assert len(report["identity"]["fingerprint"]) == 64
 
 
-def test_valid_wheel_can_add_runtime_proof_but_never_promote_product(tmp_path: Path) -> None:
-    wheel = _wheel(tmp_path / "rocketdict-0.30.34-py3-none-any.whl")
+def test_unknown_valid_wheel_can_add_runtime_proof_but_never_promote_product(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path / "rocketdict-0.30.35-py3-none-any.whl")
 
     report = recover_wheel_candidate(
         wheel,
@@ -106,6 +142,7 @@ def test_valid_wheel_can_add_runtime_proof_but_never_promote_product(tmp_path: P
     )
 
     assert report["status"] == "runtime_proven_base_candidate"
+    assert report["historical_catalog"]["name_match"] is False
     assert report["runtime_probe"]["attempted"] is True
     assert report["runtime_probe"]["ok"] is True
     assert report["runtime_probe"]["status"] == "runtime_import_proven"
@@ -118,9 +155,63 @@ def test_valid_wheel_can_add_runtime_proof_but_never_promote_product(tmp_path: P
     ]
 
 
-def test_corrupt_record_blocks_runtime_even_when_explicitly_requested(tmp_path: Path) -> None:
+def test_known_03034_filename_with_wrong_sha_blocks_runtime_before_import(tmp_path: Path) -> None:
     wheel = _wheel(
         tmp_path / "rocketdict-0.30.34-py3-none-any.whl",
+        version="0.30.34",
+    )
+
+    report = recover_wheel_candidate(
+        wheel,
+        probe_runtime=True,
+        python=sys.executable,
+    )
+
+    assert report["integrity"]["ok"] is True
+    assert report["historical_catalog"]["name_match"] is True
+    assert report["historical_catalog"]["exact_identity_expected"] is True
+    assert report["historical_catalog"]["exact_identity_match"] is False
+    assert report["historical_catalog"]["exact_identity_mismatch"] is True
+    assert report["status"] == "blocked_historical_catalog_identity"
+    assert report["runtime_probe"]["status"] == "blocked_by_historical_catalog_identity"
+    assert report["runtime_probe"]["attempted"] is False
+    assert report["runtime_proven"] is False
+    assert "historical_catalog_exact_identity_mismatch" in report[
+        "remaining_product_blockers"
+    ]
+    assert report["promotion_allowed"] is False
+
+
+def test_explicit_exact_catalog_identity_allows_runtime_proof_for_known_name(tmp_path: Path) -> None:
+    wheel = _wheel(
+        tmp_path / "rocketdict-0.30.34-py3-none-any.whl",
+        version="0.30.34",
+    )
+    catalog = _catalog(tmp_path / "catalog.json", wheel, version="0.30.34")
+
+    report = recover_wheel_candidate(
+        wheel,
+        checkpoint_catalog=catalog,
+        probe_runtime=True,
+        python=sys.executable,
+    )
+
+    assert report["historical_catalog"]["name_match"] is True
+    assert report["historical_catalog"]["exact_identity_expected"] is True
+    assert report["historical_catalog"]["exact_identity_match"] is True
+    assert report["historical_catalog"]["exact_identity_mismatch"] is False
+    assert report["historical_catalog"]["exact_match_versions"] == ["0.30.34"]
+    assert report["historical_catalog"]["version_consistent"] is True
+    assert report["status"] == "runtime_proven_base_candidate"
+    assert report["runtime_probe"]["attempted"] is True
+    assert report["runtime_probe"]["ok"] is True
+    assert report["runtime_proven"] is True
+    assert report["promotion_allowed"] is False
+
+
+def test_corrupt_record_blocks_runtime_even_when_explicitly_requested(tmp_path: Path) -> None:
+    wheel = _wheel(
+        tmp_path / "rocketdict-0.30.35-py3-none-any.whl",
         corrupt_record=True,
     )
 
@@ -145,7 +236,7 @@ def test_corrupt_record_blocks_runtime_even_when_explicitly_requested(tmp_path: 
 
 def test_batch_scan_preserves_corrupt_wheel_but_never_executes_it(tmp_path: Path) -> None:
     wheel = _wheel(
-        tmp_path / "rocketdict-0.30.34-py3-none-any.whl",
+        tmp_path / "rocketdict-0.30.35-py3-none-any.whl",
         corrupt_record=True,
     )
 
@@ -155,7 +246,7 @@ def test_batch_scan_preserves_corrupt_wheel_but_never_executes_it(tmp_path: Path
         python=sys.executable,
     )
 
-    assert report["schema"] == "rocketdict-workbench-core-recovery-scan/6"
+    assert report["schema"] == "rocketdict-workbench-core-recovery-scan/7"
     assert report["promotion_allowed"] is False
     assert report["product_execution_allowed"] is False
     assert report["wheel_pipeline_count"] == 1
@@ -172,8 +263,11 @@ def test_batch_scan_preserves_corrupt_wheel_but_never_executes_it(tmp_path: Path
     assert row["promotion_allowed"] is False
 
 
-def test_batch_scan_valid_wheel_proves_runtime_only_after_integrity(tmp_path: Path) -> None:
-    wheel = _wheel(tmp_path / "rocketdict-0.30.34-py3-none-any.whl")
+def test_batch_scan_known_catalog_mismatch_never_attempts_runtime(tmp_path: Path) -> None:
+    wheel = _wheel(
+        tmp_path / "rocketdict-0.30.34-py3-none-any.whl",
+        version="0.30.34",
+    )
 
     report = scan_recovery_pipeline(
         wheel,
@@ -181,11 +275,44 @@ def test_batch_scan_valid_wheel_proves_runtime_only_after_integrity(tmp_path: Pa
         python=sys.executable,
     )
 
+    assert report["wheel_integrity_ok_count"] == 1
+    assert report["wheel_catalog_exact_match_count"] == 0
+    assert report["wheel_catalog_exact_mismatch_count"] == 1
+    assert report["wheel_runtime_attempted_count"] == 0
+    assert report["wheel_runtime_proven_count"] == 0
+    row = report["candidates"][0]
+    assert row["historical_catalog_name_match"] is True
+    assert row["historical_catalog_exact_identity_match"] is False
+    assert row["historical_catalog_exact_identity_mismatch"] is True
+    assert row["wheel_recovery_status"] == "blocked_historical_catalog_identity"
+    assert row["runtime_proof_status"] == "blocked_by_historical_catalog_identity"
+    assert row["runtime_probe_ok"] is False
+
+
+def test_batch_scan_explicit_exact_catalog_proves_runtime_only_after_identity(tmp_path: Path) -> None:
+    wheel = _wheel(
+        tmp_path / "rocketdict-0.30.34-py3-none-any.whl",
+        version="0.30.34",
+    )
+    catalog = _catalog(tmp_path / "catalog.json", wheel, version="0.30.34")
+
+    report = scan_recovery_pipeline(
+        wheel,
+        checkpoint_catalog=catalog,
+        probe_wheels=True,
+        python=sys.executable,
+    )
+
     assert report["wheel_pipeline_count"] == 1
     assert report["wheel_integrity_ok_count"] == 1
+    assert report["wheel_catalog_exact_match_count"] == 1
+    assert report["wheel_catalog_exact_mismatch_count"] == 0
     assert report["wheel_runtime_attempted_count"] == 1
     assert report["wheel_runtime_proven_count"] == 1
     row = report["candidates"][0]
+    assert row["historical_catalog_name_match"] is True
+    assert row["historical_catalog_exact_identity_match"] is True
+    assert row["historical_catalog_exact_identity_mismatch"] is False
     assert row["wheel_integrity_ok"] is True
     assert row["runtime_probe_ok"] is True
     assert row["runtime_proof_status"] == "runtime_import_proven"
