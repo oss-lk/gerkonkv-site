@@ -19,7 +19,7 @@ from .core_scan import (
 from .core_scan_artifacts import scan_core_artifacts
 from .core_wheel_pipeline import recover_wheel_candidate
 
-SCHEMA = "rocketdict-workbench-core-recovery-scan/6"
+SCHEMA = "rocketdict-workbench-core-recovery-scan/7"
 
 
 def _canonical_sha(value: Any) -> str:
@@ -56,6 +56,8 @@ def scan_recovery_pipeline(
     errors = list(base.get("errors") or [])
     wheel_pipeline_count = 0
     wheel_integrity_ok_count = 0
+    wheel_catalog_exact_match_count = 0
+    wheel_catalog_exact_mismatch_count = 0
     wheel_runtime_attempted_count = 0
     wheel_runtime_proven_count = 0
     report_root = Path(reports_dir).expanduser().resolve() if reports_dir else None
@@ -68,6 +70,7 @@ def scan_recovery_pipeline(
             proof = recover_wheel_candidate(
                 Path(str(row["path"])),
                 target_evidence_root=target_evidence_root,
+                checkpoint_catalog=checkpoint_catalog,
                 probe_runtime=probe_wheels,
                 python=python,
                 timeout=wheel_timeout,
@@ -89,9 +92,14 @@ def scan_recovery_pipeline(
             continue
 
         integrity = proof.get("integrity") or {}
+        catalog = proof.get("historical_catalog") or {}
         runtime = proof.get("runtime_probe") or {}
         if integrity.get("ok"):
             wheel_integrity_ok_count += 1
+        if catalog.get("exact_identity_match"):
+            wheel_catalog_exact_match_count += 1
+        if catalog.get("exact_identity_mismatch"):
+            wheel_catalog_exact_mismatch_count += 1
         if runtime.get("attempted"):
             wheel_runtime_attempted_count += 1
         if proof.get("runtime_proven"):
@@ -106,6 +114,13 @@ def scan_recovery_pipeline(
         row["wheel_integrity_status"] = integrity.get("status")
         row["wheel_integrity_fingerprint"] = (
             (integrity.get("identity") or {}).get("fingerprint")
+        )
+        row["historical_catalog_name_match"] = bool(catalog.get("name_match"))
+        row["historical_catalog_exact_identity_match"] = bool(
+            catalog.get("exact_identity_match")
+        )
+        row["historical_catalog_exact_identity_mismatch"] = bool(
+            catalog.get("exact_identity_mismatch")
         )
         row["runtime_probe_ok"] = bool(proof.get("runtime_proven"))
         row["runtime_proof_status"] = runtime.get("status")
@@ -160,18 +175,22 @@ def scan_recovery_pipeline(
         "probe_wheels": probe_wheels,
         "wheel_pipeline_count": wheel_pipeline_count,
         "wheel_integrity_ok_count": wheel_integrity_ok_count,
+        "wheel_catalog_exact_match_count": wheel_catalog_exact_match_count,
+        "wheel_catalog_exact_mismatch_count": wheel_catalog_exact_mismatch_count,
         "wheel_runtime_attempted_count": wheel_runtime_attempted_count,
         "wheel_runtime_proven_count": wheel_runtime_proven_count,
         "wheel_runtime_policy": (
-            "runtime_allowed_only_after_integrity_structure_plan_and_cross_layer_identity"
+            "runtime_allowed_only_after_integrity_known_catalog_identity_structure_plan_and_cross_layer_identity"
             if probe_wheels
             else "runtime_not_requested_full_read_only_wheel_proof_still_generated"
         ),
         "checkpoint_catalog": base.get("checkpoint_catalog"),
         "ranking_semantics": (
-            "Recovery triage only. Wheel runtime evidence can improve triage rank only after "
-            "package integrity and exact cross-layer artifact identity pass. No rank authorizes "
-            "historical bytes as exact 0.30.40 or as Product execution proof."
+            "Recovery triage only. A known wheel basename with a cataloged exact identity must "
+            "match that identity before runtime probing. Runtime evidence can improve triage rank "
+            "only after package integrity, catalog identity where applicable, and cross-layer "
+            "artifact identity pass. No rank authorizes historical bytes as exact 0.30.40 or as "
+            "Product execution proof."
         ),
         "candidates": candidates,
         "errors": errors,
@@ -183,7 +202,7 @@ def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rocketdict-recover-scan",
         description=(
-            "Batch historical RocketDict recovery scan with integrity-gated wheel runtime proof"
+            "Batch historical RocketDict recovery scan with integrity- and catalog-gated wheel runtime proof"
         ),
     )
     p.add_argument("root", type=Path)
