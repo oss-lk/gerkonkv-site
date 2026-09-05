@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -340,9 +339,14 @@ def prove_stage8_execution_contract(
     if previous is not None and str(previous.get("fingerprint") or "") != proof["fingerprint"]:
         raise RuntimeError("Exact Stage8 public execution contract changed inside the immutable Product run")
     proofs[str(FIRST_UPSTREAM_STAGE)] = proof
-    upstream["status"] = "execution_contract_verified"
-    upstream["blocked_reason"] = "verified_stage8_execution_contract_not_yet_dispatched"
-    state["status"] = "ready_for_stage8_execution"
+
+    # Contract revalidation is read-only evidence work. Once a dispatch record
+    # exists, never regress its state (completed or ambiguous failure) merely
+    # because the same runtime contract was re-probed before resume/retry.
+    if str(FIRST_UPSTREAM_STAGE) not in (upstream.get("executions") or {}):
+        upstream["status"] = "execution_contract_verified"
+        upstream["blocked_reason"] = "verified_stage8_execution_contract_not_yet_dispatched"
+        state["status"] = "ready_for_stage8_execution"
     _save(path, state)
     return proof
 
@@ -384,7 +388,7 @@ def _render_request(binding: dict[str, Any], profile_stage: dict[str, Any], cont
             values[key] = int(binding["stage_number"])
         elif spec == "binding:stage_key":
             values[key] = binding["stage_key"]
-        else:  # protected again even after contract validation
+        else:
             raise RuntimeError(f"Unsupported Stage8 request source {spec!r}")
     return values
 
