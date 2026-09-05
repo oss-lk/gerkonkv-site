@@ -1,0 +1,87 @@
+{
+  "schema": "rocketdict-core-recovery-frontier/1",
+  "date_utc": "2026-09-05",
+  "promotion_allowed": false,
+  "exact_03040_core_complete": false,
+  "known_late_artifact_bytes_available_in_current_runtime": false,
+  "preferred_recovery_candidate": {
+    "version": "0.30.34",
+    "artifact_kind": "wheel",
+    "name": "rocketdict-0.30.34-py3-none-any.whl",
+    "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a",
+    "why": "newest historically verified packaged Python core artifact before 0.30.40",
+    "release_zip_available": false,
+    "promotion_allowed": false
+  },
+  "recovery_priority": [
+    {"version":"0.30.34","preferred_artifact":"wheel","priority":1},
+    {"version":"0.30.33","preferred_artifact":"exact ZIP or wheel","priority":2},
+    {"version":"0.30.32","preferred_artifact":"exact ZIP or wheel","priority":3},
+    {"version":"0.30.31","preferred_artifact":"exact ZIP or wheel","priority":4},
+    {"version":"0.30.30","preferred_artifact":"exact ZIP or wheel","priority":5},
+    {"version":"0.30.29","preferred_artifact":"exact ZIP","priority":6},
+    {"version":"0.30.8","preferred_artifact":"exact ZIP","priority":7}
+  ],
+  "current_exact_03040_overlay": {
+    "intended_members": 19,
+    "exact_target_available": 2,
+    "exact_target_missing": 17,
+    "exact_public_api_modules_recovered": 0
+  },
+  "tooling": {
+    "single_directory_or_zip_candidate_schema": "rocketdict-workbench-core-recovery-candidate/1",
+    "base_to_03040_plan_schema": "rocketdict-workbench-core-recovery-plan/1",
+    "wheel_recovery_schema": "rocketdict-workbench-core-wheel-recovery/2",
+    "wheel_runtime_probe_schema": "rocketdict-workbench-core-wheel-runtime-probe/1",
+    "unified_scan_schema": "rocketdict-workbench-core-recovery-scan/4",
+    "commands": [
+      "rocketdict-recover-core",
+      "rocketdict-recover-plan",
+      "rocketdict-recover-wheel",
+      "rocketdict-recover-scan"
+    ],
+    "wheel_runtime_probe": {
+      "default": "not_requested",
+      "opt_in_flag": "--probe-runtime",
+      "scan_opt_in_flag": "--probe-wheels",
+      "execution_model": "isolated Python subprocess plus direct zipimport; no wheel extraction or pip installation",
+      "proof_scope": "required historical RocketDict modules import from the candidate wheel in the selected Python environment",
+      "not_proven": [
+        "exact 0.30.40 compatibility",
+        "exact 0.30.40 public API bytes",
+        "live Product registry contracts",
+        "database compatibility",
+        "Product dispatch readiness"
+      ]
+    }
+  },
+  "validation": {
+    "failed_evidence_run": {
+      "workflow_run": 33967461124,
+      "job": 101309976354,
+      "result": "failure",
+      "test_summary": "2 failed, 170 passed, 1 skipped",
+      "finding": "the carried Stage6Y wheel SHA was only 63 hexadecimal characters and was correctly rejected by the catalog validator"
+    },
+    "corrected_green_run": {
+      "commit": "a016d1a739f2885cfbeb0923d571c2d177270a7a",
+      "workflow_run": 33967582970,
+      "job": 101310308432,
+      "python": "3.13.15",
+      "compile": "success",
+      "test_summary": "172 passed, 1 skipped in 1.80s",
+      "result": "success"
+    }
+  },
+  "next_required_input": {
+    "kind": "provenance-verifiable historical RocketDict checkpoint ZIP or wheel bytes",
+    "highest_value_exact_identity": "rocketdict-0.30.34-py3-none-any.whl SHA-256 76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a"
+  },
+  "next_steps_when_bytes_exist": [
+    "Run rocketdict-recover-scan on the containing directory and require exact catalog identity where known.",
+    "For a wheel, run rocketdict-recover-wheel --probe-runtime and retain structural, compatibility-plan and runtime fingerprints separately.",
+    "Do not substitute historical base bytes for the 17 missing exact 0.30.40 overlay targets or missing exact 0.30.40 API bytes.",
+    "Only after an exact-compatible runtime is established: Workbench doctor, real source import, immutable Product preflight, live API/registry probe, exact callable binding and first genuine Stage8 dispatch.",
+    "Continue the same immutable Product state through Stage25 and then validate the full 90k+ public-domain corpus without truncation."
+  ]
+}
