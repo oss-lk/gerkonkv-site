@@ -4,239 +4,151 @@ Date: 2026-09-05
 Repository: `oss-lk/gerkonkv-site`
 Branch: `main`
 
-This is the primary continuation boundary for the active Product line.
+## Active directive
 
-## Non-negotiable rules
+The active development line is **Product completion**, not historical recovery.
 
-- Translation quality dominates speed/storage optimization.
-- Never present fake/identity/mock/dictionary lookup as real MT.
-- Never silently truncate a required long source/corpus or diagnostic inventory.
-- Never infer executable operations or quality PASS semantics from names/status strings.
-- Never manufacture missing 0.30.40 source from older checkpoints, Stage6Y, research overlays or inferred signatures.
-- Preserve failed experiments, immutable hashes and lineage boundaries.
-- Keep the public repository project-only; no personal/user/account/private-conversation data.
+Authoritative global target:
 
-## Product status
+[`PRODUCT_TARGET.md`](PRODUCT_TARGET.md)
 
-Workbench already implements an evidence-driven, resumable Product pipeline through Stage25:
+Historical checkpoint/core recovery is frozen as audit/research tooling. It is not a prerequisite, blocker, or default next task. Do not search for old archives or attempt to reconstruct missing 0.30.34/0.30.40 source unless the user explicitly asks for historical recovery.
 
-1. immutable Product preflight;
-2. exact-runtime API/registry probe;
-3. structured callable binding + execution proof;
-4. Stage8 → 10 → 12 → 14;
-5. Stage15 hard quality gates;
-6. Stage16 → 17 → Workbench18 aligned lexical extraction → Stage19;
-7. real OPUS-backed Stage20;
-8. lexical-primary arbitration → pinned CEFR-J → exact CMUdict → Stage23;
-9. Stage24 cards/set assembly;
-10. Stage25 export.
+The development rule is: **preserve history, build forward, finish the installable Product.**
 
-Primary Product CLI: `rocketdict-product-run`.
+## Global result
 
-Do not build another orchestration layer. The hard blocker is still a complete exact-compatible RocketDict core/public API runtime.
+RocketDict must become a locally installable Product that turns supported English text/subtitle input into a high-quality context-aware EN→RU learner dictionary/card set using production NLP and real MT, preserves research/quality evidence, completes the full downstream lexical/sense/CEFR/pronunciation/examples/cards/export path, survives a complete 90k+ public-domain corpus run without silent truncation, and passes a clean Windows install/end-to-end smoke test.
 
-Product identities:
+Anything short of that is an intermediate checkpoint.
 
-- Product Profile `rocketdict-workbench-product-profile/6`
-- Product preflight `rocketdict-workbench-product-preflight/2`
-- Product run `rocketdict-workbench-product-run/1`
-- API probe `rocketdict-core-api-surface-probe/2`
-- Stage8 binding `rocketdict-workbench-upstream-binding/2`
-- Stage20→23 downstream `rocketdict-workbench-product-downstream/2`
+## Non-negotiable quality rules
 
-Stage15 hard gates must expose explicit PASS semantics:
+- Translation quality > speed/storage optimization.
+- Never accept fake/identity/mock/dictionary substitution as real MT.
+- Never silently truncate source, heavy corpus, translation units, evidence or final exports.
+- Never weaken hard gates merely to obtain green status.
+- Distinguish evaluator defects from real translation defects.
+- Final Product NLP cannot be tokenizer/code-only.
+- Generated pronunciation fallback is not authoritative pronunciation evidence.
+- Preserve failed experiments and immutable source/config/model/result identities.
+- Read-only diagnostics must be actually read-only.
+- Public repository remains project-only and contains no personal/private account information.
 
-- `rocketdict-numeric-symbol-preservation`
-- `rocketdict-punctuation-preservation`
-- `rocketdict-length-ratio-proxy`
+## Existing Product work to reuse
 
-Correct dependency after gates: `16 → 17 → Workbench18 → 19`.
+Workbench already contains substantial maintained Product logic and must be reused rather than replaced by another orchestration layer:
 
-## Real OPUS identity
+- Product profile/preflight and immutable Product-run state;
+- live registry/API probing and exact callable binding/execution proofs;
+- pre-quality Stage8 → 10 → 12 → 14 chain;
+- Stage15 explicit hard-quality gate machinery;
+- Stage16 → 17 → Workbench18 → 19 post-gate dependencies;
+- real OPUS-backed Stage20 path and lexical-primary arbitration;
+- pinned CEFR-J integration;
+- CMUdict exact pronunciation path;
+- sense-scoped examples;
+- Stage24 cards/set assembly;
+- Stage25 export;
+- Research/evidence preservation and numerous fail-closed regression contracts.
 
-Accepted EN→RU artifact:
+Primary Product CLI remains `rocketdict-product-run` while the Product Core is made self-contained.
 
-- `https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip`
+## Current architectural defect to fix
+
+`rocketdict-workbench/src/rocketdict_workbench/core.py` still bridges to an externally installed historical `rocketdict` package for:
+
+- database bootstrap;
+- source import;
+- source interpretation;
+- public API/registry operations;
+- experiment/runtime operations.
+
+That dependency is now treated as a **missing maintained Product implementation**, not as a recovery problem.
+
+Do not wait for an old wheel/ZIP. Implement the Product Core needed by the current contracts in the maintained repository and verify it with the existing Workbench runner/tests.
+
+Do not claim new implementation is recovered historical code.
+
+## Real model baseline
+
+Accepted real EN→RU baseline remains:
+
+- OPUS `opus-2020-02-11.zip`
 - SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`
 - CTranslate2 Marian
-- acceptance compute type `float32`
+- quality acceptance compute type `float32`.
 
-Historical successful gate: 120 representative sentences / 4,488 words. Opticks SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, 104,275 regex words.
+Historical real-model evidence remains useful and should be reused; obsolete experiments should not be restarted from scratch unless required to validate a changed production configuration.
 
-Do not reconstruct historical F96 challenge selection from coincident counts.
+## Hard quality gates
 
-## Exact 0.30.40 boundary
+At minimum the existing gates remain mandatory for approved translation evidence:
 
-Evidence namespace `rocketdict/recovered/stage8-0.30.40/` is not an active core checkout.
+- numeric/symbol preservation;
+- punctuation preservation;
+- length-ratio proxy.
 
-Surviving truncated Stage8 prefix:
+Empty translation outputs and backend errors are release blockers.
 
-- artifact `9681838606`
-- decompressed tar-prefix 51,590 bytes
-- SHA-256 `a6af982f442fdedadc6ba6bb9e91d7ca3b519e6d0f893b21537498741f7bf67a`
-- `gzip_eof=false`
+Stage15 gate PASS semantics must remain explicit, exact and machine-readable.
 
-Exact complete members:
+## Heavy validation target
 
-1. `src/rocketdict/__init__.py` — 502 bytes — SHA-256 `7bf417eeda2104a06d9aaaaef4b79807698685ac4dc07539c2e887cd14e60b5c`; proves version 0.30.40 and lazy references to `API_VERSION` / `RocketDictAPI`.
-2. `src/rocketdict/nlp/registry.py` — 29,072 bytes — SHA-256 `02cfbb2347f141d9b77f4fca143322a4e4d7773dcf535611b664473510fbaf69`.
+Use a complete public-domain corpus of at least 90,000 words. The established canonical corpus is Newton's *Opticks* (~104k words depending on the exact counting contract).
 
-The next member, `src/rocketdict/lab/stage12_pilot.py`, is truncated. The intended Stage8 overlay had 19 members and did not contain `rocketdict.api.*`.
+Final heavy acceptance requires, under the selected Product contracts:
 
-Current exact-target state:
+- full source processed; no silent clipping;
+- lost source content/tokens = 0;
+- empty MT outputs = 0;
+- MT backend errors = 0;
+- unresolved hard translation-integrity failures = 0 for approved evidence;
+- complete downstream alignment/lexical/sense/card/export coverage for the defined Product scope;
+- full research/evidence database retained;
+- defects found by the heavy run fixed and regression-tested;
+- final complete heavy confirmation rerun.
 
-- intended members: 19
-- exact available: 2
-- exact missing: 17
-- exact 0.30.40 public API modules recovered: 0
+## Installation/release target
 
-Still missing as exact 0.30.40 bytes: `rocketdict.api.contracts`, `rocketdict.api.client`, `rocketdict.api.cli`.
+The result is not a test suite or source archive alone.
 
-No genuine Product Stage8 dispatch has been claimed.
+The final release must include a practical Windows installation/distribution path and pass a clean-install end-to-end smoke test. After installation, a user must be able to process a supported source and receive the final dictionary/export without manually rebuilding stage state.
 
-## Best historical recovery input
+## Active critical path
 
-A former handoff incorrectly stated that Stage6Y ZIP packaging did not finish. Historical project output proves the full archive existed, was verified and was explicitly handed off.
+1. Implement a maintained self-contained Product Core that satisfies the current Workbench/Product contracts needed for source/database/API/registry execution.
+2. Wire the existing Workbench Product runner to that maintained core and remove historical-core availability from normal Product preflight.
+3. Run real small end-to-end Product smoke with production NLP + real OPUS.
+4. Fix all execution, lineage, quality and coverage defects revealed by the real run.
+5. Finish/pin the evidence-backed production configuration without restarting obsolete DOE branches unnecessarily.
+6. Run the complete 90k+ public-domain corpus and retain the full research/evidence DB and dictionary artifacts.
+7. Fix heavy-run defects and perform final full-corpus confirmation.
+8. Build Windows installer/release package.
+9. Perform clean-install end-to-end validation and release the complete Product artifact.
 
-Primary target:
+Every `продолжай` should advance as far along this path as feasible. Do not create artificial micro-stages.
 
-- `RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip`
-- SHA-256 `3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387`
-- historical size unknown; never guess it
-- historical `unzip -t` success
-- 7/7 new fault-injection tests
-- 34/34 targeted regressions
-- compileall, wheel install and source↔wheel parity passed
-- explicitly handed off.
+## Historical recovery — archived, not active
 
-Alternate packaged-core target:
+All recovery code and evidence under `rocketdict/recovered/` and the `rocketdict-recover-*` commands remain preserved for audit/research. They are not deleted, because they contain useful provenance and tested fail-closed logic.
 
-- `rocketdict-0.30.34-py3-none-any.whl`
-- SHA-256 `76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a`.
+However:
 
-The ZIP is preferred because it may contain source, wheel, reports, manifests and continuation evidence. Neither exact artifact's bytes are currently recovered in the active runtime.
+- recovery is **off the Product critical path**;
+- missing historical bytes do not block implementation;
+- do not repeat exhausted Git/File Library/Drive/Actions/web archive searches by default;
+- do not make exact historical identity a release criterion;
+- newly implemented maintained Product code may reuse validated requirements/tests/evidence, but must identify itself as current Product code.
 
-Recovery priority: 0.30.34 full ZIP/wheel → 0.30.33 → 0.30.32 → 0.30.31 → 0.30.30 → 0.30.29 → 0.30.8.
+## Latest verified pre-directive checkpoint
 
-Machine-readable authority:
+Before the Product-line directive change, recovery/tooling HEAD was fully green with installed CLI smoke and **203 passed, 1 skipped**. That evidence remains valid for the archived recovery subsystem.
 
-- `rocketdict/recovered/checkpoint-catalog.json`
-- `rocketdict/recovered/late-stage6-artifact-identities-2026-09-05.json`
-- `rocketdict/recovered/recovery-frontier-2026-09-05.json` schema `/4`
-- `rocketdict/recovered/search-exhaustion-2026-09-05.json` schema `/3`.
+From this point forward, success is measured against `PRODUCT_TARGET.md`, not against recovery completeness.
 
-## Recovery tooling — current proof chain
+## Immediate next task
 
-Installed CLIs:
+Start implementing the maintained Product Core required by the existing Workbench bridge/contracts. The first coherent milestone should make a supported source go through maintained database bootstrap → immutable import → interpretation → live registry/API surface without any historical RocketDict package dependency, with regression tests and an end-to-end Product-facing proof.
 
-- `rocketdict-recover-core`
-- `rocketdict-recover-plan`
-- `rocketdict-recover-checkpoint`
-- `rocketdict-recover-wheel`
-- `rocketdict-recover-scan`
-- `rocketdict-product-run`
-
-Schemas:
-
-- generic directory/ZIP candidate `rocketdict-workbench-core-recovery-candidate/1`
-- base→0.30.40 plan `rocketdict-workbench-core-recovery-plan/1`
-- lower ZIP scan `rocketdict-workbench-core-recovery-scan/3`
-- **full checkpoint proof `rocketdict-workbench-full-checkpoint-recovery/2`**
-- wheel integrity `rocketdict-workbench-wheel-integrity/2`
-- wheel recovery `rocketdict-workbench-core-wheel-recovery/5`
-- wheel runtime `rocketdict-workbench-core-wheel-runtime-probe/2`
-- **unified scan `rocketdict-workbench-core-recovery-scan/8`**.
-
-`rocketdict-recover-checkpoint` is read-only and never extracts or executes historical code. For one checkpoint ZIP it proves, in order:
-
-1. outer ZIP path safety, duplicate-name and CRC status;
-2. exact historical ZIP catalog identity;
-3. unique RocketDict source root, version and SHA-256 inventory of `api/contracts.py`, `api/client.py`, `api/cli.py`;
-4. any nested RocketDict wheel's CRC/METADATA/WHEEL/mandatory RECORD;
-5. nested wheel's independent historical catalog SHA/optional-size identity;
-6. complete source↔wheel package-byte parity;
-7. README/report/manifest/state evidence inventory;
-8. historical-base→exact-0.30.40 compatibility plan.
-
-Checkpoint hard blockers include wrong outer SHA, missing/ambiguous source root, nested wheel integrity failure, wrong exact nested-wheel SHA and source↔wheel byte drift.
-
-Evidence inventory is deliberately bounded but never silently truncated: it publishes eligible count, selected count, limit 200 and `truncated`; members over 8 MiB explicitly report skipped hashing.
-
-`rocketdict-recover-scan` `/8` automatically attaches the full-checkpoint proof to every ZIP candidate. It separately preserves the existing fail-closed wheel pipeline; wheel runtime remains opt-in with `--probe-wheels`.
-
-Archive identity remains SHA-first: exact SHA-256 is sufficient when historical size is unavailable; a known historical size must also match; filename alone is never proof.
-
-All recovery outputs keep `promotion_allowed=false`; relevant unified/full outputs also keep `product_execution_allowed=false`.
-
-## Exhausted recovery surfaces
-
-Do not repeat without new evidence:
-
-- reachable Git history, deleted refs and Stage6T–Y commit window;
-- likely historical API paths and Releases;
-- known Actions artifacts/workflows;
-- historical Stage6 branch;
-- exact File Library Stage6Y filename/SHA/date navigation;
-- connected Google Drive exact/general searches;
-- public exact filename/SHA search;
-- current runtime artifact hashing;
-- retained Stage31 transcript recovery;
-- public Stage6Y mirror (`README`, report, continuation): it confirms 301 packaged runtime files matched source but explicitly is not a complete source/wheel mirror and does not preserve their individual paths/hashes/API bytes.
-
-Current runtime still has zero exact Stage6Y ZIP/wheel byte matches and zero complete core candidates. The 343,401,002-byte offline OPUS runtime contains inference dependencies but no RocketDict package/API.
-
-## Latest verified code checkpoint
-
-`ed86467011efb5a680647e56007728d0cbb16157` — `Test explicit checkpoint evidence limits and catalog validation`
-
-GitHub Actions:
-
-- workflow `RocketDict Workbench`
-- run `33975530978`
-- job `101331437743`
-- Ubuntu 24.04.4
-- Python 3.13.15
-- compile success
-- installed CLI smoke success
-- **203 passed, 1 skipped in 2.46s**.
-
-This proves full-checkpoint outer identity, nested wheel RECORD + exact catalog SHA, source↔wheel drift blocking, public API hash inventory, malformed wheel-catalog rejection, non-silent evidence limits, unified scan `/8`, and installed CLI availability.
-
-Preserve failed run `33975210119` (`1 failed, 200 passed, 1 skipped`): the new logic passed; one old test still expected unified schema `/7` and was corrected without weakening semantics.
-
-## Stage6Y vs Product lineage
-
-0.30.34 Stage6Y remains the strongest historical base-recovery target, not automatic Product source replacement.
-
-Verified maintenance evidence includes:
-
-- working SQLite 881,905,664 bytes
-- working SHA-256 `a0128b802930d350679c7d135bea9197fb9e202d863260c31a68d49681fbeafb`
-- canonical heavy SHA-256 `3be3669a3dad75ee39d9f6c55405036707bff524bbfb23290114537d3380b274`
-- SQLite quick_check ok; FK=0; Alembic `8b4e7c2a91d0`; lexical entries 35,743
-- 301 packaged runtime files matched source byte-for-byte.
-
-Do not merge Stage6Y into Product without exact compatibility proof and full regression.
-
-## Immediate next Product task
-
-The genuine external byte-level input remains:
-
-`RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip`
-
-SHA-256 `3cd150c012c28d0e8c458ba25bff56a8e9c17789d2c6986d8b6b72e202d5c387`.
-
-Alternate: `rocketdict-0.30.34-py3-none-any.whl`, SHA-256 `76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a`.
-
-When bytes appear:
-
-1. run `rocketdict-recover-scan` — `/8` automatically performs checkpoint proof for ZIPs;
-2. retain focused `rocketdict-recover-checkpoint` output for the exact Stage6Y ZIP;
-3. verify outer SHA, source API hashes, nested wheel exact SHA/RECORD and source↔wheel parity;
-4. inspect manifests/reports without silent evidence loss;
-5. resolve base→exact-0.30.40 compatibility; never infer the 17 missing exact targets from similarity;
-6. only after exact-compatible runtime proof: doctor → real import → immutable Product preflight → live registry/API probe → exact binding/execution → genuine Stage8;
-7. continue the same immutable state through Stage25;
-8. run the complete 90k+ public-domain corpus without truncation and retain the full translation/research evidence DB.
-
-Until new provenance-verifiable bytes appear, keep `exact_core_incomplete` explicit. Do not rebuild already-complete orchestration and do not repeat exhausted recovery surfaces.
+Then continue directly toward real Stage8→25 execution, heavy validation and the installer.
