@@ -36,9 +36,10 @@ def test_late_stage6_exact_artifact_identity_record_is_fail_closed() -> None:
     assert rows["0.30.34"]["wheel"] == {
         "name": "rocketdict-0.30.34-py3-none-any.whl",
         "bytes": None,
-        "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02",
+        "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a",
         "identity": "exact_sha256",
     }
+    assert len(rows["0.30.34"]["wheel"]["sha256"]) == 64
 
 
 def test_checkpoint_catalog_ranks_03034_wheel_without_inventing_release_zip() -> None:
@@ -58,7 +59,8 @@ def test_checkpoint_catalog_ranks_03034_wheel_without_inventing_release_zip() ->
     assert y["archive_sha256"] is None
     assert y["archive_bytes"] is None
     assert y["wheel_name_patterns"] == ["rocketdict-0.30.34-py3-none-any.whl"]
-    assert y["wheel_sha256"] == "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02"
+    assert y["wheel_sha256"] == "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a"
+    assert len(y["wheel_sha256"]) == 64
     assert y["candidate_role"] == "highest_known_late_packaged_core_candidate"
     assert y["promotion_allowed"] is False
 
