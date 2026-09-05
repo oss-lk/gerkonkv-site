@@ -61,7 +61,9 @@ def test_recovery_frontier_keeps_historical_runtime_proof_separate_from_product_
     ]
     assert "wheel_record_missing" in tooling["wheel_integrity_hard_failures"]
     assert "wheel_record_verification_failed" in tooling["wheel_integrity_hard_failures"]
-    assert "wrong exact SHA" in tooling["known_name_identity_rule"]
+    identity_rule = tooling["known_name_identity_rule"]
+    assert "SHA-256/size mismatch" in identity_rule
+    assert "blocks runtime before historical code import" in identity_rule
 
     probe = tooling["wheel_runtime_probe"]
     assert probe["default"] == "not_requested"
