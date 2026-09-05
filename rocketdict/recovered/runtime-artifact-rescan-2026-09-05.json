@@ -1,0 +1,51 @@
+{
+  "schema": "rocketdict-current-runtime-artifact-rescan/1",
+  "date_utc": "2026-09-05",
+  "promotion_allowed": false,
+  "product_execution_allowed": false,
+  "target": {
+    "name": "rocketdict-0.30.34-py3-none-any.whl",
+    "sha256": "76f7054f2a28a56a650f2fdf72175c3b993e252d020936b3b6084092d465a02a"
+  },
+  "scan_scope": {
+    "description": "all top-level ZIP/WHL artifacts physically present in the active recovery runtime workspace",
+    "artifact_count": 10,
+    "top_level_wheel_count": 0,
+    "exact_target_sha_match_count": 0
+  },
+  "artifacts": [
+    {"name":"rocketdict-deleted-ref-events-recovery.zip","bytes":8254,"sha256":"c2fff73c403cbbc5ab6b25620fcf2915097283bddb3f5d6a2eca00ff045b83ee","zip_member_count":1,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"rocketdict-offline-opus-runtime-cp313.zip","bytes":343401002,"sha256":"c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c","zip_member_count":7,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"rocketdict-real-opus-gate.zip","bytes":30389,"sha256":"7044b3f3cd6a1b625c06b97067d68da1f7999b118e9e6f63776df28f969c1e00","zip_member_count":10,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"rocketdict-stage8-api-artifact-recovery-v2.zip","bytes":1626006,"sha256":"2728dc1da4e92e9f4b27d45b17e0a69a989adc2afbed8647e397286daca34c50","zip_member_count":2,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"rocketdict-stage8-api-artifact-recovery-v3.zip","bytes":1693011,"sha256":"cc4d7ffb42769af8b6c4dd240b8560c7ccaf9db37a183a822660f00916237ee2","zip_member_count":2,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"rocketdict-stage8-api-artifact-recovery.zip","bytes":693117,"sha256":"9949f5895fa4ea00e99b5d7cdca2ac59b579addab71403e3cd3566539f3acc10","zip_member_count":2,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"stage7-structural-recovery-a.zip","bytes":3611170,"sha256":"4d395857bdfaaf7ab4934e5423ef33c006d3dc0c45dddf11c815e0c918069b71","zip_member_count":19,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"stage7-structural-recovery-b.zip","bytes":2108453,"sha256":"d23b1becf07aa05b74e30b5ca786732861f61e568acf025a06d59631d28cec54","zip_member_count":18,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"stage8-artifact-recovery.zip","bytes":781214,"sha256":"b9688c2fa606a1650a9344e56a7f5a5093d389d4ea2a738abdd7aa9ee0a866f8","zip_member_count":2,"rocketdict_package_init_hits":0,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0},
+    {"name":"stage8-overlay-prefix.zip","bytes":29772,"sha256":"d56876cc23cc281ab9f9da36dedcff9536aca766ef7da7ad414addd57a2cf8d8","zip_member_count":5,"rocketdict_package_init_hits":1,"rocketdict_api_client_hits":0,"nested_rocketdict_wheels":0}
+  ],
+  "offline_opus_runtime": {
+    "artifact": "rocketdict-offline-opus-runtime-cp313.zip",
+    "bytes": 343401002,
+    "sha256": "c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c",
+    "member_count": 7,
+    "nested_wheels": [
+      "ctranslate2-4.8.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "numpy-2.5.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sentencepiece-0.2.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "setuptools-84.0.0-py3-none-any.whl"
+    ],
+    "rocketdict_package_present": false,
+    "rocketdict_api_present": false,
+    "conclusion": "offline OPUS execution dependencies survive, but this artifact cannot recover the missing RocketDict core/public API"
+  },
+  "result": {
+    "exact_03034_wheel_found": false,
+    "complete_rocketdict_core_found": false,
+    "rocketdict_api_client_found": false,
+    "next_external_input_unchanged": true
+  },
+  "rule": "Do not repeat byte hashing of this same active-runtime artifact set unless files change. New provenance-verifiable files should be scanned through rocketdict-recover-scan."
+}
