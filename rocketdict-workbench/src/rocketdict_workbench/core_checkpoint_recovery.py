@@ -58,10 +58,44 @@ _EVIDENCE_RE = re.compile(
     r"(?:^|/)(?:readme|continue|handoff|manifest|report|state|.*sha256.*|.*stage6y.*)(?:\.[^/]*)?$",
     re.IGNORECASE,
 )
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _validate_wheel_catalog(catalog: dict[str, Any] | None) -> None:
+    if catalog is None:
+        return
+    for row in catalog.get("entries") or []:
+        entry_id = str(row.get("id") or "")
+        patterns = row.get("wheel_name_patterns", [])
+        if not isinstance(patterns, list) or not all(isinstance(item, str) for item in patterns):
+            raise RecoveryCandidateError(
+                f"checkpoint catalog wheel patterns invalid: {entry_id}"
+            )
+        for pattern in patterns:
+            if not pattern or "/" in pattern or "\\" in pattern:
+                raise RecoveryCandidateError(
+                    f"checkpoint catalog wheel pattern must be a basename glob: {entry_id}: {pattern!r}"
+                )
+        expected_sha = row.get("wheel_sha256")
+        if expected_sha is not None and not _SHA256_RE.fullmatch(str(expected_sha).casefold()):
+            raise RecoveryCandidateError(
+                f"checkpoint catalog wheel SHA-256 invalid: {entry_id}"
+            )
+        expected_bytes = row.get("wheel_bytes")
+        if expected_bytes is not None and (
+            not isinstance(expected_bytes, int) or expected_bytes < 1
+        ):
+            raise RecoveryCandidateError(
+                f"checkpoint catalog wheel byte size invalid: {entry_id}"
+            )
+        if expected_bytes is not None and expected_sha is None:
+            raise RecoveryCandidateError(
+                f"checkpoint catalog wheel byte size lacks SHA-256: {entry_id}"
+            )
 
 
 def _source_roots(names: list[str]) -> list[dict[str, str]]:
@@ -396,13 +430,15 @@ def _api_complete(inventory: dict[str, Any]) -> bool:
 def _evidence_inventory(
     zf: zipfile.ZipFile,
     infos: list[zipfile.ZipInfo],
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
+    eligible = [
+        info
+        for info in sorted(infos, key=lambda item: item.filename.casefold())
+        if _EVIDENCE_RE.search(info.filename)
+    ]
+    selected = eligible[:MAX_EVIDENCE_MEMBERS]
     rows: list[dict[str, Any]] = []
-    for info in sorted(infos, key=lambda item: item.filename.casefold()):
-        if len(rows) >= MAX_EVIDENCE_MEMBERS:
-            break
-        if not _EVIDENCE_RE.search(info.filename):
-            continue
+    for info in selected:
         row: dict[str, Any] = {
             "path": info.filename,
             "bytes": info.file_size,
@@ -415,7 +451,13 @@ def _evidence_inventory(
             row["sha256"] = None
             row["hash_skipped"] = "evidence_member_over_hash_limit"
         rows.append(row)
-    return rows
+    return {
+        "eligible_count": len(eligible),
+        "selected_count": len(rows),
+        "limit": MAX_EVIDENCE_MEMBERS,
+        "truncated": len(eligible) > len(rows),
+        "members": rows,
+    }
 
 
 def inspect_full_checkpoint(
@@ -436,6 +478,7 @@ def inspect_full_checkpoint(
         target_evidence_root=target_evidence_root,
         checkpoint_catalog=checkpoint_catalog,
     )
+    _validate_wheel_catalog(catalog)
     catalog_matches = _checkpoint_matches(
         path,
         {
@@ -528,7 +571,8 @@ def inspect_full_checkpoint(
             wheel["api_complete"] = _api_complete(wheel["api_inventory"])
             nested_wheels.append(wheel)
 
-        evidence = _evidence_inventory(zf, infos)
+        evidence_report = _evidence_inventory(zf, infos)
+        evidence = list(evidence_report["members"])
         other_wheel_count = sum(
             1
             for info in infos
@@ -638,7 +682,10 @@ def inspect_full_checkpoint(
         ),
         "other_wheel_count": other_wheel_count,
         "nested_rocketdict_wheels": nested_wheels,
-        "evidence_inventory_count": len(evidence),
+        "evidence_inventory_count": evidence_report["selected_count"],
+        "evidence_inventory_eligible_count": evidence_report["eligible_count"],
+        "evidence_inventory_limit": evidence_report["limit"],
+        "evidence_inventory_truncated": evidence_report["truncated"],
         "evidence_inventory": evidence,
         "core_candidate": core_candidate,
         "compatibility_plan": compatibility_plan,
@@ -648,7 +695,8 @@ def inspect_full_checkpoint(
             "This proof is read-only and never executes or extracts checkpoint bytes. Exact "
             "historical ZIP identity, exact nested-wheel identity, source↔wheel parity and "
             "historical API hashes still do not substitute for missing exact 0.30.40 targets "
-            "or authorize Product execution."
+            "or authorize Product execution. Evidence inventory limits are always reported "
+            "explicitly; truncation is never silent."
         ),
     }
     payload["identity"] = {
