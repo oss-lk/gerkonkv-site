@@ -1,0 +1,125 @@
+name: RocketDict Stage24 repair
+
+on:
+  push:
+    paths:
+      - .github/workflows/rocketdict-stage24-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Apply exact Stage24 hardening patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('rocketdict-workbench/src/rocketdict_workbench/final_product_pipeline.py')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''def _append_journal(path: Path, record: dict[str, Any]) -> None:\n    path.parent.mkdir(parents=True, exist_ok=True)\n    record = dict(record)\n    record["record_sha256"] = _canonical_sha256(_journal_line_payload(record))\n    data = (json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\\n").encode("utf-8")\n    with path.open("ab") as fh:\n        fh.write(data)\n        fh.flush()\n        os.fsync(fh.fileno())\n'''
+          new = '''def _truncate_incomplete_journal_tail(path: Path) -> None:\n    """Discard only the uncommitted partial tail left by an interrupted append.\n\n    A durable journal record always ends in ``\\n`` after its full JSON payload was\n    written and fsynced.  Bytes after the last newline can therefore never be a\n    committed success record.  Truncate them before a future append so a recovered\n    record cannot be concatenated onto stale partial JSON.\n    """\n    if not path.is_file():\n        return\n    raw = path.read_bytes()\n    if not raw or raw.endswith(b"\\n"):\n        return\n    last_newline = raw.rfind(b"\\n")\n    durable_size = last_newline + 1 if last_newline >= 0 else 0\n    with path.open("r+b") as fh:\n        fh.truncate(durable_size)\n        fh.flush()\n        os.fsync(fh.fileno())\n\n\ndef _append_journal(path: Path, record: dict[str, Any]) -> None:\n    path.parent.mkdir(parents=True, exist_ok=True)\n    _truncate_incomplete_journal_tail(path)\n    record = dict(record)\n    record["record_sha256"] = _canonical_sha256(_journal_line_payload(record))\n    data = (json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\\n").encode("utf-8")\n    with path.open("ab") as fh:\n        fh.write(data)\n        fh.flush()\n        os.fsync(fh.fileno())\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'journal append patch anchor count={text.count(old)}')
+          text = text.replace(old, new)
+
+          old = '''        candidate = {"operation": operation, "reasons": reasons, "contract": contract if not reasons else None}\n        candidates.append(candidate)\n        if not reasons:\n            exact.append(candidate)\n'''
+          new = '''        candidate = {\n            "operation": operation,\n            "mapping_module": row.get("mapping_module"),\n            "mapping_name": row.get("mapping_name"),\n            "callable_module": row.get("callable_module"),\n            "callable_qualname": row.get("callable_qualname"),\n            "source_sha256": str(row.get("source_sha256") or "").casefold(),\n            "reasons": reasons,\n            "contract": contract if not reasons else None,\n        }\n        candidates.append(candidate)\n        if not reasons:\n            exact.append(candidate)\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'set discovery candidate patch anchor count={text.count(old)}')
+          text = text.replace(old, new)
+
+          old = '''    state, preflight, probe = _load_verified_evidence(state_path)\n    require_quality_gate_pass(state_path)\n    manifest = _load_complete_card_manifest(state_path, state)\n'''
+          new = '''    state, preflight, probe = _load_verified_evidence(state_path)\n    require_quality_gate_pass(state_path)\n    probe_database = Path(str((probe.get("database") or {}).get("path") or "")).expanduser().resolve()\n    if probe_database != database_path:\n        raise RuntimeError("Card-set assembly database differs from immutable API probe database")\n    manifest = _load_complete_card_manifest(state_path, state)\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'set discovery database patch anchor count={text.count(old)}')
+          text = text.replace(old, new)
+
+          old = '''    row = [row for row in _operation_rows(probe) if str(row.get("operation") or "") == operation][0]\n    binding = {\n'''
+          new = '''    runtime_rows = [\n        row\n        for row in _operation_rows(probe)\n        if str(row.get("operation") or "") == operation\n        and str(row.get("mapping_module") or "") == str(candidate.get("mapping_module") or "")\n        and str(row.get("mapping_name") or "") == str(candidate.get("mapping_name") or "")\n        and str(row.get("callable_module") or "") == str(candidate.get("callable_module") or "")\n        and str(row.get("callable_qualname") or "") == str(candidate.get("callable_qualname") or "")\n        and str(row.get("source_sha256") or "").casefold() == str(candidate.get("source_sha256") or "").casefold()\n    ]\n    if len(runtime_rows) != 1:\n        raise RuntimeError("Card-set assembly structured callable identity is no longer unique")\n    row = runtime_rows[0]\n    binding = {\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'set execution row patch anchor count={text.count(old)}')
+          text = text.replace(old, new)
+
+          old = '''        "operation": operation,\n        "callable_source_sha256": str(row.get("source_sha256") or "").casefold(),\n'''
+          new = '''        "operation": operation,\n        "mapping_module": str(row.get("mapping_module") or ""),\n        "mapping_name": str(row.get("mapping_name") or ""),\n        "callable_module": str(row.get("callable_module") or ""),\n        "callable_qualname": str(row.get("callable_qualname") or ""),\n        "callable_source_sha256": str(row.get("source_sha256") or "").casefold(),\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'set binding identity patch anchor count={text.count(old)}')
+          text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+
+          test_path = Path('rocketdict-workbench/tests/test_final_product_pipeline.py')
+          tests = test_path.read_text(encoding='utf-8')
+          extra = r'''
+
+
+def test_set_assembly_duplicate_operation_key_is_not_collapsed_to_first_mapping(tmp_path) -> None:
+    database = tmp_path / "db.sqlite"; database.touch()
+    state_path, payload = _write_state(tmp_path, database)
+    duplicate = dict(payload["steps"]["upstream_contract_probe"]["result"]["callable_operations"][1])
+    duplicate["mapping_module"] = "rocketdict.api.other_operations"
+    duplicate["mapping_name"] = "OTHER_OPERATIONS"
+    duplicate["callable_module"] = "rocketdict.api.other_operations"
+    duplicate["callable_qualname"] = "assemble_set_other"
+    duplicate["source_sha256"] = "7" * 64
+    payload["steps"]["upstream_contract_probe"]["result"]["callable_operations"].append(duplicate)
+    probe = payload["steps"]["upstream_contract_probe"]["result"]
+    probe["fingerprint"] = _canon({k: v for k, v in probe.items() if k != "fingerprint"})
+    payload["steps"]["upstream_contract_probe"]["result_sha256"] = _canon(probe)
+    state_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    class DuplicateAwareCore(_Core):
+        def __init__(self, state):
+            super().__init__(state)
+            self.rows_by_identity = {
+                (row["mapping_module"], row["mapping_name"], row["operation"]): row
+                for row in state["steps"]["upstream_contract_probe"]["result"]["callable_operations"]
+            }
+
+        def _run(self, args, *, timeout=120.0, input_text=None):
+            row = self.rows_by_identity[(args[2], args[3], args[4])]
+            operation = args[4]
+            contract = _contract(operation)
+            return SimpleNamespace(
+                stdout=json.dumps({
+                    "schema": "rocketdict-workbench-operation-contract-probe/1",
+                    "database": {"path": args[5], "exists": True},
+                    "core": {"rocketdict_version": "0.30.40", "api_version": "1"},
+                    "mapping_module": row["mapping_module"],
+                    "mapping_name": row["mapping_name"],
+                    "operation": operation,
+                    "callable_module": row["callable_module"],
+                    "callable_qualname": row["callable_qualname"],
+                    "callable_source_sha256": row["source_sha256"],
+                    "contract_attribute": args[6],
+                    "contract": contract,
+                }),
+                stderr="",
+                returncode=0,
+            )
+
+    core = DuplicateAwareCore(payload)
+    execute_stage24_cards(core, database, state_path)
+    discovery = discover_set_assembly(core, database, state_path)
+    assert discovery["status"] == "ambiguous_exact_matches"
+    assert len(discovery["exact_matches"]) == 2
+    with pytest.raises(RuntimeError, match="not uniquely proven"):
+        execute_set_assembly(core, database, state_path)
+'''
+          if 'test_set_assembly_duplicate_operation_key_is_not_collapsed_to_first_mapping' not in tests:
+              test_path.write_text(tests + extra, encoding='utf-8')
+          PY
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rocketdict-workbench/src/rocketdict_workbench/final_product_pipeline.py rocketdict-workbench/tests/test_final_product_pipeline.py
+          git diff --cached --check
+          git commit -m "Harden Stage24 crash recovery and set assembly identity"
+          git push origin HEAD:main
