@@ -10,7 +10,7 @@ from .core import RocketDictCore
 from .product_preflight import PREFLIGHT_SCHEMA
 
 RUN_STATE_SCHEMA = "rocketdict-workbench-product-run/1"
-API_PROBE_SCHEMA = "rocketdict-core-api-surface-probe/1"
+API_PROBE_SCHEMA = "rocketdict-core-api-surface-probe/2"
 STEP_ORDER = (
     "preflight",
     "upstream_contract_probe",
@@ -144,9 +144,9 @@ def canon(value):
     return hashlib.sha256(raw).hexdigest()
 
 
-def source_sha(module):
+def source_sha(value):
     try:
-        text=inspect.getsource(module)
+        text=inspect.getsource(value)
     except Exception:
         return None
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -177,6 +177,52 @@ def no_required_parameters(fn):
             return False
     return True
 
+
+def signature_row(fn):
+    try:
+        sig=inspect.signature(fn)
+    except Exception:
+        return {"text":None,"parameters":[]}
+    params=[]
+    for p in sig.parameters.values():
+        params.append({
+            "name":p.name,
+            "kind":p.kind.name,
+            "required":p.default is p.empty and p.kind not in (p.VAR_POSITIONAL,p.VAR_KEYWORD),
+        })
+    return {"text":str(sig),"parameters":params}
+
+
+def safe_metadata(value):
+    if value is None or isinstance(value,(str,int,float,bool)):
+        return value
+    if isinstance(value,(list,tuple)) and all(isinstance(item,(str,int,float,bool)) or item is None for item in value):
+        return list(value)
+    return None
+
+
+def binding_metadata(obj):
+    aliases={
+        "stage_number":("stage_number","stage"),
+        "stage_key":("stage_key",),
+        "implementation_key":("implementation_key","implementation"),
+        "adapter_descriptor_hash":("adapter_descriptor_hash","descriptor_hash"),
+        "required_inputs":("required_inputs",),
+    }
+    out={}
+    for key,names in aliases.items():
+        for name in names:
+            try:
+                value=getattr(obj,name)
+            except Exception:
+                continue
+            value=safe_metadata(value)
+            if value is not None:
+                out[key]=value
+                break
+    return out
+
+
 modules=[api_pkg.__name__]
 try:
     modules.extend(sorted(info.name for info in pkgutil.iter_modules(api_pkg.__path__,api_pkg.__name__+".")))
@@ -186,6 +232,7 @@ except Exception:
 module_rows=[]
 parser_commands=set()
 mapping_keys=set()
+callable_operations=[]
 for name in modules:
     row={"module":name,"imported":False,"source_sha256":None,"parser_builders":[],"callable_mapping_names":[]}
     try:
@@ -200,6 +247,20 @@ for name in modules:
                 if callable_keys:
                     row["callable_mapping_names"].append({"name":attr,"keys":callable_keys})
                     mapping_keys.update(callable_keys)
+                    for key in callable_keys:
+                        fn=obj[key]
+                        sig=signature_row(fn)
+                        callable_operations.append({
+                            "mapping_module":name,
+                            "mapping_name":attr,
+                            "operation":key,
+                            "callable_module":str(getattr(fn,"__module__","") or ""),
+                            "callable_qualname":str(getattr(fn,"__qualname__",getattr(fn,"__name__",type(fn).__name__))),
+                            "signature":sig["text"],
+                            "parameters":sig["parameters"],
+                            "source_sha256":source_sha(fn),
+                            "binding_metadata":binding_metadata(fn),
+                        })
             if callable(obj) and "parser" in attr.casefold() and getattr(obj,"__module__",None)==name and no_required_parameters(obj):
                 try:
                     candidate=obj()
@@ -213,14 +274,19 @@ for name in modules:
         row["error"]={"type":type(exc).__name__,"message":str(exc)}
     module_rows.append(row)
 
+callable_operations=sorted(
+    callable_operations,
+    key=lambda x:(x["operation"],x["mapping_module"],x["mapping_name"],x["callable_module"],x["callable_qualname"]),
+)
 payload={
-    "schema":"rocketdict-core-api-surface-probe/1",
+    "schema":"rocketdict-core-api-surface-probe/2",
     "status":"observed",
     "database":{"path":str(Path(sys.argv[1]).resolve()),"exists":Path(sys.argv[1]).is_file()},
     "core":{"rocketdict_version":str(getattr(rocketdict,"__version__","")),"api_version":str(API_VERSION)},
     "api_modules":module_rows,
     "parser_commands":sorted(parser_commands),
     "callable_mapping_keys":sorted(mapping_keys),
+    "callable_operations":callable_operations,
 }
 payload["operation_candidates"]=sorted(set(payload["parser_commands"])|set(payload["callable_mapping_keys"]))
 payload["fingerprint"]=canon({k:v for k,v in payload.items() if k!="fingerprint"})
@@ -228,22 +294,34 @@ print(json.dumps(payload,ensure_ascii=False))
 '''
 
 
-def probe_core_api_surface(core: RocketDictCore, database: Path | str) -> dict[str, Any]:
-    database = Path(database).expanduser().resolve()
-    result = core._run(["-c", _API_PROBE_CODE, str(database)], timeout=120)
-    payload = core._parse_json(result.stdout, context="RocketDict API execution-surface probe")
-    if not isinstance(payload, dict) or payload.get("schema") != API_PROBE_SCHEMA:
-        raise RuntimeError(f"Unexpected RocketDict API probe payload: {payload}")
+def _validate_probe_payload(payload: dict[str, Any]) -> None:
+    if payload.get("schema") != API_PROBE_SCHEMA:
+        raise RuntimeError(
+            f"Unsupported RocketDict API probe schema: {payload.get('schema')!r}; "
+            "rerun product-run-init with the exact preflight runtime"
+        )
     if payload.get("status") != "observed":
         raise RuntimeError(f"RocketDict API probe did not complete: {payload.get('status')!r}")
     if not _valid_sha256(payload.get("fingerprint")):
         raise RuntimeError("RocketDict API probe lacks a valid fingerprint")
     if not isinstance(payload.get("api_modules"), list) or not payload["api_modules"]:
         raise RuntimeError("RocketDict API probe observed no API modules")
+    if not isinstance(payload.get("callable_operations"), list):
+        raise RuntimeError("RocketDict API probe lacks structured callable operation evidence")
+
+
+def probe_core_api_surface(core: RocketDictCore, database: Path | str) -> dict[str, Any]:
+    database = Path(database).expanduser().resolve()
+    result = core._run(["-c", _API_PROBE_CODE, str(database)], timeout=120)
+    payload = core._parse_json(result.stdout, context="RocketDict API execution-surface probe")
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"Unexpected RocketDict API probe payload: {payload}")
+    _validate_probe_payload(payload)
     return payload
 
 
 def _validate_probe_against_preflight(probe: dict[str, Any], preflight_identity: dict[str, Any]) -> None:
+    _validate_probe_payload(probe)
     core = probe.get("core") or {}
     expected = preflight_identity.get("core") or {}
     if str(core.get("rocketdict_version") or "") != str(expected.get("rocketdict_version") or ""):
@@ -322,6 +400,7 @@ def initialize_product_run(
         "api_probe_fingerprint": probe["fingerprint"],
         "parser_commands": list(probe.get("parser_commands") or []),
         "callable_mapping_keys": list(probe.get("callable_mapping_keys") or []),
+        "callable_operations": list(probe.get("callable_operations") or []),
         "operation_candidates": list(probe.get("operation_candidates") or []),
         "upstream_execution": dict(upstream),
     }
