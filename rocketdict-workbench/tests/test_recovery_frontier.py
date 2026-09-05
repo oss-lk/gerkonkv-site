@@ -73,9 +73,11 @@ def test_recovery_frontier_keeps_historical_recovery_separate_from_product_promo
     assert tooling["wheel_recovery_schema"] == "rocketdict-workbench-core-wheel-recovery/5"
     assert tooling["wheel_runtime_probe_schema"] == "rocketdict-workbench-core-wheel-runtime-probe/2"
     assert tooling["unified_scan_schema"] == "rocketdict-workbench-core-recovery-scan/7"
-    assert "exact SHA-256 is sufficient" in tooling["archive_identity_rule"]
-    assert "known size" in tooling["archive_identity_rule"]
-    assert "Filename alone never proves identity" in tooling["archive_identity_rule"]
+    identity_rule = tooling["archive_identity_rule"]
+    assert "exact SHA-256 is sufficient" in identity_rule
+    assert "historical size is known" in identity_rule
+    assert "must also match" in identity_rule
+    assert "Filename alone never proves identity" in identity_rule
 
     assert tooling["wheel_proof_order"] == [
         "container/METADATA/WHEEL/RECORD integrity",
