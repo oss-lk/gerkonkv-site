@@ -205,6 +205,10 @@ def test_exact_full_checkpoint_proves_source_nested_wheel_api_parity_and_catalog
     assert wheel["api_complete"] is True
     assert all(row["present"] for row in wheel["api_inventory"].values())
 
+    assert report["evidence_inventory_count"] == 3
+    assert report["evidence_inventory_eligible_count"] == 3
+    assert report["evidence_inventory_limit"] == 200
+    assert report["evidence_inventory_truncated"] is False
     evidence_paths = {row["path"] for row in report["evidence_inventory"]}
     assert "checkpoint/README.md" in evidence_paths
     assert "checkpoint/STAGE6Y_REPORT_RU.md" in evidence_paths
@@ -288,6 +292,19 @@ def test_nested_known_wheel_with_wrong_catalog_sha_blocks_checkpoint(tmp_path: P
     assert wheel["historical_catalog_matches"][0]["sha256_match"] is False
 
 
+def test_checkpoint_rejects_malformed_wheel_identity_in_catalog(tmp_path: Path) -> None:
+    checkpoint = _checkpoint(
+        tmp_path / "RocketDict_0.30.34_LAB_STAGE6Y_IO_FAULT_SAFE_COMPLETE.zip"
+    )
+    catalog = _catalog(tmp_path / "catalog.json", checkpoint)
+    payload = json.loads(catalog.read_text(encoding="utf-8"))
+    payload["entries"][0]["wheel_sha256"] = "not-a-sha"
+    catalog.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RecoveryCandidateError, match="wheel SHA-256 invalid"):
+        inspect_full_checkpoint(checkpoint, checkpoint_catalog=catalog)
+
+
 def test_checkpoint_rejects_unsafe_outer_member_names(tmp_path: Path) -> None:
     checkpoint = _checkpoint(tmp_path / "unsafe.zip", unsafe_member=True)
     with pytest.raises(RecoveryCandidateError, match="unsafe member names"):
@@ -307,7 +324,26 @@ def test_checkpoint_without_source_root_is_blocked_but_evidence_remains_visible(
     assert "rocketdict_source_root_missing" in report["blockers"]
     assert report["compatibility_plan"] is None
     assert report["evidence_inventory_count"] == 2
+    assert report["evidence_inventory_eligible_count"] == 2
+    assert report["evidence_inventory_truncated"] is False
     assert report["promotion_allowed"] is False
+
+
+def test_checkpoint_evidence_inventory_reports_truncation_explicitly(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "many-reports.zip"
+    with zipfile.ZipFile(checkpoint, "w") as zf:
+        for index in range(205):
+            zf.writestr(f"evidence/{index:03d}/report.md", f"report {index}\n")
+
+    report = inspect_full_checkpoint(checkpoint)
+
+    assert report["status"] == "blocked_checkpoint_candidate"
+    assert report["evidence_inventory_eligible_count"] == 205
+    assert report["evidence_inventory_count"] == 200
+    assert report["evidence_inventory_limit"] == 200
+    assert report["evidence_inventory_truncated"] is True
+    assert len(report["evidence_inventory"]) == 200
+    assert "truncation is never silent" in report["rule"]
 
 
 def test_unified_scan_attaches_full_checkpoint_proof_and_counters(tmp_path: Path) -> None:
@@ -345,6 +381,7 @@ def test_unified_scan_attaches_full_checkpoint_proof_and_counters(tmp_path: Path
     assert row["checkpoint_nested_rocketdict_wheel_count"] == 1
     assert row["checkpoint_source_wheel_parity_complete_count"] == 1
     assert row["checkpoint_recovery"]["source"]["version"] == "0.30.34"
+    assert row["checkpoint_recovery"]["evidence_inventory_truncated"] is False
 
 
 def test_pyproject_exposes_full_checkpoint_cli() -> None:
