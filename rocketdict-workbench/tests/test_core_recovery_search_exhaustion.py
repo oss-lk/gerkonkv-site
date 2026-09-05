@@ -12,7 +12,7 @@ def test_core_recovery_search_exhaustion_is_machine_readable_and_fail_closed() -
     path = _repo() / "rocketdict" / "recovered" / "search-exhaustion-2026-09-05.json"
     report = json.loads(path.read_text(encoding="utf-8"))
 
-    assert report["schema"] == "rocketdict-core-recovery-search-exhaustion/1"
+    assert report["schema"] == "rocketdict-core-recovery-search-exhaustion/2"
     assert report["promotion_allowed"] is False
     assert report["complete_historical_core_recovered"] is False
 
