@@ -62,15 +62,32 @@ def _source(root: Path, text: str = "Hello world") -> dict:
     }
 
 
-def _profile(*, unavailable_stage: int | None = None) -> dict:
+def _stage_inputs(number: int) -> list[str]:
+    return {
+        8: ["document_version_id"],
+        10: ["document_version_id"],
+        12: ["document_version_id"],
+        14: ["document_version_id"],
+        16: ["assembly_id"],
+        17: ["translation_revision_id"],
+        19: ["extraction_run_id"],
+    }[number]
+
+
+def _profile(*, unavailable_stage: int | None = None, missing_contract_stage: int | None = None) -> dict:
     stages = {}
     for number in preflight.REQUIRED_CORE_STAGES:
-        stages[str(number)] = {
+        row = {
+            "stage_key": f"stage-{number}-key",
             "implementation": "opus-en-ru-ct2" if number == 12 else f"stage-{number}",
             "parameters": {"compute_type": "float32"} if number == 12 else {},
             "adapter_descriptor_hash": f"descriptor-{number}",
             "availability": {"available": number != unavailable_stage},
+            "required_inputs": _stage_inputs(number),
         }
+        if number == missing_contract_stage:
+            row.pop("required_inputs")
+        stages[str(number)] = row
     return {
         "schema": preflight.PROFILE_SCHEMA,
         "source_kind": "text",
@@ -87,12 +104,24 @@ def _profile(*, unavailable_stage: int | None = None) -> dict:
     }
 
 
-def _install_profile_stubs(monkeypatch, *, unavailable_stage: int | None = None) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr(preflight, "build_product_profile", lambda manifest, source_kind: _profile(unavailable_stage=unavailable_stage))
+def _install_profile_stubs(
+    monkeypatch,
+    *,
+    unavailable_stage: int | None = None,
+    missing_contract_stage: int | None = None,
+) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        preflight,
+        "build_product_profile",
+        lambda manifest, source_kind: _profile(
+            unavailable_stage=unavailable_stage,
+            missing_contract_stage=missing_contract_stage,
+        ),
+    )
     monkeypatch.setattr(preflight, "validate_product_configuration", lambda config, manifest: [])
 
 
-def test_product_preflight_freezes_source_runtime_and_profile(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+def test_product_preflight_freezes_source_runtime_profile_and_execution_contract(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
     _install_profile_stubs(monkeypatch)
     source = _source(tmp_path)
     project = _Project(tmp_path, [source])
@@ -109,6 +138,10 @@ def test_product_preflight_freezes_source_runtime_and_profile(monkeypatch, tmp_p
     assert first["identity"]["source_kind"] == "text"
     assert first["identity"]["registry_hash"] == "registry-1"
     assert first["identity"]["core"]["rocketdict_version"] == "0.30.40"
+    frozen_stage8 = first["identity"]["required_core_stages"]["8"]
+    assert frozen_stage8["stage_key"] == "stage-8-key"
+    assert frozen_stage8["required_inputs"] == ["document_version_id"]
+    assert len(frozen_stage8["execution_contract_sha256"]) == 64
     assert first["identity"]["fingerprint"] == second["identity"]["fingerprint"]
     assert project.probe_runtime is True
     assert first["fake_or_identity_mt_allowed"] is False
@@ -144,6 +177,34 @@ def test_product_preflight_fails_closed_on_unavailable_required_stage(monkeypatc
 
     with pytest.raises(RuntimeError, match="stage 12.*not locally available"):
         preflight.build_product_preflight(_Project(tmp_path, [source]))
+
+
+def test_product_preflight_rejects_missing_live_required_inputs(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    _install_profile_stubs(monkeypatch, missing_contract_stage=8)
+    source = _source(tmp_path)
+    with pytest.raises(RuntimeError, match="stage 8 lacks live registry required_inputs"):
+        preflight.build_product_preflight(_Project(tmp_path, [source]))
+
+
+def test_required_inputs_change_preflight_fingerprint(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    source = _source(tmp_path)
+    project = _Project(tmp_path, [source])
+    monkeypatch.setattr(preflight, "validate_product_configuration", lambda config, manifest: [])
+
+    baseline = _profile()
+    monkeypatch.setattr(preflight, "build_product_profile", lambda manifest, source_kind: baseline)
+    first = preflight.build_product_preflight(project)
+
+    changed = _profile()
+    changed["stages"]["8"]["required_inputs"] = ["document_version_id", "context_id"]
+    monkeypatch.setattr(preflight, "build_product_profile", lambda manifest, source_kind: changed)
+    second = preflight.build_product_preflight(project)
+
+    assert first["identity"]["fingerprint"] != second["identity"]["fingerprint"]
+    assert (
+        first["identity"]["required_core_stages"]["8"]["execution_contract_sha256"]
+        != second["identity"]["required_core_stages"]["8"]["execution_contract_sha256"]
+    )
 
 
 def test_product_preflight_rejects_source_kind_mismatch(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
