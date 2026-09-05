@@ -1,0 +1,202 @@
+{
+  "schema": "rocketdict-core-recovery-search-exhaustion/1",
+  "date_utc": "2026-09-05",
+  "promotion_allowed": false,
+  "complete_historical_core_recovered": false,
+  "git_history": {
+    "parentless_upload_commit": {
+      "sha": "442e09dbb2e0b48147837b2bc78b6454ce6dca35",
+      "tree_sha": "e3289100392a92f6118745311312a5422327b48f",
+      "message": "Add files via upload",
+      "result": "website_only_no_rocketdict_source_tree"
+    },
+    "deleted_refs_observed": [
+      {
+        "ref": "refs/heads/rocketdict-opus-gate-public",
+        "head": "818cc87f7efcc0a4dc2981c875f5c10eeb2276f8",
+        "head_tree": "4de124ec34f2a8101ed0cae7398fb8464a26a050",
+        "result": "website_plus_opus_workflow_no_core_source"
+      },
+      {
+        "ref": "refs/heads/rocketdict-pr-actions-run",
+        "predecessor": "f76cc656cdbb1324d591524f5d90789e72083d2d",
+        "predecessor_tree": "1c66ecce64a5840920fcde834095a55f501e20c3",
+        "head": "b3795ef5af529a863a0ba6bbe429da7a24acc064",
+        "head_tree": "c9c02e6100af429f34ea9a54c507b4fefa415ba4",
+        "result": "website_plus_actions_selftest_no_core_source"
+      }
+    ],
+    "likely_api_path_history_checks": [
+      {
+        "path": "src/rocketdict/api/client.py",
+        "reachable_commits": 0
+      },
+      {
+        "path": "rocketdict/src/rocketdict/api/client.py",
+        "reachable_commits": 0
+      },
+      {
+        "path": "rocketdict/active_source/src/rocketdict/api/client.py",
+        "reachable_commits": 0
+      }
+    ],
+    "release_checks": [
+      {
+        "repository": "oss-lk/gerkonkv-site",
+        "release_count": 0
+      },
+      {
+        "repository": "oss-lk/spacy-project-vault",
+        "release_count": 0
+      }
+    ],
+    "private_historical_repo": {
+      "repository": "oss-lk/spacy-project-vault",
+      "checked_branch": "rocketdict-stage06-spacy-model",
+      "result": "notes_and_project_materials_only_no_rocketdict_source_package"
+    }
+  },
+  "file_library": {
+    "recovered_checkpoint_content_evidence": [
+      {
+        "version": "0.30.29",
+        "stage": "Stage 6T",
+        "artifact_kind": "README",
+        "proves": [
+          "RocketDictAPI existed in that checkpoint line",
+          "durable local queue and CLI surfaces were documented",
+          "broader Stage1-25 lifecycle was documented"
+        ]
+      },
+      {
+        "artifact_kind": "HEAVY_PREFLIGHT.json",
+        "proves": [
+          "durable Stage1-11 checkpoint existed",
+          "real OPUS Stage12 policy and hard blockers were recorded"
+        ]
+      }
+    ],
+    "full_checkpoint_zip_bytes_recovered": false,
+    "api_source_module_bytes_recovered": false
+  },
+  "ephemeral_recovery_workspace_zip_inventory": [
+    {
+      "name": "rocketdict-deleted-ref-events-recovery.zip",
+      "bytes": 8254,
+      "sha256": "c2fff73c403cbbc5ab6b25620fcf2915097283bddb3f5d6a2eca00ff045b83ee",
+      "member_count": 1,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "rocketdict-offline-opus-runtime-cp313.zip",
+      "bytes": 343401002,
+      "sha256": "c8812631f65eb5f64c1e3d910d432a181bfa850af92637221b6fa926d9132b8c",
+      "member_count": 7,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "rocketdict-real-opus-gate.zip",
+      "bytes": 30389,
+      "sha256": "7044b3f3cd6a1b625c06b97067d68da1f7999b118e9e6f63776df28f969c1e00",
+      "member_count": 10,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "rocketdict-stage8-api-artifact-recovery-v2.zip",
+      "bytes": 1626006,
+      "sha256": "2728dc1da4e92e9f4b27d45b17e0a69a989adc2afbed8647e397286daca34c50",
+      "member_count": 2,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "rocketdict-stage8-api-artifact-recovery-v3.zip",
+      "bytes": 1693011,
+      "sha256": "cc4d7ffb42769af8b6c4dd240b8560c7ccaf9db37a183a822660f00916237ee2",
+      "member_count": 2,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "rocketdict-stage8-api-artifact-recovery.zip",
+      "bytes": 693117,
+      "sha256": "9949f5895fa4ea00e99b5d7cdca2ac59b579addab71403e3cd3566539f3acc10",
+      "member_count": 2,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "stage7-structural-recovery-a.zip",
+      "bytes": 3611170,
+      "sha256": "4d395857bdfaaf7ab4934e5423ef33c006d3dc0c45dddf11c815e0c918069b71",
+      "member_count": 19,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "stage7-structural-recovery-b.zip",
+      "bytes": 2108453,
+      "sha256": "d23b1becf07aa05b74e30b5ca786732861f61e568acf025a06d59631d28cec54",
+      "member_count": 18,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "stage8-artifact-recovery.zip",
+      "bytes": 781214,
+      "sha256": "b9688c2fa606a1650a9344e56a7f5a5093d389d4ea2a738abdd7aa9ee0a866f8",
+      "member_count": 2,
+      "rocketdict_package_init_hits": 0,
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0
+    },
+    {
+      "name": "stage8-overlay-prefix.zip",
+      "bytes": 29772,
+      "sha256": "d56876cc23cc281ab9f9da36dedcff9536aca766ef7da7ad414addd57a2cf8d8",
+      "member_count": 5,
+      "rocketdict_package_init_hits": 1,
+      "rocketdict_package_init_paths": [
+        "members/src/rocketdict/__init__.py"
+      ],
+      "rocketdict_api_required_hits": 0,
+      "rocketdict_wheel_hits": 0,
+      "nested_rocketdict_zip_hits": 0,
+      "classification": "known_truncated_0.30.40_overlay_prefix_evidence_only"
+    }
+  ],
+  "workspace_inventory_summary": {
+    "zip_count": 10,
+    "zip_with_any_rocketdict_package_init": 1,
+    "zip_with_all_required_public_api_modules": 0,
+    "zip_with_rocketdict_wheel": 0,
+    "zip_with_nested_rocketdict_checkpoint_zip": 0,
+    "complete_core_candidate_found": false
+  },
+  "conclusion": [
+    "Current reachable Git history, observed deleted refs, releases, File Library evidence and the current recovery workspace do not contain a complete exact-compatible RocketDict core.",
+    "The only local ZIP containing a RocketDict package root is the already-known truncated Stage8 0.30.40 overlay-prefix evidence and it contains none of the required public API modules.",
+    "The strongest known full-byte recovery lead remains an external historical checkpoint/archive copy, preferably one of the later 0.30.x checkpoints recorded in checkpoint-catalog.json.",
+    "When new bytes are recovered, run rocketdict-recover-scan, rocketdict-recover-core and rocketdict-recover-plan before any Product execution attempt."
+  ]
+}
