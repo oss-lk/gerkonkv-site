@@ -12,6 +12,7 @@ from rocketdict.api.contracts import (
 )
 from rocketdict.api.registry import descriptor_hash, required_inputs, stage_key
 from rocketdict.lexical import run_stage18 as _run_stage18, run_stage19 as _run_stage19
+from rocketdict.sense_translation import run_stage20 as _run_stage20
 from rocketdict.stages import (
     run_length_ratio_gate as _run_length_ratio_gate,
     run_numeric_symbol_gate as _run_numeric_symbol_gate,
@@ -30,9 +31,7 @@ STAGE18_REQUIRED_INPUTS = ["alignment_run_id"]
 
 
 def _canonical_sha(value: Any) -> str:
-    raw = json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
-    ).encode("utf-8")
+    raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -44,8 +43,7 @@ def _execution_contract(
     identity_fields: list[str],
     extra_required_fields: list[str] | None = None,
 ) -> dict[str, Any]:
-    required = ["schema", *identity_fields, *(extra_required_fields or [])]
-    required = list(dict.fromkeys(required))
+    required = list(dict.fromkeys(["schema", *identity_fields, *(extra_required_fields or [])]))
     return {
         "schema": PUBLIC_EXECUTION_CONTRACT_SCHEMA,
         "transport": TRANSPORT,
@@ -78,11 +76,7 @@ def _identity(stage_number: int, implementation: str) -> tuple[str, list[str], s
             }
         )
         return STAGE18_STAGE_KEY, list(STAGE18_REQUIRED_INPUTS), descriptor
-    return (
-        stage_key(stage_number),
-        required_inputs(stage_number, implementation),
-        descriptor_hash(stage_number, implementation),
-    )
+    return stage_key(stage_number), required_inputs(stage_number, implementation), descriptor_hash(stage_number, implementation)
 
 
 def _bind(
@@ -119,89 +113,52 @@ def _bind(
     return fn
 
 
-def run_stage8(
-    *, database: Path | str, document_version_id: int,
-    parameters: dict[str, Any] | None = None, implementation: str = "en-sm",
-) -> dict[str, Any]:
+def run_stage8(*, database: Path | str, document_version_id: int, parameters: dict[str, Any] | None = None, implementation: str = "en-sm") -> dict[str, Any]:
     return _run_stage8(database, document_version_id=int(document_version_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage10(
-    *, database: Path | str, nlp_run_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "structural-entity-term-discourse-pronoun-v1",
-) -> dict[str, Any]:
+def run_stage10(*, database: Path | str, nlp_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = "structural-entity-term-discourse-pronoun-v1") -> dict[str, Any]:
     return _run_stage10(database, nlp_run_id=int(nlp_run_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage12(
-    *, database: Path | str, context_run_id: int,
-    parameters: dict[str, Any] | None = None, implementation: str = "opus-en-ru-ct2",
-) -> dict[str, Any]:
+def run_stage12(*, database: Path | str, context_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = "opus-en-ru-ct2") -> dict[str, Any]:
     return _run_stage12(database, context_run_id=int(context_run_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage14(
-    *, database: Path | str, translation_run_id: int,
-    parameters: dict[str, Any] | None = None, implementation: str = "glossary_refinement-current",
-) -> dict[str, Any]:
+def run_stage14(*, database: Path | str, translation_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = "glossary_refinement-current") -> dict[str, Any]:
     return _run_stage14(database, translation_run_id=int(translation_run_id), parameters=parameters, implementation=implementation)
 
 
-def run_numeric_symbol_gate(
-    *, database: Path | str, assembly_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "rocketdict-numeric-symbol-preservation",
-) -> dict[str, Any]:
+def run_numeric_symbol_gate(*, database: Path | str, assembly_id: int, parameters: dict[str, Any] | None = None, implementation: str = "rocketdict-numeric-symbol-preservation") -> dict[str, Any]:
     return _run_numeric_symbol_gate(database, assembly_id=int(assembly_id), parameters=parameters, implementation=implementation)
 
 
-def run_punctuation_gate(
-    *, database: Path | str, assembly_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "rocketdict-punctuation-preservation",
-) -> dict[str, Any]:
+def run_punctuation_gate(*, database: Path | str, assembly_id: int, parameters: dict[str, Any] | None = None, implementation: str = "rocketdict-punctuation-preservation") -> dict[str, Any]:
     return _run_punctuation_gate(database, assembly_id=int(assembly_id), parameters=parameters, implementation=implementation)
 
 
-def run_length_ratio_gate(
-    *, database: Path | str, assembly_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "rocketdict-length-ratio-proxy",
-) -> dict[str, Any]:
+def run_length_ratio_gate(*, database: Path | str, assembly_id: int, parameters: dict[str, Any] | None = None, implementation: str = "rocketdict-length-ratio-proxy") -> dict[str, Any]:
     return _run_length_ratio_gate(database, assembly_id=int(assembly_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage16(
-    *, database: Path | str, assembly_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "approve-if-clean-finalization",
-) -> dict[str, Any]:
+def run_stage16(*, database: Path | str, assembly_id: int, parameters: dict[str, Any] | None = None, implementation: str = "approve-if-clean-finalization") -> dict[str, Any]:
     return _run_stage16(database, assembly_id=int(assembly_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage17(
-    *, database: Path | str, translation_revision_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "deterministic-structural-global",
-) -> dict[str, Any]:
+def run_stage17(*, database: Path | str, translation_revision_id: int, parameters: dict[str, Any] | None = None, implementation: str = "deterministic-structural-global") -> dict[str, Any]:
     return _run_stage17(database, translation_revision_id=int(translation_revision_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage18(
-    *, database: Path | str, alignment_run_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = STAGE18_IMPLEMENTATION,
-) -> dict[str, Any]:
+def run_stage18(*, database: Path | str, alignment_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = STAGE18_IMPLEMENTATION) -> dict[str, Any]:
     return _run_stage18(database, alignment_run_id=int(alignment_run_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage19(
-    *, database: Path | str, extraction_run_id: int,
-    parameters: dict[str, Any] | None = None,
-    implementation: str = "deterministic-context-target-graph",
-) -> dict[str, Any]:
+def run_stage19(*, database: Path | str, extraction_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = "deterministic-context-target-graph") -> dict[str, Any]:
     return _run_stage19(database, extraction_run_id=int(extraction_run_id), parameters=parameters, implementation=implementation)
+
+
+def run_stage20(*, database: Path | str, sense_induction_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = "contextual-lexical-opus-v3") -> dict[str, Any]:
+    return _run_stage20(database, sense_induction_run_id=int(sense_induction_run_id), parameters=parameters, implementation=implementation)
 
 
 _bind(run_stage8, stage_number=8, implementation="en-sm", result_schema="rocketdict-product-stage8/1", identity_fields=["nlp_run_id"])
@@ -215,6 +172,7 @@ _bind(run_stage16, stage_number=16, implementation="approve-if-clean-finalizatio
 _bind(run_stage17, stage_number=17, implementation="deterministic-structural-global", result_schema="rocketdict-product-stage17/1", identity_fields=["alignment_run_id", "stage_result_id"], extra_required_fields=["coverage_complete"])
 _bind(run_stage18, stage_number=18, implementation=STAGE18_IMPLEMENTATION, result_schema="rocketdict-product-stage18/1", identity_fields=["extraction_run_id", "stage_result_id", "alignment_run_id", "nlp_run_id"], extra_required_fields=["coverage_complete", "uncovered_token_count"])
 _bind(run_stage19, stage_number=19, implementation="deterministic-context-target-graph", result_schema="rocketdict-product-stage19/1", identity_fields=["sense_induction_run_id", "stage_result_id"], extra_required_fields=["coverage_complete"])
+_bind(run_stage20, stage_number=20, implementation="contextual-lexical-opus-v3", result_schema="rocketdict-product-stage20/1", identity_fields=["sense_translation_run_id", "stage_result_id"], extra_required_fields=["coverage_complete", "all_selected_approved"])
 
 OPERATIONS: dict[str, Callable[..., dict[str, Any]]] = {
     "product.stage8.run": run_stage8,
@@ -228,4 +186,5 @@ OPERATIONS: dict[str, Callable[..., dict[str, Any]]] = {
     "product.stage17.run": run_stage17,
     "product.stage18.run": run_stage18,
     "product.stage19.run": run_stage19,
+    "product.stage20.run": run_stage20,
 }
