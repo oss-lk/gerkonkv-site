@@ -402,10 +402,11 @@ def test_incomplete_workbench_stage18_coverage_blocks_before_stage19(tmp_path) -
     assert core.api_calls == [16, 17, 18]
     persisted = json.loads(path.read_text(encoding="utf-8"))
     assert persisted["steps"]["upstream_execution"]["executions"]["18"]["status"] == "dispatch_failed_ambiguous"
+    assert persisted["steps"]["upstream_execution"]["executions"]["18"]["replay_safe"] is True
     assert "19" not in persisted["steps"]["upstream_execution"]["executions"]
 
 
-def test_workbench_stage18_ambiguous_failure_is_not_automatically_replayed(tmp_path) -> None:
+def test_workbench_stage18_ambiguous_failure_retries_same_request(tmp_path) -> None:
     database = tmp_path / "db.sqlite"
     database.touch()
     state = _state(database)
@@ -416,8 +417,42 @@ def test_workbench_stage18_ambiguous_failure_is_not_automatically_replayed(tmp_p
 
     with pytest.raises(RuntimeError, match="simulated ambiguous Stage18"):
         execute_workbench_stage18(core, database, path)
+    failed = json.loads(path.read_text(encoding="utf-8"))["steps"]["upstream_execution"]["executions"]["18"]
+    assert failed["status"] == "dispatch_failed_ambiguous"
+    assert failed["replay_safe"] is True
+    assert failed["attempts"] == 1
     calls = core.stage18_calls
-    with pytest.raises(RuntimeError, match="manual reconciliation"):
+
+    retried = execute_workbench_stage18(core, database, path)
+    assert retried["status"] == "completed"
+    assert retried["attempts"] == 2
+    assert core.stage18_calls == calls + 1
+
+
+def test_legacy_non_replay_safe_stage18_failure_remains_fail_closed(tmp_path) -> None:
+    database = tmp_path / "db.sqlite"
+    database.touch()
+    state = _state(database)
+    path = _write(tmp_path, state)
+    core = _Core(state)
+    advance_post_gate_pipeline(core, database, path, max_steps=2)
+    core.stage18_fail_once = True
+
+    with pytest.raises(RuntimeError, match="simulated ambiguous Stage18"):
+        execute_workbench_stage18(core, database, path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    record = payload["steps"]["upstream_execution"]["executions"]["18"]
+    record["replay_safe"] = False
+    immutable = {
+        key: value
+        for key, value in record.items()
+        if key not in {"fingerprint", "started_at", "completed_at", "failed_at", "error", "attempts", "cache_hit"}
+    }
+    record["fingerprint"] = _canon(immutable)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    calls = core.stage18_calls
+    with pytest.raises(RuntimeError, match="predates the maintained crash-replay contract"):
         execute_workbench_stage18(core, database, path)
     assert core.stage18_calls == calls
 
