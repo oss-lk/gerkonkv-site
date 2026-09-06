@@ -8,16 +8,16 @@ import sys
 from typing import Any
 
 from .core import CoreError, RocketDictCore
-from .final_product_pipeline import DEFAULT_SET_NAME, advance_final_product
+from .maintained_product_pipeline import advance_maintained_downstream
 from .post_gate_pipeline import advance_post_gate_pipeline
 from .product_preflight import build_product_preflight
 from .product_run_state import initialize_product_run
 from .quality_gate_execution import execute_quality_gates, require_quality_gate_pass
-from .unified_stage20 import continue_unified_stage20_through_stage23, run_unified_stage20
 from .upstream_pipeline import advance_pre_gate_upstream
 from .project import WorkbenchProject
 
-CLI_SCHEMA = "rocketdict-workbench-product-run-cli/1"
+CLI_SCHEMA = "rocketdict-workbench-product-run-cli/2"
+DEFAULT_SET_NAME = "RocketDict Product output"
 
 
 def _json(value: Any) -> None:
@@ -58,16 +58,23 @@ def advance_product_run(
     database: Path,
     state_path: Path,
     *,
+    opus_asset: Path | None = None,
     model_path: Path | None = None,
     cefrj_asset: Path | None = None,
     set_name: str = DEFAULT_SET_NAME,
     max_new_cards: int | None = None,
 ) -> dict[str, Any]:
-    """Resume as far as possible without weakening any evidence boundary.
+    """Resume the maintained Product path as far as exact evidence allows.
 
-    Missing external Product assets are reported as explicit blockers. Runtime
-    contract/evidence failures remain exceptions: they are correctness failures, not
-    ordinary asset prompts.
+    Stage8→19 keeps the existing verified Workbench binding/gate machinery. Once
+    Stage19 is complete, Stage20→25 is executed exclusively by the maintained
+    core implementation in a small number of core processes. The historical
+    Workbench Stage20/arbitration/CEFR/pronunciation/examples/cards helpers are no
+    longer on the active Product execution path.
+
+    ``model_path`` is accepted only as a backwards-compatible alias for the new
+    verified OPUS asset root. New callers should use ``opus_asset`` or configure
+    ``ROCKETDICT_OPUS_ASSET_DIR``.
     """
     state_path = state_path.expanduser().resolve()
     database = database.expanduser().resolve()
@@ -111,64 +118,44 @@ def advance_product_run(
                 "state_path": str(state_path),
             }
 
-    state = _load_state(state_path)
-    downstream_status = str(((state.get("steps") or {}).get("stage20_downstream") or {}).get("status") or "")
-    if downstream_status not in {"stage20_completed", "completed_through_stage23"}:
-        if model_path is None:
-            return {
-                "schema": CLI_SCHEMA,
-                "status": "blocked",
-                "blocked_phase": "stage20",
-                "required": "--model-path",
-                "reason": "pinned_offline_opus_model_path_required",
-                "checkpoints": checkpoints,
-                "state_path": str(state_path),
-            }
-        stage20 = run_unified_stage20(core, database, state_path, model_path=model_path)
-        checkpoints.append({"phase": "stage20", "result": stage20})
-
-    state = _load_state(state_path)
-    downstream_status = str(((state.get("steps") or {}).get("stage20_downstream") or {}).get("status") or "")
-    if downstream_status != "completed_through_stage23":
-        if cefrj_asset is None:
-            return {
-                "schema": CLI_SCHEMA,
-                "status": "blocked",
-                "blocked_phase": "stage20_through_stage23",
-                "required": "--cefrj-asset",
-                "reason": "pinned_cefrj_1_5_asset_required",
-                "checkpoints": checkpoints,
-                "state_path": str(state_path),
-            }
-        downstream = continue_unified_stage20_through_stage23(
-            core,
-            database,
-            state_path,
-            cefrj_asset=cefrj_asset,
-        )
-        checkpoints.append({"phase": "stage20_through_stage23", "result": downstream})
-
-    final = advance_final_product(
+    effective_opus_asset = opus_asset or model_path
+    maintained = advance_maintained_downstream(
         core,
         database,
         state_path,
+        opus_asset=effective_opus_asset,
+        cefrj_asset=cefrj_asset,
         set_name=set_name,
         max_new_cards=max_new_cards,
     )
-    checkpoints.append({"phase": "stage24_25", "result": final})
-    if final.get("status") != "product_complete_exported":
+    checkpoints.append({"phase": "maintained_stage20_25", "result": maintained})
+    status = str(maintained.get("status") or "")
+    if status == "blocked":
         return {
             "schema": CLI_SCHEMA,
-            "status": "progressed",
-            "blocked_phase": "stage24_25" if final.get("status") != "stage24_partial" else None,
+            "status": "blocked",
+            "blocked_phase": maintained.get("blocked_phase"),
+            "required": maintained.get("required"),
+            "reason": maintained.get("reason"),
             "checkpoints": checkpoints,
             "state_path": str(state_path),
         }
+    if status == "progressed":
+        return {
+            "schema": CLI_SCHEMA,
+            "status": "progressed",
+            "blocked_phase": None,
+            "checkpoints": checkpoints,
+            "state_path": str(state_path),
+        }
+    if status != "product_complete_exported":
+        raise RuntimeError(f"Maintained Product downstream returned unexpected status: {maintained}")
     return {
         "schema": CLI_SCHEMA,
         "status": "product_complete_exported",
         "checkpoints": checkpoints,
         "state_path": str(state_path),
+        "export": maintained.get("export"),
     }
 
 
@@ -190,7 +177,13 @@ def parser() -> argparse.ArgumentParser:
     advance = sub.add_parser("advance", help="Resume all Product phases as far as proven inputs/contracts allow")
     advance.add_argument("root", type=Path)
     advance.add_argument("--state", type=Path, required=True)
-    advance.add_argument("--model-path", type=Path)
+    advance.add_argument(
+        "--opus-asset",
+        "--model-path",
+        dest="opus_asset",
+        type=Path,
+        help="verified RocketDict OPUS asset root (legacy alias: --model-path)",
+    )
     advance.add_argument("--cefrj-asset", type=Path)
     advance.add_argument("--set-name", default=DEFAULT_SET_NAME)
     advance.add_argument("--max-new-cards", type=int)
@@ -240,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
                 core,
                 project.paths.database,
                 args.state,
-                model_path=args.model_path,
+                opus_asset=args.opus_asset,
                 cefrj_asset=args.cefrj_asset,
                 set_name=args.set_name,
                 max_new_cards=args.max_new_cards,
