@@ -8,6 +8,7 @@ from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
+STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/1"
 NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/2"
 
 
@@ -69,13 +70,14 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "OPUS EN-RU CTranslate2 Marian",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["real-mt", "offline", "opus", "ctranslate2"],
+                "tags": ["real-mt", "offline", "opus", "ctranslate2", "structure-aware-planner"],
                 "required_inputs": ["context_run_id"],
                 "controls": [
                     _control("allow_download", False),
                     _control("device", "cpu"),
                     _control("compute_type", "float32"),
                     _control("run_assemble", True),
+                    _control("planner_contract", STAGE12_PLANNER_CONTRACT),
                     _control("plan_preferred_unit_tokens", 64),
                     _control("beam_size", 6),
                     _control("num_hypotheses", 1),
