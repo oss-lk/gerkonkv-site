@@ -36,9 +36,17 @@ from rocketdict.numeric_integrity import (
         ("1'699 and 0'000625", "1,699 и 0,000625"),
         ("four Inches and sixteen Feet", "4 дюйма и 16 футов"),
         ("twenty one divisions", "21 деление"),
+        # Frozen R1 demonstrated these are checker-equivalence classes rather
+        # than translation failures.
+        ("11/178000 parts", "11/178 000 частей"),
+        ("961/72000000 parts", "961/72000 000 частей"),
+        ("-6/106, to 17", "- 6/106, 17"),
+        ("_Obs._ 16.", "_Об._16."),
+        ("above an hundred vicissitudes", "более 100 изменений"),
+        ("the first of 106 means", "1 из 106 средних"),
     ],
 )
-def test_documented_numeric_equivalences_pass(source: str, target: str) -> None:
+def test_documented_and_r1_numeric_equivalences_pass(source: str, target: str) -> None:
     result = compare_numeric_integrity(source, target)
     assert result["contract"] == CONTRACT
     assert result["passed"] is True
@@ -56,6 +64,8 @@ def test_documented_literals_are_detected() -> None:
         "1'699",
         "0'000625",
         "4'27",
+        "_16",
+        "3p",
     ):
         assert contains_numeric_literal(literal), literal
 
@@ -81,6 +91,10 @@ def test_documented_literals_are_detected() -> None:
             {"1000000": 1, "1000000000000000000": 1},
             {"1000000000": 1},
         ),
+        # Real maintained R1 defects must remain visible after equivalence
+        # normalization.
+        ("diameter 2'389 Inches", "диаметр 2'38 дюйма", {"2.389": 1}, {}),
+        ("Project clause 1.E.5.", "Пункт проекта исчез.", {"1": 1, "5": 1}, {}),
     ],
 )
 def test_known_failure_classes_remain_fail_closed(
@@ -173,7 +187,7 @@ def test_gate_contract_version_prevents_reusing_old_parameterless_pass(tmp_path:
         "assembly_output_sha256": str(assembly["output_sha256"]),
     }
 
-    # Simulate a completed cache row from the previous parser semantics.
+    # Simulate a completed cache row from a previous parser semantics.
     with transaction(db) as connection:
         old_run_id, cache_hit = begin_run(
             connection,
