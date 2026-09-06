@@ -8,7 +8,7 @@ from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
-NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/1"
+NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/2"
 
 
 def _canon(value: Any) -> str:
