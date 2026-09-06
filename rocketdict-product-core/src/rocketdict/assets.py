@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Provision verified external model assets for RocketDict Product Core.
 
-Processing itself is offline.  Provisioning is a separate explicit step: it
+Processing itself is offline. Provisioning is a separate explicit step: it
 accepts the official OPUS archive already downloaded by the operator/installer,
 verifies the pinned SHA-256, safely extracts it, converts the Marian model to
 CTranslate2 float32, copies the exact SentencePiece models and writes the
@@ -56,6 +56,48 @@ def _tree_identity(root: Path) -> dict[str, Any]:
     }
 
 
+def _discover_opus_model_dir(source_root: Path) -> tuple[Path, list[Path]]:
+    """Locate the actual OPUS model directory without assuming model.npz.
+
+    Official OPUS archives use release-specific Marian weight filenames. The
+    CTranslate2 OPUS converter takes the containing model directory, not a fixed
+    model filename, so the durable discovery contract is decoder.yml + at least
+    one NPZ + source/target SentencePiece evidence in one directory.
+    """
+    candidate_dirs = {source_root}
+    candidate_dirs.update(path.parent for path in source_root.rglob("decoder.yml"))
+    candidate_dirs.update(path.parent for path in source_root.rglob("*.npz"))
+    rows: list[tuple[Path, list[Path], list[Path]]] = []
+    for directory in sorted(candidate_dirs):
+        if not (directory / "decoder.yml").is_file():
+            continue
+        weights = sorted(directory.glob("*.npz"))
+        spm_files = sorted(directory.glob("*.spm"))
+        if weights and len(spm_files) >= 2:
+            rows.append((directory, weights, spm_files))
+    exact = [
+        row
+        for row in rows
+        if (row[0] / "source.spm").is_file() and (row[0] / "target.spm").is_file()
+    ]
+    selected = exact if len(exact) == 1 else rows
+    if len(selected) != 1:
+        inventory = [
+            {
+                "directory": str(directory.relative_to(source_root)),
+                "npz": [path.name for path in weights],
+                "spm": [path.name for path in spm_files],
+            }
+            for directory, weights, spm_files in rows
+        ]
+        raise RuntimeError(
+            "Could not uniquely locate OPUS Marian model directory from decoder.yml/NPZ/SPM evidence: "
+            + json.dumps(inventory, ensure_ascii=False, sort_keys=True)
+        )
+    directory, weights, _spm = selected[0]
+    return directory, weights
+
+
 def build_opus_asset(
     archive: Path | str,
     destination: Path | str,
@@ -97,34 +139,16 @@ def build_opus_asset(
                 with zf.open(info) as source_handle, target.open("wb") as target_handle:
                     shutil.copyfileobj(source_handle, target_handle, 1024 * 1024)
 
-        candidates = [source_root, *sorted(p for p in source_root.iterdir() if p.is_dir())]
-        model_dir = next(
-            (
-                path
-                for path in candidates
-                if (path / "model.npz").is_file() and (path / "decoder.yml").is_file()
-            ),
-            None,
-        )
-        if model_dir is None:
-            nested = sorted(
-                path.parent
-                for path in source_root.rglob("model.npz")
-                if (path.parent / "decoder.yml").is_file()
-            )
-            model_dir = nested[0] if len(nested) == 1 else None
-        if model_dir is None:
-            raise RuntimeError("Could not uniquely locate OPUS Marian model.npz + decoder.yml")
-
-        spm_files = sorted(model_dir.glob("*.spm")) or sorted(source_root.rglob("*.spm"))
-        if len(spm_files) < 2:
-            raise RuntimeError(
-                f"Expected source+target SentencePiece models, found {len(spm_files)}"
-            )
+        model_dir, weight_files = _discover_opus_model_dir(source_root)
+        spm_files = sorted(model_dir.glob("*.spm"))
         source_spm = next(
-            (path for path in spm_files if "source" in path.name.casefold()), spm_files[0]
+            (path for path in spm_files if path.name.casefold() == "source.spm"),
+            next((path for path in spm_files if "source" in path.name.casefold()), spm_files[0]),
         )
         target_spm = next(
+            (path for path in spm_files if path.name.casefold() == "target.spm" and path != source_spm),
+            None,
+        ) or next(
             (
                 path
                 for path in spm_files
@@ -150,6 +174,11 @@ def build_opus_asset(
             "revision": OPUS_REVISION,
             "source_archive_sha256": OPUS_ARCHIVE_SHA256,
             "source_archive_bytes": archive.stat().st_size,
+            "source_model": {
+                "directory": str(model_dir.relative_to(source_root)),
+                "weight_files": [path.name for path in weight_files],
+                "decoder": "decoder.yml",
+            },
             "ct2_model_dir": "ct2",
             "source_sentencepiece": "source.spm",
             "target_sentencepiece": "target.spm",
@@ -186,6 +215,7 @@ def build_opus_asset(
         "status": "completed",
         "destination": str(destination),
         "source_archive_sha256": archive_sha,
+        "source_model_weight_files": [path.name for path in weight_files],
         "manifest_sha256": _file_sha256(destination / "rocketdict-opus-asset.json"),
         "payload_tree_sha256": manifest["payload_tree"]["sha256"],
         "payload_file_count": manifest["payload_tree"]["file_count"],
