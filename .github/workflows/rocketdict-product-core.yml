@@ -1,0 +1,46 @@
+name: RocketDict Product Core
+
+on:
+  push:
+    branches: [main, chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/**'
+      - 'rocketdict-workbench/**'
+      - '.github/workflows/rocketdict-product-core.yml'
+  pull_request:
+    paths:
+      - 'rocketdict-product-core/**'
+      - 'rocketdict-workbench/**'
+      - '.github/workflows/rocketdict-product-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-light:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install maintained core and Workbench
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          python -m pip install -e ./rocketdict-product-core
+          python -m pip install -e ./rocketdict-workbench
+      - name: Compile maintained Product Core and Workbench
+        run: |
+          python -m compileall -q rocketdict-product-core/src
+          python -m compileall -q rocketdict-workbench/src
+      - name: Smoke installed Product/Core CLIs
+        run: |
+          rocketdict-core --help >/dev/null
+          rocketdict-product-run --help >/dev/null
+          rocketdict-workbench --help >/dev/null
+      - name: Run Product Core tests
+        run: pytest -q rocketdict-product-core/tests
+      - name: Run Workbench regressions against maintained core installation
+        run: pytest -q rocketdict-workbench/tests
