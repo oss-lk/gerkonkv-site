@@ -9,6 +9,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/database.py'
       - 'rocketdict-product-core/src/rocketdict/importing/**'
       - 'rocketdict-product-core/src/rocketdict/interpretation/**'
+      - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
       - 'rocketdict-product-core/src/rocketdict/runtime.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/core.py'
