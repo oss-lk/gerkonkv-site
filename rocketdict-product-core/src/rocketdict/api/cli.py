@@ -7,7 +7,7 @@ import sys
 from typing import Any
 
 from rocketdict.database import bootstrap_database, project_summary
-from .operations import OPERATIONS
+from . import operations as product_operations
 from .registry import lab_manifest
 
 
@@ -108,7 +108,7 @@ def _dispatch(args: argparse.Namespace) -> Any:
         operation = str(args.operation)
         if operation == "lab.config.validate":
             return _validate_config(params.get("config"))
-        fn = OPERATIONS.get(operation)
+        fn = product_operations.OPERATIONS.get(operation)
         if fn is None:
             raise KeyError(f"Unknown Product Core operation {operation!r}")
         return fn(database=database, **params)
