@@ -59,6 +59,7 @@ jobs:
       ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
       ROCKETDICT_CEFRJ_ASSET: ${{ github.workspace }}/work/cefrj-vocabulary-profile-1.5.csv
       ROCKETDICT_REAL_SMOKE_ROOT: ${{ github.workspace }}/work/real-smoke
+      ROCKETDICT_PRODUCT_RUN_SMOKE_ROOT: ${{ github.workspace }}/work/product-run-smoke
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -110,6 +111,8 @@ jobs:
           PY
       - name: Run real maintained-core Stage8 through Stage25 smoke
         run: python rocketdict-product-core/tests/real_runtime_smoke.py
+      - name: Run real unified rocketdict-product-run source through Stage25 smoke
+        run: python rocketdict-workbench/tests/real_product_run_smoke.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -129,6 +132,8 @@ jobs:
             work/opus-asset-build.json
             work/real-smoke/real-runtime-smoke.json
             work/real-smoke/product-export.json
+            work/product-run-smoke/real-product-run-smoke.json
+            work/product-run-smoke/*.product-export.json
             work/evidence/**
           if-no-files-found: warn
           retention-days: 14
