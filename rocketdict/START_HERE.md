@@ -1,8 +1,8 @@
 # START HERE — historical Stage 8 research handoff
 
-> **Status (2026-09-05): historical research context, not the active continuation entrypoint.**
+> **Status: historical L3 research/provenance, not the active continuation entrypoint.**
 >
-> The active Product directive is now [`PRODUCT_TARGET.md`](PRODUCT_TARGET.md) + [`CURRENT.md`](CURRENT.md): build forward to the complete installable RocketDict Product. Historical core/checkpoint recovery is not a Product prerequisite. The Stage8/F96 material below remains valuable evidence and must not be discarded, but it must not override the current global Product critical path.
+> Active autonomous development starts at [`../PROJECT_STATE.md`](../PROJECT_STATE.md), follows [`../AGENTS.md`](../AGENTS.md), and uses [`../docs/memory/INDEX.md`](../docs/memory/INDEX.md) for targeted L2 loading. The mandatory Product directive is [`PRODUCT_TARGET.md`](PRODUCT_TARGET.md). The Stage8/F96 material below remains valuable evidence and must not be discarded, but it must not override the current Product critical path.
 
 ## Purpose
 
@@ -75,7 +75,7 @@ Do not reintroduce these defects:
 
 Stage 8 introduced a separate append-only **Research Vault SQLite** for:
 
-`corpus/version → exact component stack/config → experiment trial → source unit → all translation candidates → selected output → quality metrics → resource metrics → failures → comparisons`.
+`corpus/version → exact component stack/config → experiment trial → source unit → all translation candidates → selected output → quality metrics → resource metrics → failures → comparisons`
 
 Required properties already implemented/tested include operational-DB immutability during export, append-only evidence, idempotent repeated export, retention of all candidates, deterministic shard merge and pairwise comparison on common source units.
 
