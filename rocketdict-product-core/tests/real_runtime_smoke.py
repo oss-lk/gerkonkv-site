@@ -25,6 +25,16 @@ def _call(core: RocketDictCore, database: Path, operation: str, **params):  # ty
     )
 
 
+def _positive_id(payload: dict, name: str, *, context: str) -> int:
+    value = payload.get(name)
+    if isinstance(value, bool):
+        raise RuntimeError(f"{context} returned boolean {name}: {value!r}")
+    result = int(value or 0)
+    if result <= 0:
+        raise RuntimeError(f"{context} lacks positive durable {name}: {payload}")
+    return result
+
+
 def main() -> int:
     root = Path(os.environ.get("ROCKETDICT_REAL_SMOKE_ROOT", "work/real-smoke")).resolve()
     if root.exists():
@@ -54,6 +64,9 @@ def main() -> int:
         parameters={},
         implementation="en-sm",
     )
+    _positive_id(s8, "nlp_run_id", context="Stage8")
+    if s8.get("schema") != "rocketdict-product-stage8/1":
+        raise RuntimeError(f"Unexpected Stage8 schema: {s8}")
     if s8.get("coverage_complete") is not True or int(s8.get("token_count") or 0) <= 0:
         raise RuntimeError(f"Stage8 real NLP coverage failed: {s8}")
 
@@ -65,6 +78,7 @@ def main() -> int:
         parameters={},
         implementation="structural-entity-term-discourse-pronoun-v1",
     )
+    _positive_id(s10, "context_run_id", context="Stage10")
     s12 = _call(
         core,
         database,
@@ -78,6 +92,7 @@ def main() -> int:
         },
         implementation="opus-en-ru-ct2",
     )
+    _positive_id(s12, "translation_run_id", context="Stage12")
     if s12.get("real_mt") is not True:
         raise RuntimeError(f"Stage12 did not prove real MT lineage: {s12}")
 
@@ -89,7 +104,12 @@ def main() -> int:
         raise RuntimeError("Stage12 persisted no translated target text")
     if not any(re.search(r"[А-Яа-яЁё]", value) for value in targets):
         raise RuntimeError(f"Stage12 targets contain no Cyrillic evidence: {targets}")
-    if all(value.casefold() == str(row.get("source_text") or "").strip().casefold() for value, row in zip(targets, translation_items)):
+    pairs = [
+        (str(row.get("source_text") or "").strip(), str(row.get("target_text") or "").strip())
+        for row in translation_items
+        if str(row.get("target_text") or "").strip()
+    ]
+    if not pairs or all(source_text.casefold() == target_text.casefold() for source_text, target_text in pairs):
         raise RuntimeError("Stage12 appears to have produced identity translation")
 
     s14 = _call(
@@ -100,6 +120,7 @@ def main() -> int:
         parameters={},
         implementation="glossary_refinement-current",
     )
+    _positive_id(s14, "assembly_id", context="Stage14")
     if s14.get("real_mt_lineage") is not True:
         raise RuntimeError(f"Stage14 lost real MT lineage: {s14}")
 
@@ -117,6 +138,7 @@ def main() -> int:
             parameters={},
             implementation=implementation,
         )
+        _positive_id(result, "quality_gate_run_id", context=f"Stage15 {implementation}")
         gates[implementation] = result
         if result.get("passed") is not True:
             raise RuntimeError(f"Real smoke hard gate failed: {implementation}: {result}")
@@ -129,6 +151,8 @@ def main() -> int:
         parameters={},
         implementation="approve-if-clean-finalization",
     )
+    _positive_id(s16, "translation_revision_id", context="Stage16")
+    _positive_id(s16, "stage_result_id", context="Stage16")
     if s16.get("approved") is not True:
         raise RuntimeError(f"Stage16 did not approve clean translation: {s16}")
 
@@ -140,6 +164,8 @@ def main() -> int:
         parameters={},
         implementation="deterministic-structural-global",
     )
+    _positive_id(s17, "alignment_run_id", context="Stage17")
+    _positive_id(s17, "stage_result_id", context="Stage17")
     if s17.get("coverage_complete") is not True:
         raise RuntimeError(f"Stage17 alignment coverage failed: {s17}")
 
@@ -151,6 +177,8 @@ def main() -> int:
         parameters={},
         implementation="workbench-aligned-content-pos-v4",
     )
+    for identity in ("extraction_run_id", "stage_result_id", "alignment_run_id", "nlp_run_id"):
+        _positive_id(s18, identity, context="Stage18")
     if s18.get("coverage_complete") is not True or int(s18.get("uncovered_token_count") or 0) != 0:
         raise RuntimeError(f"Stage18 lexical coverage failed: {s18}")
     if int(s18.get("lexical_entry_count") or 0) <= 0:
@@ -164,7 +192,11 @@ def main() -> int:
         parameters={},
         implementation="deterministic-context-target-graph",
     )
-    if s19.get("coverage_complete") is not True or int(s19.get("sense_count") or 0) <= 0:
+    if s19.get("schema") != "rocketdict-product-stage19/1":
+        raise RuntimeError(f"Unexpected Stage19 schema: {s19}")
+    _positive_id(s19, "sense_induction_run_id", context="Stage19")
+    _positive_id(s19, "stage_result_id", context="Stage19")
+    if s19.get("coverage_complete") is not True or int(s19.get("lexical_sense_count") or 0) <= 0:
         raise RuntimeError(f"Stage19 sense induction failed: {s19}")
 
     evidence = {
