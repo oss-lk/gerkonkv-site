@@ -38,9 +38,84 @@ jobs:
       - name: Smoke installed Product/Core CLIs
         run: |
           rocketdict-core --help >/dev/null
+          rocketdict-assets --help >/dev/null
           rocketdict-product-run --help >/dev/null
           rocketdict-workbench --help >/dev/null
       - name: Run Product Core tests
-        run: pytest -q rocketdict-product-core/tests
+        run: pytest -q rocketdict-product-core/tests --ignore=rocketdict-product-core/tests/real_runtime_smoke.py
       - name: Run Workbench regressions against maintained core installation
         run: pytest -q rocketdict-workbench/tests
+
+  real-runtime:
+    needs: dependency-light
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_REAL_SMOKE_ROOT: ${{ github.workspace }}/work/real-smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install production NLP and MT runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+          python -m pip install 'https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl'
+      - name: Download and verify official OPUS EN-RU archive
+        run: |
+          mkdir -p work
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Prove live runtime availability
+        run: |
+          python - <<'PY'
+          import json
+          from rocketdict.api.registry import lab_manifest
+          manifest=lab_manifest(probe_runtime=True)
+          stages={int(s['number']):s for s in manifest['stages']}
+          def available(stage,key):
+              row=next(i for i in stages[stage]['implementations'] if i['implementation_key']==key)
+              return row['availability']
+          evidence={
+              'stage8':available(8,'en-sm'),
+              'stage12':available(12,'opus-en-ru-ct2'),
+              'registry_hash':manifest['registry_hash'],
+          }
+          print(json.dumps(evidence,ensure_ascii=False,indent=2))
+          if evidence['stage8'].get('available') is not True:
+              raise SystemExit('Stage8 real NLP is not available')
+          if evidence['stage12'].get('available') is not True:
+              raise SystemExit('Stage12 real OPUS is not available')
+          PY
+      - name: Run real maintained-core Stage8 through Stage19 smoke
+        run: python rocketdict-product-core/tests/real_runtime_smoke.py
+      - name: Record runtime identities and resources
+        if: always()
+        run: |
+          mkdir -p work/evidence
+          python -VV > work/evidence/python.txt || true
+          python -m pip freeze | sort > work/evidence/pip-freeze.txt || true
+          df -h > work/evidence/disk.txt || true
+          free -h > work/evidence/memory.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/evidence/opus.sha256 || true
+      - name: Upload real-runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-product-core-real-runtime
+          path: |
+            work/opus-asset-build.json
+            work/real-smoke/real-runtime-smoke.json
+            work/evidence/**
+          if-no-files-found: warn
+          retention-days: 14
