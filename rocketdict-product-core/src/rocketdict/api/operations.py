@@ -28,6 +28,9 @@ from rocketdict.stages import (
 STAGE18_IMPLEMENTATION = "workbench-aligned-content-pos-v4"
 STAGE18_STAGE_KEY = "lexical_extraction"
 STAGE18_REQUIRED_INPUTS = ["alignment_run_id"]
+STAGE20_IMPLEMENTATION = "contextual-lexical-opus-v3"
+STAGE20_STAGE_KEY = "sense_translation"
+STAGE20_REQUIRED_INPUTS = ["sense_induction_run_id"]
 
 
 def _canonical_sha(value: Any) -> str:
@@ -76,6 +79,20 @@ def _identity(stage_number: int, implementation: str) -> tuple[str, list[str], s
             }
         )
         return STAGE18_STAGE_KEY, list(STAGE18_REQUIRED_INPUTS), descriptor
+    if stage_number == 20:
+        descriptor = _canonical_sha(
+            {
+                "stage_number": 20,
+                "stage_key": STAGE20_STAGE_KEY,
+                "implementation_key": STAGE20_IMPLEMENTATION,
+                "required_inputs": STAGE20_REQUIRED_INPUTS,
+                "provider_policy": STAGE20_IMPLEMENTATION,
+                "probe_policy": "pos-dependency-dictionary-shape-v3",
+                "arbitration_policy": "lexical-primary-arbitration-v1",
+                "full_sense_coverage_required": True,
+            }
+        )
+        return STAGE20_STAGE_KEY, list(STAGE20_REQUIRED_INPUTS), descriptor
     return stage_key(stage_number), required_inputs(stage_number, implementation), descriptor_hash(stage_number, implementation)
 
 
@@ -157,7 +174,7 @@ def run_stage19(*, database: Path | str, extraction_run_id: int, parameters: dic
     return _run_stage19(database, extraction_run_id=int(extraction_run_id), parameters=parameters, implementation=implementation)
 
 
-def run_stage20(*, database: Path | str, sense_induction_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = "contextual-lexical-opus-v3") -> dict[str, Any]:
+def run_stage20(*, database: Path | str, sense_induction_run_id: int, parameters: dict[str, Any] | None = None, implementation: str = STAGE20_IMPLEMENTATION) -> dict[str, Any]:
     return _run_stage20(database, sense_induction_run_id=int(sense_induction_run_id), parameters=parameters, implementation=implementation)
 
 
@@ -172,7 +189,7 @@ _bind(run_stage16, stage_number=16, implementation="approve-if-clean-finalizatio
 _bind(run_stage17, stage_number=17, implementation="deterministic-structural-global", result_schema="rocketdict-product-stage17/1", identity_fields=["alignment_run_id", "stage_result_id"], extra_required_fields=["coverage_complete"])
 _bind(run_stage18, stage_number=18, implementation=STAGE18_IMPLEMENTATION, result_schema="rocketdict-product-stage18/1", identity_fields=["extraction_run_id", "stage_result_id", "alignment_run_id", "nlp_run_id"], extra_required_fields=["coverage_complete", "uncovered_token_count"])
 _bind(run_stage19, stage_number=19, implementation="deterministic-context-target-graph", result_schema="rocketdict-product-stage19/1", identity_fields=["sense_induction_run_id", "stage_result_id"], extra_required_fields=["coverage_complete"])
-_bind(run_stage20, stage_number=20, implementation="contextual-lexical-opus-v3", result_schema="rocketdict-product-stage20/1", identity_fields=["sense_translation_run_id", "stage_result_id"], extra_required_fields=["coverage_complete", "all_selected_approved"])
+_bind(run_stage20, stage_number=20, implementation=STAGE20_IMPLEMENTATION, result_schema="rocketdict-product-stage20/1", identity_fields=["sense_translation_run_id", "stage_result_id"], extra_required_fields=["coverage_complete", "all_selected_approved"])
 
 OPERATIONS: dict[str, Callable[..., dict[str, Any]]] = {
     "product.stage8.run": run_stage8,
