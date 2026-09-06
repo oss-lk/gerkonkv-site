@@ -19,10 +19,11 @@ production = [
   "ctranslate2>=4.8,<5",
   "sentencepiece>=0.2,<0.3",
 ]
-test = ["pytest>=8,<9"]
+test = ["pytest>=8,<10"]
 
 [project.scripts]
 rocketdict-core = "rocketdict.api.cli:main"
+rocketdict-assets = "rocketdict.assets:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
