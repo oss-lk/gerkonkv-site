@@ -34,6 +34,7 @@ from .evidence import (
     cmudict_status,
     load_cefrj_rows,
     load_cmudict,
+    match_cefrj_entry,
 )
 from .lexical import ensure_schema as ensure_lexical_schema
 from .runtime import OpusTranslator, load_opus_asset
@@ -691,20 +692,14 @@ def run_stage21(
     entry = _entry(database, int(lexical_entry_id))
     asset, rows = load_cefrj_rows()
     lemma = str(entry["normalized_lemma"]).casefold()
-    matches = [row for row in rows if str(row.get("headword") or "").strip().casefold() == lemma]
-    levels = sorted({str(row.get("CEFR") or "").strip() for row in matches if str(row.get("CEFR") or "").strip()})
-    if not matches:
-        level = None
-        match_kind = "unknown_exact_headword"
-        conflicts = 0
-    elif len(levels) == 1:
-        level = levels[0]
-        match_kind = "exact_headword"
-        conflicts = 0
-    else:
-        level = None
-        match_kind = "conflicting_exact_headword_levels"
-        conflicts = len(levels)
+    matched = match_cefrj_entry(
+        rows,
+        lemma=lemma,
+        part_of_speech=str(entry.get("part_of_speech") or ""),
+    )
+    level = matched["level"]
+    match_kind = str(matched["match_kind"])
+    conflicts = int(matched["conflict_count"])
     input_identity = {
         "lexical_entry_id": int(lexical_entry_id),
         "entry_identity": canonical_sha256(
@@ -730,7 +725,12 @@ def run_stage21(
         evidence = {
             "dataset": asset["dataset"],
             "source_sha256": asset["sha256"],
-            "source_rows": matches,
+            "entry_part_of_speech": str(entry.get("part_of_speech") or ""),
+            "expected_cefrj_pos": matched["expected_cefrj_pos"],
+            "headword_match_count": matched["headword_match_count"],
+            "pos_match_count": matched["pos_match_count"],
+            "source_rows": matched["matched_rows"],
+            "headword_rows": matched["headword_rows"],
             "builtin_smoke_used": False,
             "frequency_inference_used": False,
             "network_used": False,
@@ -766,6 +766,9 @@ def run_stage21(
                 "level": level,
                 "match_kind": match_kind,
                 "conflict_count": conflicts,
+                "expected_cefrj_pos": matched["expected_cefrj_pos"],
+                "headword_match_count": matched["headword_match_count"],
+                "pos_match_count": matched["pos_match_count"],
                 "source_sha256": asset["sha256"],
                 "builtin_smoke_used": False,
                 "frequency_inference_used": False,

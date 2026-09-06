@@ -400,6 +400,7 @@ def main() -> int:
         "card_set": card_set,
         "stage25": s25,
         "downstream_counts": counts,
+        "stage20_persisted_candidate_evidence": downstream["translations"],
         "export_sha256": s25["export_sha256"],
         "export_card_count": sense_count,
         "fake_or_identity_mt": False,
