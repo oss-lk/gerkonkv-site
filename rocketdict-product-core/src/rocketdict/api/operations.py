@@ -34,11 +34,11 @@ from rocketdict.stages import (
     run_punctuation_gate as _run_punctuation_gate,
     run_stage8 as _run_stage8,
     run_stage10 as _run_stage10,
-    run_stage12 as _run_stage12,
     run_stage14 as _run_stage14,
     run_stage16 as _run_stage16,
     run_stage17 as _run_stage17,
 )
+from rocketdict.translation_stage import run_stage12 as _run_stage12
 
 STAGE18_IMPLEMENTATION = "workbench-aligned-content-pos-v4"
 STAGE18_STAGE_KEY = "lexical_extraction"
