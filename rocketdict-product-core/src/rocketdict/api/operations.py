@@ -28,9 +28,9 @@ from rocketdict.downstream import (
     run_stage25 as _run_stage25,
 )
 from rocketdict.lexical import run_stage18 as _run_stage18, run_stage19 as _run_stage19
+from rocketdict.numeric_integrity import run_numeric_symbol_gate as _run_numeric_symbol_gate
 from rocketdict.stages import (
     run_length_ratio_gate as _run_length_ratio_gate,
-    run_numeric_symbol_gate as _run_numeric_symbol_gate,
     run_punctuation_gate as _run_punctuation_gate,
     run_stage8 as _run_stage8,
     run_stage10 as _run_stage10,
