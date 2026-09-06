@@ -28,14 +28,14 @@ def test_workbench_can_create_project_import_source_and_read_live_registry(tmp_p
     assert status["core"]["available"] is True
     assert status["core_project"]["import_event_count"] == 1
     assert status["core_project"]["document_version_count"] == 1
-    assert status["lab_summary"]["stage_count"] == 13
+    assert status["lab_summary"]["stage_count"] == 14
 
 
-def test_dependency_light_preflight_refuses_missing_real_nlp_or_opus(tmp_path: Path, monkeypatch) -> None:
-    # The core must never make dependency-light CI look like a product-ready
-    # machine. In particular, absence of the verified OPUS asset is a hard
-    # preflight blocker rather than a fake/identity translation fallback.
+def test_dependency_light_preflight_refuses_missing_real_product_evidence(tmp_path: Path, monkeypatch) -> None:
+    # Dependency-light CI has no right to claim Product readiness. Real NLP/OPUS
+    # and pinned CEFR-J are hard runtime evidence, never fake fallbacks.
     monkeypatch.delenv("ROCKETDICT_OPUS_ASSET_DIR", raising=False)
+    monkeypatch.delenv("ROCKETDICT_CEFRJ_ASSET", raising=False)
     core = RocketDictCore(python=sys.executable)
     project = WorkbenchProject.create(tmp_path / "project", name="preflight", core=core)
     source = tmp_path / "sample.txt"
@@ -45,4 +45,4 @@ def test_dependency_light_preflight_refuses_missing_real_nlp_or_opus(tmp_path: P
     with pytest.raises(RuntimeError, match="not locally available") as error:
         build_product_preflight(project)
     message = str(error.value)
-    assert "stage 8" in message or "stage 12" in message
+    assert any(f"stage {number}" in message for number in (8, 12, 20, 21))
