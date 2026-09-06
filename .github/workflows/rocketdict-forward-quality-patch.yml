@@ -1,0 +1,65 @@
+name: RocketDict forward quality patch
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-forward-quality-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+      - name: Patch Stage21 POS matching and expose Stage20 candidate evidence in smoke
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          downstream = Path('rocketdict-product-core/src/rocketdict/downstream.py')
+          text = downstream.read_text(encoding='utf-8')
+          old_import = '''from .evidence import (\n    CEFRJ_SHA256,\n    cmudict_status,\n    load_cefrj_rows,\n    load_cmudict,\n)'''
+          new_import = '''from .evidence import (\n    CEFRJ_SHA256,\n    cmudict_status,\n    load_cefrj_rows,\n    load_cmudict,\n    match_cefrj_entry,\n)'''
+          if old_import not in text:
+              raise SystemExit('downstream evidence import marker not found')
+          text = text.replace(old_import, new_import, 1)
+          old_match = '''    lemma = str(entry["normalized_lemma"]).casefold()\n    matches = [row for row in rows if str(row.get("headword") or "").strip().casefold() == lemma]\n    levels = sorted({str(row.get("CEFR") or "").strip() for row in matches if str(row.get("CEFR") or "").strip()})\n    if not matches:\n        level = None\n        match_kind = "unknown_exact_headword"\n        conflicts = 0\n    elif len(levels) == 1:\n        level = levels[0]\n        match_kind = "exact_headword"\n        conflicts = 0\n    else:\n        level = None\n        match_kind = "conflicting_exact_headword_levels"\n        conflicts = len(levels)'''
+          new_match = '''    lemma = str(entry["normalized_lemma"]).casefold()\n    matched = match_cefrj_entry(\n        rows,\n        lemma=lemma,\n        part_of_speech=str(entry.get("part_of_speech") or ""),\n    )\n    level = matched["level"]\n    match_kind = str(matched["match_kind"])\n    conflicts = int(matched["conflict_count"])'''
+          if old_match not in text:
+              raise SystemExit('Stage21 old match block not found')
+          text = text.replace(old_match, new_match, 1)
+          old_evidence = '''        evidence = {\n            "dataset": asset["dataset"],\n            "source_sha256": asset["sha256"],\n            "source_rows": matches,\n            "builtin_smoke_used": False,'''
+          new_evidence = '''        evidence = {\n            "dataset": asset["dataset"],\n            "source_sha256": asset["sha256"],\n            "entry_part_of_speech": str(entry.get("part_of_speech") or ""),\n            "expected_cefrj_pos": matched["expected_cefrj_pos"],\n            "headword_match_count": matched["headword_match_count"],\n            "pos_match_count": matched["pos_match_count"],\n            "source_rows": matched["matched_rows"],\n            "headword_rows": matched["headword_rows"],\n            "builtin_smoke_used": False,'''
+          if old_evidence not in text:
+              raise SystemExit('Stage21 evidence marker not found')
+          text = text.replace(old_evidence, new_evidence, 1)
+          old_output = '''                "conflict_count": conflicts,\n                "source_sha256": asset["sha256"],'''
+          new_output = '''                "conflict_count": conflicts,\n                "expected_cefrj_pos": matched["expected_cefrj_pos"],\n                "headword_match_count": matched["headword_match_count"],\n                "pos_match_count": matched["pos_match_count"],\n                "source_sha256": asset["sha256"],'''
+          if old_output not in text:
+              raise SystemExit('Stage21 output marker not found')
+          text = text.replace(old_output, new_output, 1)
+          downstream.write_text(text, encoding='utf-8')
+
+          smoke = Path('rocketdict-product-core/tests/real_runtime_smoke.py')
+          text = smoke.read_text(encoding='utf-8')
+          old = '''        "downstream_counts": counts,\n        "export_sha256": s25["export_sha256"],'''
+          new = '''        "downstream_counts": counts,\n        "stage20_persisted_candidate_evidence": downstream["translations"],\n        "export_sha256": s25["export_sha256"],'''
+          if old not in text:
+              raise SystemExit('real smoke downstream evidence marker not found')
+          text = text.replace(old, new, 1)
+          smoke.write_text(text, encoding='utf-8')
+          PY
+      - name: Compile patched files
+        run: python -m compileall -q rocketdict-product-core/src rocketdict-product-core/tests/real_runtime_smoke.py
+      - name: Commit quality patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rocketdict-product-core/src/rocketdict/downstream.py rocketdict-product-core/tests/real_runtime_smoke.py
+          git commit -m 'Make CEFR-J matching POS-aware and retain Stage20 evidence'
+          git push origin HEAD:chatgpt/product-core-forward
