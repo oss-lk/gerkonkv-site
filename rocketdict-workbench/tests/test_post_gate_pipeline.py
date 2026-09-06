@@ -287,29 +287,7 @@ class _Core:
                 "contract": _contract(stage),
             }
             return SimpleNamespace(stdout=json.dumps(payload), stderr="", returncode=0)
-        self.stage18_calls += 1
-        if self.stage18_fail_once:
-            self.stage18_fail_once = False
-            raise RuntimeError("simulated ambiguous Stage18 failure")
-        alignment_run_id = int(args[3])
-        payload = {
-            "policy": POLICY_KEY,
-            "extraction_run_id": 180,
-            "stage_result_id": 181,
-            "alignment_run_id": alignment_run_id,
-            "nlp_run_id": 8,
-            "source_mode": "aligned",
-            "candidate_count": 20,
-            "selected_candidate_count": 15,
-            "occurrence_count": 15,
-            "lexical_entry_count": 12,
-            "coverage_complete": not self.stage18_incomplete,
-            "uncovered_token_count": 1 if self.stage18_incomplete else 0,
-            "cache_hit": False,
-            "target_evidence_occurrence_count": 10,
-            "occurrences": [{"occurrence_id": 1, "entry_id": 2}],
-        }
-        return SimpleNamespace(stdout=json.dumps(payload), stderr="", returncode=0)
+        raise AssertionError("Stage18 must execute through RocketDictCore.api, not a raw subprocess")
 
     @staticmethod
     def _parse_json(text: str, *, context: str):  # type: ignore[no-untyped-def]
@@ -323,6 +301,31 @@ class _Core:
             return {"schema": "stage16-result/1", "translation_revision_id": 160, "stage_result_id": 161}
         if stage == 17:
             return {"schema": "stage17-result/1", "alignment_run_id": 170, "stage_result_id": 171}
+        if stage == 18:
+            self.stage18_calls += 1
+            if self.stage18_fail_once:
+                self.stage18_fail_once = False
+                raise RuntimeError("simulated ambiguous Stage18 failure")
+            params = json.loads(str(args[3]))
+            alignment_run_id = int(params["alignment_run_id"])
+            return {
+                "schema": "rocketdict-product-stage18/1",
+                "policy": POLICY_KEY,
+                "extraction_run_id": 180,
+                "stage_result_id": 181,
+                "alignment_run_id": alignment_run_id,
+                "nlp_run_id": 8,
+                "source_mode": "aligned",
+                "candidate_count": 20,
+                "selected_candidate_count": 15,
+                "occurrence_count": 15,
+                "lexical_entry_count": 12,
+                "coverage_complete": not self.stage18_incomplete,
+                "uncovered_token_count": 1 if self.stage18_incomplete else 0,
+                "cache_hit": False,
+                "target_evidence_occurrence_count": 10,
+                "occurrences": [{"occurrence_id": 1, "entry_id": 2}],
+            }
         if stage == 19:
             return {"schema": "stage19-result/1", "sense_induction_run_id": 190, "stage_result_id": 191}
         raise AssertionError(stage)
@@ -357,7 +360,7 @@ def test_full_post_gate_pipeline_runs_16_17_workbench18_19_in_order(tmp_path) ->
     assert result["schema"] == POST_GATE_PIPELINE_SCHEMA
     assert result["status"] == "stage19_completed"
     assert result["completed_now"] == [16, 17, 18, 19]
-    assert core.api_calls == [16, 17, 19]
+    assert core.api_calls == [16, 17, 18, 19]
     assert core.stage18_calls == 1
     persisted = json.loads(path.read_text(encoding="utf-8"))
     executions = persisted["steps"]["upstream_execution"]["executions"]
@@ -396,7 +399,7 @@ def test_incomplete_workbench_stage18_coverage_blocks_before_stage19(tmp_path) -
 
     with pytest.raises(RuntimeError, match="coverage is incomplete"):
         advance_post_gate_pipeline(core, database, path)
-    assert core.api_calls == [16, 17]
+    assert core.api_calls == [16, 17, 18]
     persisted = json.loads(path.read_text(encoding="utf-8"))
     assert persisted["steps"]["upstream_execution"]["executions"]["18"]["status"] == "dispatch_failed_ambiguous"
     assert "19" not in persisted["steps"]["upstream_execution"]["executions"]
