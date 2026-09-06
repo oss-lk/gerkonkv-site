@@ -16,25 +16,34 @@ from typing import Any
 
 from .stages import StageExecutionError, _quality_run
 
-CONTRACT = "rocketdict-maintained-numeric-integrity/1"
+CONTRACT = "rocketdict-maintained-numeric-integrity/2"
 
-# Structured alternatives are deliberately ordered before simpler integer
-# forms.  This covers the documented Newton/Stage8 semantics: mixed fractions,
-# ordinary fractions, English/Russian ordinals, old ``42d`` ordinals, grouped
-# thousands, decimal comma, and Newton apostrophe decimals.
+_ORDINAL_SUFFIX = r"(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))"
+# Space-grouping is deliberately allowed after an arbitrary-length leading
+# digit group.  Real R1 evidence contains model output such as ``11/178 000``
+# and ``961/72000 000``; these are formatting variants of the exact source
+# values, not newly invented numbers.
+_GROUPED_INT = r"(?:\d{1,3}(?:,\d{3})+|\d+(?:[\s\u00a0\u202f]\d{3})*)"
+_SIGN = r"[+\-−]?\s*"
+
+# Numeric boundaries are digit-based rather than Python-word-based.  This is
+# necessary for Gutenberg/source markup such as ``_Obs._16`` and technical
+# payloads where a digit may touch an underscore or letter.  Structural-token
+# identity remains a separate hard diagnostic; counting its digits here adds a
+# second fail-closed signal rather than licensing changes.
 _NUMERIC_RE = re.compile(
-    r"(?<![\w])(?P<token>[+\-−]?\d+(?:\s*[-–]\s*|\s+)\d+\s*/\s*\d+(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))?"
-    r"|[+\-−]?\d+\s*/\s*\d+(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))?"
-    r"|[+\-−]?\d+['’]\d+"
-    r"|[+\-−]?\d{1,3}(?:(?:[\s\u00a0\u202f]\d{3}){1,}|(?:,\d{3}){1,})"
-    r"|[+\-−]?\d+[.,]\d+"
-    r"|[+\-−]?\d+(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))?)(?![\w])",
+    rf"(?<!\d)(?P<token>"
+    rf"{_SIGN}{_GROUPED_INT}(?:\s*[-–]\s*|\s+){_GROUPED_INT}\s*/\s*{_GROUPED_INT}{_ORDINAL_SUFFIX}?"
+    rf"|{_SIGN}{_GROUPED_INT}\s*/\s*{_GROUPED_INT}{_ORDINAL_SUFFIX}?"
+    rf"|{_SIGN}\d+['’]\d+"
+    rf"|{_SIGN}\d{{1,3}}(?:,\d{{3}})+"
+    rf"|{_SIGN}\d+(?:[\s\u00a0\u202f]\d{{3}})+"
+    rf"|{_SIGN}\d+[.,]\d+"
+    rf"|{_SIGN}\d+{_ORDINAL_SUFFIX}?"
+    rf")(?!\d)",
     re.IGNORECASE | re.UNICODE,
 )
-_ORDINAL_SUFFIX_RE = re.compile(
-    r"(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))$",
-    re.IGNORECASE,
-)
+_ORDINAL_SUFFIX_RE = re.compile(rf"{_ORDINAL_SUFFIX}$", re.IGNORECASE)
 _CRITICAL_SYMBOLS = ("%", "°", "±", "=", "<", ">", "×", "÷")
 _NUMBER_WORDS = {
     "zero": 0,
@@ -65,6 +74,39 @@ _NUMBER_WORDS = {
     "seventy": 70,
     "eighty": 80,
     "ninety": 90,
+    # Exact source word -> target digit licences.  This does not parse arbitrary
+    # prose quantities; it only permits a model to render the explicit word as
+    # the corresponding literal.  ``an hundred`` is present in frozen R1.
+    "hundred": 100,
+}
+_ORDINAL_WORDS = {
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "fourth": 4,
+    "fifth": 5,
+    "sixth": 6,
+    "seventh": 7,
+    "eighth": 8,
+    "ninth": 9,
+    "tenth": 10,
+    "eleventh": 11,
+    "twelfth": 12,
+    "thirteenth": 13,
+    "fourteenth": 14,
+    "fifteenth": 15,
+    "sixteenth": 16,
+    "seventeenth": 17,
+    "eighteenth": 18,
+    "nineteenth": 19,
+    "twentieth": 20,
+    "thirtieth": 30,
+    "fortieth": 40,
+    "fiftieth": 50,
+    "sixtieth": 60,
+    "seventieth": 70,
+    "eightieth": 80,
+    "ninetieth": 90,
 }
 
 
@@ -80,33 +122,76 @@ def _strip_ordinal_suffix(token: str) -> str:
     return _ORDINAL_SUFFIX_RE.sub("", token)
 
 
+def _normalize_integer(raw: str) -> str:
+    compact = re.sub(r"[\s\u00a0\u202f]", "", raw)
+    # At integer-only positions commas are grouping punctuation.  Decimal-comma
+    # ambiguity is handled separately by ``normalize_numeric_options``.
+    compact = compact.replace(",", "")
+    sign = ""
+    if compact[:1] in {"+", "-", "−"}:
+        sign, compact = compact[0], compact[1:]
+    digits = compact.lstrip("0") or "0"
+    return ("-" if sign in {"-", "−"} else "") + digits
+
+
 def normalize_numeric_literal(raw: str) -> str:
     token = raw.casefold().replace("−", "-").replace("‑", "-").replace("–", "-")
-    token = re.sub(r"[\u00a0\u202f]", " ", token)
-    token = _strip_ordinal_suffix(token)
-    token = re.sub(r"\s*/\s*", "/", token)
-    token = re.sub(r"\s*-\s*", "-", token)
+    token = re.sub(r"[\u00a0\u202f]", " ", token).strip()
+    token = _strip_ordinal_suffix(token).strip()
+    token = re.sub(r"^([+-])\s+", r"\1", token)
+
+    # Mixed/simple fractions, including grouped denominators emitted by MT.
+    mixed = re.fullmatch(
+        rf"(?P<sign>[+-]?)\s*(?P<whole>{_GROUPED_INT})(?:\s*-\s*|\s+)(?P<num>{_GROUPED_INT})\s*/\s*(?P<den>{_GROUPED_INT})",
+        token,
+        flags=re.IGNORECASE,
+    )
+    if mixed:
+        sign = "-" if mixed.group("sign") == "-" else ""
+        return (
+            sign
+            + _normalize_integer(mixed.group("whole"))
+            + "-"
+            + _normalize_integer(mixed.group("num"))
+            + "/"
+            + _normalize_integer(mixed.group("den"))
+        )
+    fraction = re.fullmatch(
+        rf"(?P<sign>[+-]?)\s*(?P<num>{_GROUPED_INT})\s*/\s*(?P<den>{_GROUPED_INT})",
+        token,
+        flags=re.IGNORECASE,
+    )
+    if fraction:
+        sign = "-" if fraction.group("sign") == "-" else ""
+        return (
+            sign
+            + _normalize_integer(fraction.group("num"))
+            + "/"
+            + _normalize_integer(fraction.group("den"))
+        )
 
     if re.fullmatch(r"[+-]?\d+['’]\d+", token):
         return token.replace("’", "'").replace("'", ".")
-    if re.fullmatch(r"[+-]?\d+(?:-| )\d+/\d+", token):
-        return token.replace(" ", "-")
-    if re.fullmatch(r"[+-]?\d+/\d+", token):
-        return token
 
     compact = token.replace(" ", "")
     if re.fullmatch(r"[+-]?\d{1,3}(?:,\d{3})+", compact):
-        compact = compact.replace(",", "")
-    elif "," in compact:
+        return _normalize_integer(compact)
+    if "," in compact:
         compact = compact.replace(",", ".")
 
-    if re.fullmatch(r"[+-]?\d+", compact):
+    if re.fullmatch(r"[+-]?\d+(?:\.\d+)?", compact):
         sign = ""
-        digits = compact
-        if digits[:1] in "+-":
-            sign, digits = digits[0], digits[1:]
-        digits = digits.lstrip("0") or "0"
-        return ("-" if sign == "-" else "") + digits
+        value = compact
+        if value[:1] in "+-":
+            sign, value = value[0], value[1:]
+        if "." in value:
+            integer, fraction_part = value.split(".", 1)
+            integer = integer.lstrip("0") or "0"
+            fraction_part = fraction_part.rstrip("0")
+            normalized = integer + ("." + fraction_part if fraction_part else "")
+        else:
+            normalized = value.lstrip("0") or "0"
+        return ("-" if sign == "-" else "") + normalized
     return compact
 
 
@@ -124,8 +209,8 @@ def normalize_numeric_options(raw: str) -> tuple[str, ...]:
     match = re.fullmatch(r"([+-]?\d{1,3}),(\d{3})", compact)
     if not match:
         return (primary,)
-    grouped = normalize_numeric_literal(match.group(1) + match.group(2))
-    decimal = match.group(1) + "." + match.group(2)
+    grouped = _normalize_integer(match.group(1) + match.group(2))
+    decimal = normalize_numeric_literal(match.group(1) + "." + match.group(2))
     return tuple(dict.fromkeys((grouped, decimal)))
 
 
@@ -150,23 +235,24 @@ def numeric_counter(text: str) -> Counter[str]:
 
 
 def spelled_numeric_licenses(source: str) -> Counter[str]:
-    """License only explicit basic English number words present in the source.
-
-    A tens+unit pair (``twenty one``) licenses the composed value once instead
-    of separately licensing 20 and 1.  No arbitrary prose-number inference is
-    attempted.
-    """
+    """License only explicit English cardinal/ordinal number words in source."""
     words = re.findall(r"(?<![A-Za-z])([A-Za-z]+)(?![A-Za-z])", source.casefold())
     out: Counter[str] = Counter()
     index = 0
     while index < len(words):
         word = words[index]
+        ordinal = _ORDINAL_WORDS.get(word)
+        if ordinal is not None:
+            out[str(ordinal)] += 1
+            index += 1
+            continue
         value = _NUMBER_WORDS.get(word)
         if value is None:
             index += 1
             continue
         if (
             value >= 20
+            and value < 100
             and value % 10 == 0
             and index + 1 < len(words)
             and 0 < (_NUMBER_WORDS.get(words[index + 1]) or 0) < 10
@@ -272,7 +358,7 @@ def run_numeric_symbol_gate(
             f"Unsupported numeric evaluator contract {requested_contract!r}; expected {CONTRACT!r}"
         )
     # Include evaluator semantics in the immutable stage-run request identity so
-    # an old cached PASS produced by the previous parser can never be reused.
+    # an old cached PASS produced by a previous parser can never be reused.
     effective["evaluator_contract"] = CONTRACT
     return _quality_run(
         Path(database).expanduser().resolve(),
