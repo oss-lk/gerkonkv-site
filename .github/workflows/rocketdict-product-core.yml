@@ -133,6 +133,7 @@ jobs:
             work/real-smoke/real-runtime-smoke.json
             work/real-smoke/product-export.json
             work/product-run-smoke/real-product-run-smoke.json
+            work/product-run-smoke/real-product-run-failure.json
             work/product-run-smoke/*.product-export.json
             work/evidence/**
           if-no-files-found: warn

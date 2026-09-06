@@ -15,13 +15,61 @@ from rocketdict_workbench.product_run_state import initialize_product_run
 from rocketdict_workbench.project import WorkbenchProject
 
 T = TypeVar("T")
+FAILURE_SCHEMA = "rocketdict-workbench-real-product-run-failure/1"
 
 
-def _phase(name: str, fn: Callable[[], T]) -> T:
+def _exception_stream(exc: Exception, name: str) -> str | None:
+    value = getattr(exc, name, None)
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def _write_failure_evidence(failure_path: Path, *, phase: str, exc: Exception) -> None:
+    payload: dict[str, object] = {
+        "schema": FAILURE_SCHEMA,
+        "status": "failed",
+        "phase": phase,
+        "exception_type": type(exc).__name__,
+        "message": str(exc),
+        "traceback": traceback.format_exc(),
+    }
+    returncode = getattr(exc, "returncode", None)
+    if returncode is not None:
+        payload["returncode"] = returncode
+    command = getattr(exc, "cmd", None)
+    if command is not None:
+        payload["command"] = repr(command)
+    for name in ("stdout", "stderr"):
+        stream = _exception_stream(exc, name)
+        if stream:
+            payload[name] = stream
+
+    state_path = failure_path.parent / "product-run.json"
+    if state_path.is_file():
+        try:
+            payload["product_run_state"] = json.loads(state_path.read_text(encoding="utf-8"))
+        except Exception as state_exc:
+            payload["product_run_state_read_error"] = (
+                f"{type(state_exc).__name__}: {state_exc}"
+            )
+
+    failure_path.parent.mkdir(parents=True, exist_ok=True)
+    failure_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(f"::notice title=RocketDict failure evidence::{failure_path}", flush=True)
+
+
+def _phase(name: str, fn: Callable[[], T], *, failure_path: Path) -> T:
     print(f"::notice title=RocketDict phase::{name}", flush=True)
     try:
         value = fn()
     except Exception as exc:
+        _write_failure_evidence(failure_path, phase=name, exc=exc)
         print(
             f"::error title=RocketDict {name}::{type(exc).__name__}: {exc}",
             flush=True,
@@ -41,11 +89,7 @@ def _positive(value: object, name: str) -> int:
     return result
 
 
-def main() -> int:
-    root = Path(os.environ.get("ROCKETDICT_PRODUCT_RUN_SMOKE_ROOT", "work/product-run-smoke")).resolve()
-    if root.exists():
-        shutil.rmtree(root)
-    root.mkdir(parents=True)
+def _run(root: Path, failure_path: Path) -> int:
     source = root / "source.txt"
     source.write_text(
         "Light passes through a glass prism and forms a spectrum. "
@@ -59,11 +103,17 @@ def main() -> int:
     project = _phase(
         "create-workbench-project",
         lambda: WorkbenchProject.create(root / "project", name="real-product-run-smoke", core=core),
+        failure_path=failure_path,
     )
-    imported = _phase("import-source", lambda: project.import_source(source))
+    imported = _phase(
+        "import-source",
+        lambda: project.import_source(source),
+        failure_path=failure_path,
+    )
     preflight = _phase(
         "build-product-preflight",
         lambda: build_product_preflight(project, source_kind="text"),
+        failure_path=failure_path,
     )
     if preflight.get("status") != "ready":
         raise RuntimeError(f"Product preflight is not ready: {preflight}")
@@ -77,6 +127,7 @@ def main() -> int:
             preflight,
             state_path=state_path,
         ),
+        failure_path=failure_path,
     )
     if not state_path.is_file():
         raise RuntimeError("Product run did not persist its unified state")
@@ -91,6 +142,7 @@ def main() -> int:
             cefrj_asset=cefrj_asset,
             set_name="RocketDict unified real smoke",
         ),
+        failure_path=failure_path,
     )
     if result.get("status") != "product_complete_exported":
         raise RuntimeError(f"Unified product-run did not finish: {result}")
@@ -140,6 +192,7 @@ def main() -> int:
     state, downstream, export, sense_count, export_path, cards_payload = _phase(
         "validate-final-product",
         validate_final_product,
+        failure_path=failure_path,
     )
     cards = (state.get("steps") or {}).get("cards") or {}
 
@@ -156,6 +209,7 @@ def main() -> int:
             cefrj_asset=cefrj_asset,
             set_name="RocketDict unified real smoke",
         ),
+        failure_path=failure_path,
     )
     if replay.get("status") != "product_complete_exported":
         raise RuntimeError(f"Unified product-run replay failed: {replay}")
@@ -189,6 +243,20 @@ def main() -> int:
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(evidence, ensure_ascii=False, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    root = Path(os.environ.get("ROCKETDICT_PRODUCT_RUN_SMOKE_ROOT", "work/product-run-smoke")).resolve()
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
+    failure_path = root / "real-product-run-failure.json"
+    try:
+        return _run(root, failure_path)
+    except Exception as exc:
+        if not failure_path.is_file():
+            _write_failure_evidence(failure_path, phase="main", exc=exc)
+        raise
 
 
 if __name__ == "__main__":
