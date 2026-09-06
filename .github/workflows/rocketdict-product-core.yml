@@ -112,7 +112,7 @@ jobs:
       - name: Run real maintained-core Stage8 through Stage25 smoke
         run: python rocketdict-product-core/tests/real_runtime_smoke.py
       - name: Run real unified rocketdict-product-run source through Stage25 smoke
-        run: python rocketdict-workbench/tests/real_product_run_smoke.py
+        run: python -u rocketdict-workbench/tests/real_product_run_smoke.py
       - name: Record runtime identities and resources
         if: always()
         run: |
