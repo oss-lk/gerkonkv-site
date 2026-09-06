@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-"""Fail-closed discovery of Product downstream evidence sources.
+"""Fail-closed discovery and matching of Product downstream evidence sources.
 
-CEFR-J is an explicit pinned external asset.  It is never downloaded during
-processing.  CMUdict is supplied by the installed ``cmudict`` Python package;
-its package version and resource identity are exposed for audit and generated
-pronunciation fallback is never enabled by this module.
+CEFR-J is an explicit pinned external asset. It is never downloaded during
+processing. CMUdict is supplied by the installed ``cmudict`` Python package.
+Both sources may be cached process-locally only after their exact evidence
+identity has been verified. Generated pronunciation fallback is never enabled.
 """
 
 import csv
+from functools import lru_cache
 import hashlib
 import importlib.metadata
 import importlib.util
@@ -32,6 +33,22 @@ CEFRJ_HEADER = [
     "Threshold",
 ]
 CEFRJ_ASSET_ENV = "ROCKETDICT_CEFRJ_ASSET"
+
+# Deliberately conservative mapping from Universal/spaCy POS to the labels
+# actually used by CEFR-J. Unknown categories do not receive a guessed match.
+CEFRJ_POS_BY_UPOS = {
+    "ADJ": "adjective",
+    "ADV": "adverb",
+    "ADP": "preposition",
+    "AUX": "be-verb",
+    "CCONJ": "conjunction",
+    "DET": "determiner",
+    "NOUN": "noun",
+    "NUM": "number",
+    "PRON": "pronoun",
+    "SCONJ": "conjunction",
+    "VERB": "verb",
+}
 
 
 def file_sha256(path: Path | str) -> str:
@@ -124,26 +141,118 @@ def cmudict_status() -> dict[str, Any]:
     }
 
 
-def load_cefrj_rows(path: Path | str | None = None) -> tuple[dict[str, Any], list[dict[str, str]]]:
-    verified = verify_cefrj_asset(path)
-    asset = Path(str(verified["path"]))
+@lru_cache(maxsize=4)
+def _load_cefrj_cached(path_text: str, sha256: str) -> tuple[tuple[tuple[str, str], ...], ...]:
+    # ``sha256`` is part of the cache key even though the accepted Product asset
+    # is currently single-pinned. This prevents stale rows if the path is reused
+    # for different bytes in a future explicit asset revision.
+    if sha256 != CEFRJ_SHA256:
+        raise RuntimeError("Attempted to cache unaccepted CEFR-J identity")
+    asset = Path(path_text)
     with asset.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = [dict(row) for row in csv.DictReader(handle)]
     if len(rows) != CEFRJ_ROWS:
         raise RuntimeError("CEFR-J rows changed after verification")
+    return tuple(tuple(sorted(row.items())) for row in rows)
+
+
+def load_cefrj_rows(path: Path | str | None = None) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    verified = verify_cefrj_asset(path)
+    packed = _load_cefrj_cached(str(verified["path"]), str(verified["sha256"]))
+    rows = [dict(items) for items in packed]
     return verified, rows
+
+
+def cefrj_pos_label(part_of_speech: str | None) -> str | None:
+    normalized = str(part_of_speech or "").strip().upper()
+    return CEFRJ_POS_BY_UPOS.get(normalized)
+
+
+def match_cefrj_entry(
+    rows: list[dict[str, str]],
+    *,
+    lemma: str,
+    part_of_speech: str | None,
+) -> dict[str, Any]:
+    normalized_lemma = str(lemma or "").strip().casefold()
+    headword_rows = [
+        row
+        for row in rows
+        if str(row.get("headword") or "").strip().casefold() == normalized_lemma
+    ]
+    expected_pos = cefrj_pos_label(part_of_speech)
+    if not headword_rows:
+        matched: list[dict[str, str]] = []
+        match_kind = "unknown_exact_headword"
+    elif expected_pos is None:
+        # Do not invent a mapping for unsupported POS. The headword evidence is
+        # retained for audit but no CEFR level is selected from it.
+        matched = []
+        match_kind = "headword_found_pos_mapping_unavailable"
+    else:
+        matched = [
+            row
+            for row in headword_rows
+            if str(row.get("pos") or "").strip().casefold() == expected_pos.casefold()
+        ]
+        match_kind = "exact_headword_pos" if matched else "headword_found_pos_mismatch"
+
+    levels = sorted(
+        {
+            str(row.get("CEFR") or "").strip()
+            for row in matched
+            if str(row.get("CEFR") or "").strip()
+        }
+    )
+    if len(levels) == 1:
+        level = levels[0]
+        conflicts = 0
+    elif len(levels) > 1:
+        level = None
+        conflicts = len(levels)
+        match_kind = "conflicting_exact_headword_pos_levels"
+    else:
+        level = None
+        conflicts = 0
+    return {
+        "level": level,
+        "match_kind": match_kind,
+        "conflict_count": conflicts,
+        "expected_cefrj_pos": expected_pos,
+        "headword_match_count": len(headword_rows),
+        "pos_match_count": len(matched),
+        "headword_rows": headword_rows,
+        "matched_rows": matched,
+    }
+
+
+@lru_cache(maxsize=4)
+def _load_cmudict_cached(package_version: str) -> tuple[tuple[str, tuple[tuple[str, ...], ...]], ...]:
+    import cmudict
+
+    data = cmudict.dict()
+    if not isinstance(data, dict) or not data:
+        raise RuntimeError("CMUdict package returned an empty/non-dictionary resource")
+    packed = []
+    for key, variants in data.items():
+        packed.append(
+            (
+                str(key).casefold(),
+                tuple(tuple(map(str, variant)) for variant in variants),
+            )
+        )
+    packed.sort(key=lambda item: item[0])
+    return tuple(packed)
 
 
 def load_cmudict() -> tuple[dict[str, Any], dict[str, list[list[str]]]]:
     status = cmudict_status()
     if not status["available"]:
         raise RuntimeError(f"Exact CMUdict evidence is unavailable: {status}")
-    import cmudict
-
-    data = cmudict.dict()
-    if not isinstance(data, dict) or not data:
-        raise RuntimeError("CMUdict package returned an empty/non-dictionary resource")
-    normalized: dict[str, list[list[str]]] = {}
-    for key, variants in data.items():
-        normalized[str(key).casefold()] = [list(map(str, variant)) for variant in variants]
+    version = str(status.get("package_version") or "unknown")
+    packed = _load_cmudict_cached(version)
+    normalized = {
+        key: [list(variant) for variant in variants]
+        for key, variants in packed
+    }
     return status, normalized
