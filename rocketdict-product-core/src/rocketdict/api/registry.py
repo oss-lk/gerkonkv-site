@@ -4,9 +4,10 @@ import hashlib
 import json
 from typing import Any
 
+from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
-REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/1"
+REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
 
 
 def _canon(value: Any) -> str:
@@ -22,7 +23,7 @@ def _control(key: str, default: Any, *, kind: str = "value") -> dict[str, Any]:
 
 
 # Static descriptor material. Runtime availability is deliberately excluded from
-# descriptor hashes so installing a model does not change operation identity.
+# descriptor hashes so installing a model/evidence asset does not change operation identity.
 _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
     {
         "number": 8,
@@ -183,6 +184,27 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
         ],
     },
     {
+        "number": 20,
+        "key": "sense_translation",
+        "label": "Contextual lexical sense translation",
+        "implementations": [
+            {
+                "implementation_key": "contextual-lexical-opus-v3",
+                "label": "Real OPUS n-best lexical sense translation",
+                "production_eligible": True,
+                "testing_only": False,
+                "tags": ["real-mt", "sense-scoped", "n-best", "offline"],
+                "required_inputs": ["sense_induction_run_id"],
+                "controls": [
+                    _control("beam_size", 12),
+                    _control("num_hypotheses", 12),
+                    _control("maximum_candidates_per_lemma", 8),
+                    _control("probe_batch_size", 64),
+                ],
+            }
+        ],
+    },
+    {
         "number": 21,
         "key": "cefr",
         "label": "CEFR-J assessment",
@@ -192,7 +214,7 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "CEFR-J Vocabulary Profile 1.5",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["external-evidence", "offline"],
+                "tags": ["external-evidence", "offline", "pinned"],
                 "required_inputs": ["lexical_entry_id"],
                 "controls": [_control("use_builtin_smoke_sources", False)],
             }
@@ -208,9 +230,9 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "Exact CMUdict pronunciation",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["cmudict", "exact", "offline"],
+                "tags": ["cmudict", "exact", "offline", "no-generated-fallback"],
                 "required_inputs": ["lexical_entry_id"],
-                "controls": [],
+                "controls": [_control("enable_generated_fallback", False)],
             }
         ],
     },
@@ -224,7 +246,7 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "Document-aligned sense examples",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["sense-scoped", "document-evidence"],
+                "tags": ["sense-scoped", "document-evidence", "offline"],
                 "required_inputs": ["lexical_sense_id"],
                 "controls": [_control("corpus_snapshots", [])],
             }
@@ -256,9 +278,9 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "Structured JSON export",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["export"],
+                "tags": ["export", "immutable-set"],
                 "required_inputs": ["set_revision_id"],
-                "controls": [],
+                "controls": [_control("output_path", "")],
             }
         ],
     },
@@ -308,16 +330,17 @@ def required_inputs(stage_number: int, implementation_key: str) -> list[str]:
 def _availability(stage_number: int, implementation_key: str) -> dict[str, Any]:
     if stage_number == 8:
         return nlp_status(implementation_key)
-    if stage_number == 12:
+    if stage_number in {12, 20}:
         return opus_status()
-    if stage_number in {10, 14, 15, 16, 17, 19}:
+    if stage_number == 21:
+        return cefrj_status()
+    if stage_number == 22:
+        return cmudict_status()
+    if stage_number in {10, 14, 15, 16, 17, 19, 23, 24, 25}:
         return {"available": True, "reason": "maintained_product_core", "offline": True}
-    # Downstream 21-25 is currently executed by Workbench's verified Product
-    # components. Keep registry identity visible without falsely claiming a core
-    # runtime implementation that is not yet the active dispatcher.
     return {
         "available": False,
-        "reason": "workbench_managed_pending_core_migration",
+        "reason": "maintained_product_core_operation_not_implemented",
         "offline": True,
     }
 
@@ -351,8 +374,6 @@ REGISTRY_HASH = _sha(_STATIC)
 
 
 def lab_manifest(*, probe_runtime: bool = False) -> dict[str, Any]:
-    # ``probe_runtime`` is retained as public API semantics. Runtime checks here
-    # are local and read-only in either mode; the flag is reported for audit.
     stages: list[dict[str, Any]] = []
     for stage in _STATIC["stages"]:
         implementations = []
