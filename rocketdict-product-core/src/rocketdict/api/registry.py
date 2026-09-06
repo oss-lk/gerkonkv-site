@@ -8,6 +8,7 @@ from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
+NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/1"
 
 
 def _canon(value: Any) -> str:
@@ -108,9 +109,11 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "Numeric and critical-symbol preservation",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["hard-gate", "reference-free"],
+                "tags": ["hard-gate", "reference-free", "versioned-evaluator"],
                 "required_inputs": ["assembly_id"],
-                "controls": [],
+                "controls": [
+                    _control("evaluator_contract", NUMERIC_INTEGRITY_CONTRACT),
+                ],
             },
             {
                 "implementation_key": "rocketdict-punctuation-preservation",
