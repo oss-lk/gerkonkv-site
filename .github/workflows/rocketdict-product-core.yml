@@ -2,7 +2,7 @@ name: RocketDict Product Core
 
 on:
   push:
-    branches: [main, chatgpt/product-core-forward]
+    branches: [main, chatgpt/product-core-forward, chatgpt/native-stage20-forward]
     paths:
       - 'rocketdict-product-core/**'
       - 'rocketdict-workbench/**'
@@ -42,7 +42,7 @@ jobs:
           rocketdict-product-run --help >/dev/null
           rocketdict-workbench --help >/dev/null
       - name: Run Product Core tests
-        run: pytest -q rocketdict-product-core/tests --ignore=rocketdict-product-core/tests/real_runtime_smoke.py
+        run: pytest -q rocketdict-product-core/tests --ignore=rocketdict-product-core/tests/real_runtime_smoke.py --ignore=rocketdict-product-core/tests/real_stage20_smoke.py
       - name: Run Workbench regressions against maintained core installation
         run: pytest -q rocketdict-workbench/tests
 
@@ -99,6 +99,8 @@ jobs:
           PY
       - name: Run real maintained-core Stage8 through Stage19 smoke
         run: python rocketdict-product-core/tests/real_runtime_smoke.py
+      - name: Run real native Stage20 full-sense smoke
+        run: python rocketdict-product-core/tests/real_stage20_smoke.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -116,6 +118,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/real-smoke/real-runtime-smoke.json
+            work/real-smoke/real-stage20-smoke.json
             work/evidence/**
           if-no-files-found: warn
           retention-days: 14
