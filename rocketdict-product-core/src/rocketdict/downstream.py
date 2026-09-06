@@ -147,6 +147,17 @@ def ensure_downstream_schema(connection) -> None:  # type: ignore[no-untyped-def
     connection.executescript(_DOWNSTREAM_SCHEMA)
 
 
+def ensure_downstream_database(database: Path | str) -> None:
+    """Create/upgrade maintained downstream tables on a writable connection.
+
+    Read-only evidence paths must never attempt schema DDL.  Call this before
+    opening the corresponding read-only snapshot.
+    """
+    database = Path(database).expanduser().resolve()
+    with transaction(database) as connection:
+        ensure_downstream_schema(connection)
+
+
 def _start(
     database: Path,
     *,
@@ -352,8 +363,8 @@ def _context_overlap(candidate: str, aligned_target: str) -> float:
 
 
 def _stage19_rows(database: Path, sense_induction_run_id: int) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         run = get_run(connection, int(sense_induction_run_id))
         if int(run["stage_number"]) != 19 or run["status"] != "completed":
             raise RuntimeError("Stage20 requires a completed maintained Stage19 run")
@@ -654,8 +665,8 @@ def run_stage20(
 
 
 def _entry(database: Path, lexical_entry_id: int) -> dict[str, Any]:
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         row = connection.execute(
             "SELECT * FROM lexical_entries WHERE id=?", (int(lexical_entry_id),)
         ).fetchone()
@@ -910,10 +921,10 @@ def run_stage23(
     if implementation != STAGE23_POLICY:
         raise RuntimeError(f"Unsupported Stage23 Product policy {implementation!r}")
     parameters = dict(parameters or {})
-    if parameters.get("corpus_snapshots") not in {None, []}:
+    if parameters.get("corpus_snapshots") not in (None, []):
         raise RuntimeError("Maintained Stage23 currently accepts document-aligned examples only")
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         sense = connection.execute(
             "SELECT * FROM lexical_senses WHERE id=?", (int(lexical_sense_id),)
         ).fetchone()
@@ -1058,8 +1069,8 @@ def run_stage24(
     if implementation != STAGE24_POLICY:
         raise RuntimeError(f"Unsupported Stage24 Product policy {implementation!r}")
     parameters = dict(parameters or {})
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         sense = connection.execute(
             """
             SELECT s.*,e.normalized_lemma,e.display_lemma,e.part_of_speech,e.entry_type
@@ -1187,8 +1198,8 @@ def assemble_card_set(
     ids = [int(value) for value in card_revision_ids]
     if not ids or any(value <= 0 for value in ids) or len(ids) != len(set(ids)):
         raise RuntimeError("Card-set assembly requires a non-empty unique positive card_revision_ids list")
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         rows = [
             connection.execute("SELECT * FROM card_revisions WHERE id=?", (value,)).fetchone()
             for value in ids
@@ -1249,8 +1260,8 @@ def assemble_card_set(
 
 
 def _export_payload(database: Path, set_revision_id: int) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         set_row = connection.execute("SELECT * FROM card_sets WHERE id=?", (int(set_revision_id),)).fetchone()
         if set_row is None:
             raise RuntimeError(f"Card set does not exist: {set_revision_id}")
@@ -1348,8 +1359,8 @@ def run_stage25(
 
 def downstream_snapshot(database: Path | str, *, sense_translation_run_id: int | None = None) -> dict[str, Any]:
     database = Path(database).expanduser().resolve()
+    ensure_downstream_database(database)
     with connect(database, readonly=True) as connection:
-        ensure_downstream_schema(connection)
         translations = []
         if sense_translation_run_id is not None:
             translations = [
