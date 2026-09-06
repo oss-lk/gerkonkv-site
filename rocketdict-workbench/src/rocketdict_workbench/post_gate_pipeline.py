@@ -488,9 +488,14 @@ def execute_workbench_stage18(
             raise RuntimeError("Completed Workbench Stage18 result was mutated")
         return {**previous, "cache_hit": True, "state_path": str(path)}
     if isinstance(previous, dict) and previous.get("status") in {"dispatching", "dispatch_failed_ambiguous"}:
-        raise RuntimeError(
-            "Previous Workbench Stage18 dispatch may have mutated the database; no replay-safety claim exists, manual reconciliation is required"
-        )
+        _record_fingerprint(previous)
+        if previous.get("request_sha256") != request_sha:
+            raise RuntimeError("Retryable Workbench Stage18 belongs to different request")
+        if previous.get("replay_safe") is not True:
+            raise RuntimeError(
+                "Previous Workbench Stage18 dispatch predates the maintained crash-replay contract; manual reconciliation is required"
+            )
+    attempts = int(previous.get("attempts") or 0) + 1 if isinstance(previous, dict) else 1
     record: dict[str, Any] = {
         "schema": STAGE18_EXECUTION_SCHEMA,
         "status": "dispatching",
@@ -500,8 +505,8 @@ def execute_workbench_stage18(
         "input_evidence": {"alignment_run_id": evidence_sources},
         "request": request,
         "request_sha256": request_sha,
-        "replay_safe": False,
-        "attempts": 1,
+        "replay_safe": True,
+        "attempts": attempts,
         "started_at": _now(),
     }
     record["fingerprint"] = _canonical_sha256({k: v for k, v in record.items() if k not in {"fingerprint", "started_at", "attempts"}})
@@ -535,8 +540,8 @@ def execute_workbench_stage18(
         record["failed_at"] = _now()
         record["error"] = {"type": type(exc).__name__, "message": str(exc)}
         record["fingerprint"] = _canonical_sha256({k: v for k, v in record.items() if k not in {"fingerprint", "started_at", "failed_at", "error", "attempts"}})
-        upstream["status"] = "stage18_ambiguous_non_replay_safe"
-        upstream["blocked_reason"] = "manual_reconciliation_required_before_stage18_replay"
+        upstream["status"] = "stage18_retryable_after_ambiguous_failure"
+        upstream["blocked_reason"] = "retry_explicitly_allowed_by_maintained_core_running_identity_contract"
         state["status"] = "failed"
         _save(path, state)
         raise
@@ -552,6 +557,7 @@ def execute_workbench_stage18(
     record["fingerprint"] = _canonical_sha256({k: v for k, v in record.items() if k not in {"fingerprint", "started_at", "completed_at", "attempts"}})
     executions["18"] = record
     upstream["status"] = "stage18_completed"
+    upstream["blocked_reason"] = None
     state["status"] = "stage18_completed_awaiting_stage19"
     _save(path, state)
     return {**record, "cache_hit": False, "state_path": str(path)}
