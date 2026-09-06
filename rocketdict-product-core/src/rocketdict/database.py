@@ -281,6 +281,20 @@ def begin_run(
     input_identity: dict[str, Any],
     parameters: dict[str, Any],
 ) -> tuple[int, bool]:
+    """Begin or resume one immutable stage identity.
+
+    A ``running`` row is an execution identity, not a process lease. Maintained
+    stages compute outside SQLite and commit all run-owned database mutations in
+    the same transaction as ``finish_run``. Reusing the same running row is
+    therefore crash-safe: an interrupted final transaction rolls back, while a
+    committed final transaction also marks the row completed atomically.
+
+    Concurrent callers may temporarily compute the same request. SQLite
+    serializes their final transactions; only the first can transition the row
+    from ``running`` to ``completed`` and a later conflicting final transaction
+    rolls back. This preserves durable identities without guessing whether an
+    earlier process is still alive.
+    """
     cached = find_completed_run(
         connection,
         stage_number=stage_number,
@@ -304,10 +318,7 @@ def begin_run(
     ).fetchone()
     if existing is not None:
         if str(existing["status"]) == "running":
-            raise RuntimeError(
-                f"Stage {stage_number} run {existing['id']} is already marked running; "
-                "manual reconciliation is required before replay"
-            )
+            return int(existing["id"]), False
         connection.execute("DELETE FROM stage_runs WHERE id=?", (int(existing["id"]),))
     cursor = connection.execute(
         """
