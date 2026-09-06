@@ -2,9 +2,10 @@ from __future__ import annotations
 
 """Runtime discovery/loading for production NLP and real OPUS MT.
 
-No downloader lives here.  Product processing is offline: assets must already
-be provisioned and their identities must be explicit.  Missing assets produce
-``available=false`` or a hard exception, never a degraded fake implementation.
+No downloader lives here. Product processing is offline: assets must already
+be provisioned and their identities must be explicit. Missing or mutated assets
+produce ``available=false`` or a hard exception, never a degraded fake
+implementation.
 """
 
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ OPUS_REVISION = "opus-2020-02-11"
 OPUS_ARCHIVE_SHA256 = "798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677"
 OPUS_ASSET_SCHEMA = "rocketdict-opus-asset/1"
 OPUS_ASSET_ENV = "ROCKETDICT_OPUS_ASSET_DIR"
+OPUS_MANIFEST_NAME = "rocketdict-opus-asset.json"
 
 NLP_MODELS = {
     "en-sm": "en_core_web_sm",
@@ -34,6 +36,36 @@ def _file_sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _payload_tree_identity(root: Path) -> dict[str, Any]:
+    """Identity of every provisioned OPUS payload byte except its manifest.
+
+    The builder computes this before it writes the manifest. Recomputing the
+    exact same contract on load prevents a later model/SPM/config mutation from
+    being accepted merely because the manifest still names the official source
+    archive.
+    """
+    rows: list[dict[str, Any]] = []
+    total = 0
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        relative = path.relative_to(root).as_posix()
+        if relative == OPUS_MANIFEST_NAME:
+            continue
+        size = path.stat().st_size
+        total += size
+        rows.append({"path": relative, "bytes": size, "sha256": _file_sha256(path)})
+    raw = json.dumps(rows, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {
+        "file_count": len(rows),
+        "bytes": total,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
+def _valid_sha256(value: Any) -> bool:
+    text = str(value or "").casefold()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def nlp_status(implementation: str) -> dict[str, Any]:
@@ -85,15 +117,46 @@ class OpusAsset:
     source_sentencepiece: Path
     target_sentencepiece: Path
     manifest_sha256: str
+    payload_tree_sha256: str
+    payload_file_count: int
+    payload_bytes: int
 
 
 def _inside(root: Path, value: str, *, label: str) -> Path:
+    if not value:
+        raise RuntimeError(f"OPUS asset {label} is empty")
     candidate = (root / value).resolve()
     try:
         candidate.relative_to(root)
     except ValueError as exc:
         raise RuntimeError(f"OPUS asset {label} escapes asset root") from exc
     return candidate
+
+
+def _verify_payload_tree(asset_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    expected = payload.get("payload_tree")
+    if not isinstance(expected, dict):
+        raise RuntimeError("OPUS asset manifest lacks payload_tree identity")
+    expected_sha = str(expected.get("sha256") or "").casefold()
+    expected_files = expected.get("file_count")
+    expected_bytes = expected.get("bytes")
+    if not _valid_sha256(expected_sha):
+        raise RuntimeError("OPUS asset payload_tree lacks valid SHA-256")
+    if isinstance(expected_files, bool) or not isinstance(expected_files, int) or expected_files <= 0:
+        raise RuntimeError("OPUS asset payload_tree has invalid file_count")
+    if isinstance(expected_bytes, bool) or not isinstance(expected_bytes, int) or expected_bytes <= 0:
+        raise RuntimeError("OPUS asset payload_tree has invalid byte count")
+    observed = _payload_tree_identity(asset_root)
+    if observed != {
+        "file_count": expected_files,
+        "bytes": expected_bytes,
+        "sha256": expected_sha,
+    }:
+        raise RuntimeError(
+            "OPUS asset payload bytes changed after provisioning: "
+            f"observed={observed!r} expected={expected!r}"
+        )
+    return observed
 
 
 def load_opus_asset(root: Path | str | None = None) -> OpusAsset:
@@ -103,7 +166,7 @@ def load_opus_asset(root: Path | str | None = None) -> OpusAsset:
             f"Real OPUS asset is not configured; set {OPUS_ASSET_ENV} to a provisioned offline asset directory"
         )
     asset_root = Path(raw_root).expanduser().resolve()
-    manifest = asset_root / "rocketdict-opus-asset.json"
+    manifest = asset_root / OPUS_MANIFEST_NAME
     if not manifest.is_file():
         raise RuntimeError(f"OPUS asset manifest is missing: {manifest}")
     raw = manifest.read_bytes()
@@ -112,7 +175,9 @@ def load_opus_asset(root: Path | str | None = None) -> OpusAsset:
     except Exception as exc:
         raise RuntimeError(f"OPUS asset manifest is invalid JSON: {exc}") from exc
     if not isinstance(payload, dict) or payload.get("schema") != OPUS_ASSET_SCHEMA:
-        raise RuntimeError(f"Unexpected OPUS asset manifest schema: {payload.get('schema') if isinstance(payload, dict) else type(payload).__name__}")
+        raise RuntimeError(
+            f"Unexpected OPUS asset manifest schema: {payload.get('schema') if isinstance(payload, dict) else type(payload).__name__}"
+        )
     if payload.get("revision") != OPUS_REVISION:
         raise RuntimeError(
             f"OPUS asset revision drift: {payload.get('revision')!r} != {OPUS_REVISION!r}"
@@ -123,6 +188,11 @@ def load_opus_asset(root: Path | str | None = None) -> OpusAsset:
             "OPUS asset does not bind the accepted official archive SHA-256: "
             f"{archive_sha!r} != {OPUS_ARCHIVE_SHA256!r}"
         )
+    if payload.get("compute_type") != "float32":
+        raise RuntimeError(
+            f"OPUS Product asset must be float32; manifest has {payload.get('compute_type')!r}"
+        )
+    observed_tree = _verify_payload_tree(asset_root, payload)
     model_dir = _inside(asset_root, str(payload.get("ct2_model_dir") or ""), label="ct2_model_dir")
     source_spm = _inside(asset_root, str(payload.get("source_sentencepiece") or ""), label="source_sentencepiece")
     target_spm = _inside(asset_root, str(payload.get("target_sentencepiece") or ""), label="target_sentencepiece")
@@ -140,6 +210,9 @@ def load_opus_asset(root: Path | str | None = None) -> OpusAsset:
         source_sentencepiece=source_spm,
         target_sentencepiece=target_spm,
         manifest_sha256=hashlib.sha256(raw).hexdigest(),
+        payload_tree_sha256=str(observed_tree["sha256"]),
+        payload_file_count=int(observed_tree["file_count"]),
+        payload_bytes=int(observed_tree["bytes"]),
     )
 
 
@@ -163,6 +236,9 @@ def opus_status() -> dict[str, Any]:
         "revision": asset.revision if asset else OPUS_REVISION,
         "source_archive_sha256": asset.source_archive_sha256 if asset else OPUS_ARCHIVE_SHA256,
         "manifest_sha256": asset.manifest_sha256 if asset else None,
+        "payload_tree_sha256": asset.payload_tree_sha256 if asset else None,
+        "payload_file_count": asset.payload_file_count if asset else None,
+        "payload_bytes": asset.payload_bytes if asset else None,
         "offline": True,
         "compute_type": "float32",
     }
