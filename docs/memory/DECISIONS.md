@@ -42,6 +42,16 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 **Evidence.** `rocketdict/PRODUCT_TARGET.md`; `.github/workflows/rocketdict-product-core.yml`; `rocketdict-workbench/tests/real_product_run_smoke.py`.
 
+## Translation-quality promotion requires contiguous evidence, not checker gaming
+
+**Decision.** A maintained translation-quality change may be promoted only when the failure class is correctly identified (planner vs evaluator vs source-selection artifact vs model), the candidate remains raw/evidence-backed rather than synthetically repaired, and evidence extends beyond a frozen discontinuous stress excerpt when that discontinuity can affect the result. Mechanical hard-gate success alone is insufficient if target-language review exposes semantic or structural degradation.
+
+Raw OPUS n-best hypotheses are legitimate research candidates; post-hoc insertion of missing numbers/structure is not. Broad n-best fallback, arbitrary punctuation-boundary splitting and wholesale structural-island splitting are not current Product policies. Detailed maintained findings and current contracts live in [`TRANSLATION_QUALITY.md`](TRANSLATION_QUALITY.md).
+
+**Why.** The maintained R1 campaign demonstrated all four confounders: evaluator false positives, real Stage12 planning defects, artificial joins at frozen-selection boundaries, and model hypotheses that satisfy a narrow invariant while worsening useful translation text. Without this separation a green metric can represent a worse Product.
+
+**Evidence.** `docs/memory/TRANSLATION_QUALITY.md`; `rocketdict-product-core/src/rocketdict/translation_stage.py`; `numeric_integrity.py`; maintained R1/full-Opticks workflows and artifacts.
+
 ## Stage8 negative results must not be rediscovered by default
 
 **Decision.** Historical F96/Stage8 research is reusable evidence, not an instruction to restart the DOE. In particular, `numeric-islands-v1` remains an experimental/fail-closed negative branch unless new evidence justifies reopening it; long atomic units require careful splitting; table structure requires distinct handling; evaluator failures must be separated from model failures.
