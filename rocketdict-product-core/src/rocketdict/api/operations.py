@@ -40,7 +40,7 @@ from rocketdict.stages import (
 )
 from rocketdict.translation_stage import run_stage12 as _run_stage12
 
-STAGE18_IMPLEMENTATION = "workbench-aligned-content-pos-v4"
+STAGE18_IMPLEMENTATION = "workbench-aligned-content-pos-v5"
 STAGE18_STAGE_KEY = "lexical_extraction"
 STAGE18_REQUIRED_INPUTS = ["alignment_run_id"]
 
@@ -90,7 +90,7 @@ def _identity(stage_number: int, implementation: str) -> tuple[str, list[str], s
                 "stage_key": STAGE18_STAGE_KEY,
                 "implementation_key": STAGE18_IMPLEMENTATION,
                 "required_inputs": STAGE18_REQUIRED_INPUTS,
-                "policy": "aligned-content-pos-v4",
+                "policy": "aligned-content-pos-v5-table-scoped-target-evidence",
             }
         )
         return STAGE18_STAGE_KEY, list(STAGE18_REQUIRED_INPUTS), descriptor
