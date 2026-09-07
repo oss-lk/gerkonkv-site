@@ -9,8 +9,11 @@ on:
       - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
       - 'rocketdict-product-core/src/rocketdict/runtime.py'
       - 'rocketdict-product-core/src/rocketdict/table_structure.py'
+      - 'rocketdict-product-core/src/rocketdict/table_logical_structure.py'
       - 'rocketdict-product-core/tests/test_table_structure.py'
+      - 'rocketdict-product-core/tests/test_table_logical_structure.py'
       - 'rocketdict-workbench/tests/real_translation_table_cells_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_table_logical_cells_feasibility.py'
       - '.github/workflows/rocketdict-full-opticks-table-cells.yml'
   workflow_dispatch:
 
@@ -29,6 +32,7 @@ jobs:
       ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
       ROCKETDICT_OPTICKS_SOURCE: ${{ github.workspace }}/work/opticks.txt
       ROCKETDICT_TABLE_CELLS_ROOT: ${{ github.workspace }}/work/full-opticks-table-cells
+      ROCKETDICT_TABLE_LOGICAL_ROOT: ${{ github.workspace }}/work/full-opticks-table-logical-cells
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,8 +64,10 @@ jobs:
           rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
-      - name: Run full contiguous Opticks table-cells feasibility
+      - name: Run physical full Opticks table-cells baseline
         run: python -u rocketdict-workbench/tests/real_translation_table_cells_feasibility.py
+      - name: Run logical full Opticks table-cell feasibility
+        run: python -u rocketdict-workbench/tests/real_translation_table_logical_cells_feasibility.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -72,7 +78,7 @@ jobs:
           free -h > work/full-opticks-table-cells/runtime-evidence/memory.txt || true
           sha256sum work/opus-2020-02-11.zip > work/full-opticks-table-cells/runtime-evidence/opus.sha256 || true
           sha256sum "$ROCKETDICT_OPTICKS_SOURCE" > work/full-opticks-table-cells/runtime-evidence/opticks.sha256 || true
-      - name: Upload full Opticks table-cells evidence
+      - name: Upload full Opticks table evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -80,6 +86,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/full-opticks-table-cells/full-opticks-table-cells-feasibility.json
+            work/full-opticks-table-logical-cells/full-opticks-table-logical-cells-feasibility.json
             work/full-opticks-table-cells/runtime-evidence/**
           if-no-files-found: warn
           retention-days: 90
