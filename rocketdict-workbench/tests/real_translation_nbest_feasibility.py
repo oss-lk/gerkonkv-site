@@ -6,9 +6,9 @@ This script never mutates Product output or the R1 database.  It asks the exact
 pinned OPUS model for additional *raw model hypotheses* only on units whose
 current rank-0 target fails a Product hard gate or a maintained structural
 research diagnostic.  A candidate is considered strictly eligible only when it
-passes all current Product hard gates plus numeric-order, delimiter and critical
-technical-token preservation.  No target rewriting, placeholder repair or
-literal injection is allowed.
+passes all current Product hard gates plus numeric-order, delimiter, critical
+technical-token and output-artifact preservation.  No target rewriting,
+placeholder repair or literal injection is allowed.
 """
 
 import hashlib
@@ -25,14 +25,16 @@ from rocketdict.research_diagnostics import (
     CRITICAL_TOKEN_CONTRACT,
     DELIMITER_CONTRACT,
     NUMERIC_ORDER_CONTRACT,
+    OUTPUT_ARTIFACT_CONTRACT,
     compare_critical_technical_tokens,
     compare_delimiter_preservation,
     compare_numeric_order,
+    compare_output_artifacts,
 )
 from rocketdict.runtime import OpusTranslator
 from rocketdict.stages import _length_issues, _punctuation_issues
 
-SCHEMA = "rocketdict-maintained-r1-nbest-feasibility/1"
+SCHEMA = "rocketdict-maintained-r1-nbest-feasibility/2"
 EXPECTED_SELECTION_SHA256 = "665f1ee5ad1778ac8ab1b1b2ae0da7e17a05a0321b8a25cb6d47d74294f4af32"
 GENERATION_CELLS = (
     {"beam_size": 6, "num_hypotheses": 6},
@@ -92,6 +94,7 @@ def _verdict(
     numeric_order = compare_numeric_order(source, target)
     delimiters = compare_delimiter_preservation(source, target)
     critical = compare_critical_technical_tokens(source, target)
+    output_artifacts = compare_output_artifacts(source, target)
     product_hard_passed = (
         numeric["passed"] is True
         and not punctuation_issues
@@ -102,6 +105,7 @@ def _verdict(
         numeric_order["passed"] is True
         and delimiters["passed"] is True
         and critical["passed"] is True
+        and output_artifacts["passed"] is True
     )
     return {
         "product_hard_passed": product_hard_passed,
@@ -113,6 +117,7 @@ def _verdict(
         "numeric_order": numeric_order,
         "delimiter_preservation": delimiters,
         "critical_technical_tokens": critical,
+        "output_artifacts": output_artifacts,
     }
 
 
@@ -303,8 +308,8 @@ def main() -> int:
         "promotion_allowed": False,
         "selection_policy": (
             "within each explicit generation cell, first/highest model-rank raw OPUS hypothesis "
-            "passing all current Product hard gates plus maintained numeric-order, delimiter and "
-            "critical technical-token diagnostics"
+            "passing all current Product hard gates plus maintained numeric-order, delimiter, "
+            "critical technical-token and output-artifact diagnostics"
         ),
         "no_synthetic_target_repair": True,
         "selection_sha256": selection_sha,
@@ -328,6 +333,7 @@ def main() -> int:
             "numeric_order": NUMERIC_ORDER_CONTRACT,
             "delimiter": DELIMITER_CONTRACT,
             "critical_technical_token": CRITICAL_TOKEN_CONTRACT,
+            "output_artifact": OUTPUT_ARTIFACT_CONTRACT,
             "punctuation": "current rocketdict.stages._punctuation_issues runtime semantics",
             "length_ratio": "current rocketdict.stages._length_issues runtime semantics",
         },
