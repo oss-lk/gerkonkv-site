@@ -12,6 +12,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
       - 'rocketdict-product-core/src/rocketdict/runtime.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/core.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/product_policy.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/product_preflight.py'
