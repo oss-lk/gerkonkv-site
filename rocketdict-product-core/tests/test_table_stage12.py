@@ -34,6 +34,7 @@ def test_partition_replaces_table_inside_one_nlp_sentence_byte_exactly() -> None
         "------+------\n"
         "Head  | Other\n"
         "More  |  42  \n"
+        "Tail  |  43  \n"
         "------+------\n"
     )
     content = "Before.\n" + table + "After."
