@@ -6,9 +6,11 @@ from rocketdict.research_diagnostics import (
     CRITICAL_TOKEN_CONTRACT,
     DELIMITER_CONTRACT,
     NUMERIC_ORDER_CONTRACT,
+    OUTPUT_ARTIFACT_CONTRACT,
     compare_critical_technical_tokens,
     compare_delimiter_preservation,
     compare_numeric_order,
+    compare_output_artifacts,
 )
 
 
@@ -84,8 +86,8 @@ def test_target_added_balanced_pair_still_fails() -> None:
 
 
 def test_critical_technical_tokens_accept_preserved_payloads_and_localized_labels() -> None:
-    source = "[Illustration: FIG. 1.] [Greek: ab] _q_ [C]"
-    target = "[Иллюстрация: FIG. 1.] [греческом: ab] _q_ [C]"
+    source = "[Illustration: FIG. 1.] [Greek: ab] _q_ [C] 1.F.4."
+    target = "[Иллюстрация: FIG. 1.] [греческом: ab] _q_ [C] 1.F.4."
     result = compare_critical_technical_tokens(source, target)
     assert result["contract"] == CRITICAL_TOKEN_CONTRACT
     assert result["passed"] is True
@@ -99,6 +101,7 @@ def test_critical_technical_tokens_accept_preserved_payloads_and_localized_label
         ("Point _q_ remains.", "Точка q_ остаётся.", "symbolic_emphasis"),
         ("See note [C].", "См. примечание [С].", "footnote_markers"),
         ("[Illustration: FIG. 2.]", "[Иллюстрация: FIG.]", "illustration_payloads"),
+        ("Section 1.F.4.", "Раздел 1.F.4", "structural_identifiers"),
     ],
 )
 def test_critical_technical_tokens_keep_real_corruption_visible(
@@ -107,3 +110,22 @@ def test_critical_technical_tokens_keep_real_corruption_visible(
     result = compare_critical_technical_tokens(source, target)
     assert result["passed"] is False
     assert failed in result["failed_checks"]
+
+
+def test_output_artifact_diagnostic_rejects_target_only_html_entities() -> None:
+    result = compare_output_artifacts("green-making", "&quot; зелёный &quot;")
+    assert result["contract"] == OUTPUT_ARTIFACT_CONTRACT
+    assert result["passed"] is False
+    assert result["introduced_entities"] == {"&quot;": 2}
+
+
+def test_output_artifact_diagnostic_licenses_entities_already_present_in_source() -> None:
+    result = compare_output_artifacts("literal &quot; token", "буквальный &quot; token")
+    assert result["passed"] is True
+    assert result["introduced_entities"] == {}
+
+
+def test_output_artifact_diagnostic_rejects_new_replacement_character() -> None:
+    result = compare_output_artifacts("plain source", "испорчено �")
+    assert result["passed"] is False
+    assert result["introduced_replacement_character_count"] == 1
