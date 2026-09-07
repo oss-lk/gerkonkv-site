@@ -186,7 +186,7 @@ def main() -> int:
         "product.stage18.run",
         alignment_run_id=int(s17["alignment_run_id"]),
         parameters={},
-        implementation="workbench-aligned-content-pos-v4",
+        implementation="workbench-aligned-content-pos-v5",
     )
     for identity in ("extraction_run_id", "stage_result_id", "alignment_run_id", "nlp_run_id"):
         _positive_id(s18, identity, context="Stage18")
@@ -211,9 +211,6 @@ def main() -> int:
     if s19.get("coverage_complete") is not True or sense_count <= 0:
         raise RuntimeError(f"Stage19 sense induction failed: {s19}")
 
-    # Stage20 uses real OPUS again, this time as contextual lexical/sense MT.
-    # Defaults are production defaults (beam/n-best 12); this is a correctness
-    # smoke, not a quality-downshifted alternate configuration.
     s20 = _call(
         core,
         database,
