@@ -1,0 +1,98 @@
+name: RocketDict Full Opticks Numeric Stress
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/api/**'
+      - 'rocketdict-product-core/src/rocketdict/assets.py'
+      - 'rocketdict-product-core/src/rocketdict/database.py'
+      - 'rocketdict-product-core/src/rocketdict/importing/**'
+      - 'rocketdict-product-core/src/rocketdict/interpretation/**'
+      - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
+      - 'rocketdict-product-core/src/rocketdict/runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/stages.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-workbench/src/rocketdict_workbench/core.py'
+      - 'rocketdict-workbench/src/rocketdict_workbench/product_policy.py'
+      - 'rocketdict-workbench/src/rocketdict_workbench/product_preflight.py'
+      - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
+      - 'rocketdict-workbench/src/rocketdict_workbench/project.py'
+      - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
+      - '.github/workflows/rocketdict-full-opticks-numeric-stress.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-opticks-numeric-stress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      OPTICKS_URL: https://www.gutenberg.org/cache/epub/33504/pg33504.txt
+      OPTICKS_SHA256: 1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_OPTICKS_SOURCE: ${{ github.workspace }}/work/opticks.txt
+      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/full-opticks-numeric-stress
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product numeric-stress runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+          python -m pip install 'https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl'
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify pinned OPUS and Opticks sources
+        run: |
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPTICKS_URL" -o "$ROCKETDICT_OPTICKS_SOURCE"
+          echo "$OPTICKS_SHA256  $ROCKETDICT_OPTICKS_SOURCE" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Run full contiguous Opticks numeric stress
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py
+      - name: Record runtime identities and resources
+        if: always()
+        run: |
+          mkdir -p work/full-opticks-numeric-stress/runtime-evidence
+          python -VV > work/full-opticks-numeric-stress/runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/full-opticks-numeric-stress/runtime-evidence/pip-freeze.txt || true
+          df -h > work/full-opticks-numeric-stress/runtime-evidence/disk.txt || true
+          free -h > work/full-opticks-numeric-stress/runtime-evidence/memory.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/full-opticks-numeric-stress/runtime-evidence/opus.sha256 || true
+          sha256sum "$ROCKETDICT_OPTICKS_SOURCE" > work/full-opticks-numeric-stress/runtime-evidence/opticks.sha256 || true
+      - name: Upload full Opticks numeric stress evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-numeric-stress
+          path: |
+            work/opus-asset-build.json
+            work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
+            work/full-opticks-numeric-stress/project/**
+            work/full-opticks-numeric-stress/runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
