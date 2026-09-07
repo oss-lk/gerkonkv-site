@@ -2,18 +2,18 @@ from __future__ import annotations
 
 """Full contiguous Opticks numeric-integrity stress for current Stage12 planning.
 
-This research harness deliberately stops before the full Product translation
-pipeline.  It runs the real maintained Stage8/10 interpretation on the complete
-pinned Opticks source, asks the current Stage12 planner to materialize its
-byte-exact translation units, and then translates *every planned unit containing
-an explicit numeric literal* with the pinned OPUS float32 model.
+The harness runs real maintained Stage8/10 over the complete pinned Opticks
+source and materializes the current byte-exact Stage12 plan.  Every
+numeric-bearing planned unit is then translated with the same rank-0 semantics
+as Product Stage12.  Ordinary units go directly to OPUS; detected ASCII-table
+units send only their source-only logical text groups to OPUS and render
+source-owned geometry/numeric cells unchanged from their pre-MT spans.
 
-Rank-0 is the current Product baseline.  Beam-6 n-best is requested only for
-units where rank-0 actually fails numeric/symbol integrity.  Nothing is repaired
-or inserted after MT, the research project DB is not mutated by translation
-inference, and every candidate is evaluated against the maintained hard/strict
-semantics.  The result is evidence for or against a narrow numeric retry policy,
-not automatic Product promotion.
+Beam-6 n-best remains a research retry only for ordinary rank-0 numeric
+failures.  Composite table segments are never retried by translating the whole
+table as prose, because that would no longer represent Product behavior.
+Nothing is repaired or inserted after MT and inference must not mutate the
+Stage8/10 research DB.
 """
 
 from collections import Counter
@@ -29,6 +29,11 @@ from typing import Any
 from rocketdict.database import connect, get_document, get_document_segments, get_run_items
 from rocketdict.numeric_integrity import extract_numeric_literals
 from rocketdict.runtime import OpusTranslator
+from rocketdict.table_stage12 import (
+    TABLE_STAGE12_CONTRACT,
+    build_stage12_table_plan,
+    render_stage12_table_rank0,
+)
 from rocketdict.translation_stage import PLANNER_CONTRACT, segment_translation_units
 from rocketdict_workbench.core import RocketDictCore
 from rocketdict_workbench.product_preflight import build_product_preflight
@@ -37,7 +42,7 @@ from rocketdict_workbench.project import WorkbenchProject
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from real_translation_nbest_feasibility import _verdict  # noqa: E402
 
-SCHEMA = "rocketdict-full-opticks-numeric-stress/1"
+SCHEMA = "rocketdict-full-opticks-numeric-stress/2"
 OPTICKS_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
 NBEST_GENERATION = {"beam_size": 6, "num_hypotheses": 6}
 BATCH_SIZE = 48
@@ -131,6 +136,82 @@ def _similarity(left: str, right: str) -> float:
     return SequenceMatcher(a=left, b=right, autojunk=False).ratio()
 
 
+def _production_rank0_targets(
+    translator: OpusTranslator,
+    numeric_units: list[tuple[int, dict[str, Any]]],
+    *,
+    beam_size: int,
+    preferred_tokens: int,
+) -> tuple[dict[int, dict[str, Any]], int, int]:
+    requests: list[str] = []
+    refs: list[tuple[int, int | None]] = []
+    proxy_counts: list[int] = []
+    table_plans: dict[int, Any] = {}
+
+    for sequence, unit in numeric_units:
+        metadata = dict(unit.get("metadata") or {})
+        if metadata.get("source") == "ascii_table":
+            plan = build_stage12_table_plan(
+                str(unit["text"]), absolute_start=int(unit["start"])
+            )
+            table_plans[sequence] = plan
+            for group in plan.groups:
+                requests.append(group.source_text)
+                refs.append((sequence, int(group.index)))
+                proxy_counts.append(max(1, len(group.source_text.split())))
+        else:
+            requests.append(str(unit["text"]))
+            refs.append((sequence, None))
+            proxy_counts.append(max(1, int(metadata.get("token_count") or 0)))
+
+    max_request_proxy = max(proxy_counts, default=0)
+    max_decoding_length = max(128, max(preferred_tokens, max_request_proxy) * 8)
+    generated_rows = _translate_batches(
+        translator,
+        requests,
+        beam_size=beam_size,
+        num_hypotheses=1,
+        max_decoding_length=max_decoding_length,
+    ) if requests else []
+    generated = {
+        ref: hypotheses
+        for ref, hypotheses in zip(refs, generated_rows, strict=True)
+    }
+
+    output: dict[int, dict[str, Any]] = {}
+    table_request_count = 0
+    for sequence, unit in numeric_units:
+        if sequence in table_plans:
+            plan = table_plans[sequence]
+            mapping = {
+                int(group.index): generated[(sequence, int(group.index))]
+                for group in plan.groups
+            }
+            target, group_evidence = render_stage12_table_rank0(plan, mapping)
+            table_request_count += len(plan.groups)
+            output[sequence] = {
+                "target_text": target,
+                "rank0_score": None,
+                "production_table_composite": True,
+                "table_stage12_contract": TABLE_STAGE12_CONTRACT,
+                "table_logical_group_count": len(plan.groups),
+                "table_logical_groups": group_evidence,
+            }
+            continue
+        hypotheses = generated[(sequence, None)]
+        if not hypotheses:
+            raise RuntimeError(f"OPUS returned no rank-0 hypothesis for planned unit {sequence}")
+        target = str(hypotheses[0].get("text") or "")
+        if not target.strip():
+            raise RuntimeError(f"OPUS returned empty rank-0 target for planned unit {sequence}")
+        output[sequence] = {
+            "target_text": target,
+            "rank0_score": hypotheses[0].get("score"),
+            "production_table_composite": False,
+        }
+    return output, max_decoding_length, table_request_count
+
+
 def main() -> int:
     root = Path(os.environ.get("ROCKETDICT_NUMERIC_STRESS_ROOT", "work/full-opticks-numeric-stress")).resolve()
     source_path = Path(os.environ["ROCKETDICT_OPTICKS_SOURCE"]).resolve()
@@ -199,23 +280,23 @@ def main() -> int:
         raise RuntimeError("Full Opticks planner produced no numeric-bearing translation units")
 
     translator = OpusTranslator(device="cpu", compute_type="float32")
-    max_unit_tokens = max(int((unit.get("metadata") or {}).get("token_count") or 0) for _, unit in numeric_units)
-    max_decoding_length = max(128, max(preferred_tokens, max_unit_tokens) * 8)
+    max_unit_tokens = max(
+        int((unit.get("metadata") or {}).get("token_count") or 0)
+        for _, unit in numeric_units
+    )
     database_sha_before_inference = _sha_file(database)
-    baseline_generated = _translate_batches(
+    rank0_by_sequence, max_decoding_length, table_model_request_count = _production_rank0_targets(
         translator,
-        [str(unit["text"]) for _, unit in numeric_units],
+        numeric_units,
         beam_size=int(params12.get("beam_size") or 6),
-        num_hypotheses=1,
-        max_decoding_length=max_decoding_length,
+        preferred_tokens=preferred_tokens,
     )
 
     baseline_rows: list[dict[str, Any]] = []
     numeric_failures: list[dict[str, Any]] = []
-    for (sequence, unit), hypotheses in zip(numeric_units, baseline_generated, strict=True):
-        if not hypotheses:
-            raise RuntimeError(f"OPUS returned no rank-0 hypothesis for planned unit {sequence}")
-        target = str(hypotheses[0].get("text") or "")
+    for sequence, unit in numeric_units:
+        baseline = rank0_by_sequence[sequence]
+        target = str(baseline["target_text"])
         source_row = _row(unit, sequence)
         verdict = _verdict(
             source_row,
@@ -230,7 +311,10 @@ def main() -> int:
             "source_text": str(unit["text"]),
             "planner": dict(unit.get("metadata") or {}),
             "rank0_target_text": target,
-            "rank0_score": hypotheses[0].get("score"),
+            "rank0_score": baseline.get("rank0_score"),
+            "production_table_composite": bool(baseline["production_table_composite"]),
+            "table_stage12_contract": baseline.get("table_stage12_contract"),
+            "table_logical_group_count": baseline.get("table_logical_group_count"),
             "rank0_verdict": verdict,
             "source_numeric_literal_count": len(extract_numeric_literals(str(unit["text"]))),
         }
@@ -238,16 +322,37 @@ def main() -> int:
         if (verdict.get("numeric_symbol") or {}).get("passed") is False:
             numeric_failures.append(record)
 
+    ordinary_failures = [
+        row for row in numeric_failures if not bool(row["production_table_composite"])
+    ]
     retry_generated = _translate_batches(
         translator,
-        [str(row["source_text"]) for row in numeric_failures],
+        [str(row["source_text"]) for row in ordinary_failures],
         beam_size=NBEST_GENERATION["beam_size"],
         num_hypotheses=NBEST_GENERATION["num_hypotheses"],
         max_decoding_length=max_decoding_length,
-    ) if numeric_failures else []
+    ) if ordinary_failures else []
+    retries_by_sequence = {
+        int(row["planned_sequence"]): hypotheses
+        for row, hypotheses in zip(ordinary_failures, retry_generated, strict=True)
+    }
 
     retry_results: list[dict[str, Any]] = []
-    for failed, hypotheses in zip(numeric_failures, retry_generated, strict=True):
+    for failed in numeric_failures:
+        if failed["production_table_composite"]:
+            retry_results.append(
+                {
+                    **failed,
+                    "numeric_failure_is_isolated": False,
+                    "retry_applicable": False,
+                    "retry_skip_reason": "composite_table_must_not_be_retranslated_as_prose",
+                    "retry_generation": None,
+                    "selected_strict_candidate": None,
+                    "candidates": [],
+                }
+            )
+            continue
+        hypotheses = retries_by_sequence[int(failed["planned_sequence"])]
         source_row = {
             "sequence_number": int(failed["planned_sequence"]),
             "source_start": int(failed["source_start"]),
@@ -275,16 +380,18 @@ def main() -> int:
             candidates.append(candidate)
             if selected is None and verdict.get("strictly_eligible") is True:
                 selected = candidate
+        isolated = bool(
+            not list((failed["rank0_verdict"] or {}).get("punctuation_issues") or [])
+            and not list((failed["rank0_verdict"] or {}).get("length_issues") or [])
+            and ((failed["rank0_verdict"] or {}).get("delimiter_preservation") or {}).get("passed") is True
+            and ((failed["rank0_verdict"] or {}).get("critical_technical_tokens") or {}).get("passed") is True
+            and ((failed["rank0_verdict"] or {}).get("output_artifacts") or {}).get("passed") is True
+        )
         retry_results.append(
             {
                 **failed,
-                "numeric_failure_is_isolated": bool(
-                    not list((failed["rank0_verdict"] or {}).get("punctuation_issues") or [])
-                    and not list((failed["rank0_verdict"] or {}).get("length_issues") or [])
-                    and ((failed["rank0_verdict"] or {}).get("delimiter_preservation") or {}).get("passed") is True
-                    and ((failed["rank0_verdict"] or {}).get("critical_technical_tokens") or {}).get("passed") is True
-                    and ((failed["rank0_verdict"] or {}).get("output_artifacts") or {}).get("passed") is True
-                ),
+                "numeric_failure_is_isolated": isolated,
+                "retry_applicable": True,
                 "retry_generation": dict(NBEST_GENERATION),
                 "selected_strict_candidate": selected,
                 "candidates": candidates,
@@ -305,10 +412,16 @@ def main() -> int:
         for row in all_rescued
         if row["selected_strict_candidate"] is not None
     )
+    table_numeric_units = [
+        row for row in baseline_rows if row["production_table_composite"]
+    ]
+    table_numeric_failures = [
+        row for row in numeric_failures if row["production_table_composite"]
+    ]
     asset = translator.asset
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "full contiguous Opticks numeric-integrity stress for current Stage12 planner and raw n-best retry",
+        "purpose": "full contiguous Opticks numeric-integrity stress for exact Product Stage12 rank-0 semantics and ordinary-unit raw n-best retry",
         "promotion_allowed": False,
         "no_synthetic_target_repair": True,
         "source_sha256": OPTICKS_SHA256,
@@ -327,12 +440,19 @@ def main() -> int:
             "sentence_count": int(stage10.get("sentence_count") or 0),
         },
         "stage12_planner_contract": PLANNER_CONTRACT,
+        "table_stage12_contract": TABLE_STAGE12_CONTRACT,
         "stage12_parameters": params12,
         "planned_unit_count": len(units),
         "max_planned_unit_tokens": max_unit_tokens,
         "numeric_bearing_unit_count": len(numeric_units),
+        "table_numeric_bearing_unit_count": len(table_numeric_units),
+        "table_model_request_count": table_model_request_count,
         "rank0_numeric_failure_count": len(numeric_failures),
         "rank0_numeric_failure_sequences": [int(row["planned_sequence"]) for row in numeric_failures],
+        "table_rank0_numeric_failure_count": len(table_numeric_failures),
+        "table_rank0_numeric_failure_sequences": [
+            int(row["planned_sequence"]) for row in table_numeric_failures
+        ],
         "isolated_numeric_failure_count": len(isolated_failures),
         "isolated_numeric_failure_sequences": [int(row["planned_sequence"]) for row in isolated_failures],
         "strict_nbest_rescue_count": len(all_rescued),
@@ -341,6 +461,7 @@ def main() -> int:
         "isolated_strict_nbest_rescue_sequences": [int(row["planned_sequence"]) for row in isolated_rescued],
         "selected_rank_distribution": {str(key): value for key, value in sorted(selected_ranks.items())},
         "retry_generation": dict(NBEST_GENERATION),
+        "retry_scope": "ordinary_units_only; composite tables retain production logical-rank0 semantics",
         "model": {
             "revision": asset.revision,
             "source_archive_sha256": asset.source_archive_sha256,
@@ -366,7 +487,9 @@ def main() -> int:
                 "schema": SCHEMA,
                 "planned_unit_count": len(units),
                 "numeric_bearing_unit_count": len(numeric_units),
+                "table_numeric_bearing_unit_count": len(table_numeric_units),
                 "rank0_numeric_failure_count": len(numeric_failures),
+                "table_rank0_numeric_failure_count": len(table_numeric_failures),
                 "isolated_numeric_failure_count": len(isolated_failures),
                 "strict_nbest_rescue_count": len(all_rescued),
                 "isolated_strict_nbest_rescue_count": len(isolated_rescued),
