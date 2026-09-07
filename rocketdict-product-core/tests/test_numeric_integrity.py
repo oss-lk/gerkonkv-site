@@ -44,6 +44,12 @@ from rocketdict.numeric_integrity import (
         ("_Obs._ 16.", "_Об._16."),
         ("above an hundred vicissitudes", "более 100 изменений"),
         ("the first of 106 means", "1 из 106 средних"),
+        ("POF 42 and POG 50", "POF - 42 и POG - 50"),
+        (
+            "77-1/3, 77-1/2, 77-2/3, 77-7/9, 78",
+            "77-1/3 - 77-1/2 - 77-2/3 - 77-7/9 - 78",
+        ),
+        ("11 and first of 106 and 11-6/106", "11 - 1 из 106 и 11 - 11-6/106"),
     ],
 )
 def test_documented_and_r1_numeric_equivalences_pass(source: str, target: str) -> None:
@@ -92,7 +98,7 @@ def test_documented_literals_are_detected() -> None:
             {"1000000000": 1},
         ),
         # Real maintained R1 defects must remain visible after equivalence
-        # normalization.  A truncated decimal is both a missing required value
+        # normalization. A truncated decimal is both a missing required value
         # and a newly observed, unlicensed value; asserting both directions is
         # intentionally stricter than the former test expectation.
         ("diameter 2'389 Inches", "диаметр 2'38 дюйма", {"2.389": 1}, {"2.38": 1}),
@@ -109,6 +115,28 @@ def test_known_failure_classes_remain_fail_closed(
     assert result["passed"] is False
     assert result["missing"] == missing
     assert result["unlicensed_additions"] == additions
+
+
+def test_spaced_dash_is_not_unsigned_at_segment_start_or_after_operator() -> None:
+    start = compare_numeric_integrity("42", "- 42")
+    assert start["passed"] is False
+    assert start["missing"] == {"42": 1}
+    assert start["unlicensed_additions"] == {"-42": 1}
+
+    after_open = compare_numeric_integrity("42", "(- 42)")
+    assert after_open["passed"] is False
+    assert after_open["missing"] == {"42": 1}
+    assert after_open["unlicensed_additions"] == {"-42": 1}
+
+    direct = compare_numeric_integrity("42", "value -42")
+    assert direct["passed"] is False
+    assert direct["missing"] == {"42": 1}
+    assert direct["unlicensed_additions"] == {"-42": 1}
+
+
+def test_true_negative_may_use_spaced_sign() -> None:
+    result = compare_numeric_integrity("-6/106", "- 6/106")
+    assert result["passed"] is True
 
 
 def test_known_nbest_preserving_hypothesis_passes() -> None:
