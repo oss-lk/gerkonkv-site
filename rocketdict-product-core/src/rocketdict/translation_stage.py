@@ -2,12 +2,18 @@ from __future__ import annotations
 
 """Maintained Product Stage12 translation execution.
 
-The historical quality evidence showed that a hard token-count cut can bisect
-source-owned Gutenberg/technical structures such as ``[Greek: ...]`` and
-``_..._``.  This module keeps the preferred token count as a soft budget: when
-a desired cut falls inside a *balanced source span*, the cut is deferred until
-a later token boundary outside that span.  It never fabricates closing syntax
-for malformed/unbalanced input.
+Quality evidence showed two independent planner hazards:
+
+* a hard token-count cut can bisect source-owned Gutenberg/technical structure;
+* the upstream NLP sentence splitter can itself place a sentence boundary inside
+  a balanced structure such as ``[Illustration: FIG. 10.]``.
+
+The maintained planner therefore treats the preferred token count as a soft
+budget and treats balanced source delimiters as atomic for *translation-unit
+planning*.  Adjacent NLP sentence spans are first coalesced when their boundary
+falls inside a balanced source ``[]``, ``()`` or ``{}`` span.  Token-budget cuts
+are then deferred until a later boundary outside all balanced protected spans.
+The planner never invents a missing closing delimiter for malformed input.
 """
 
 from pathlib import Path
@@ -23,31 +29,41 @@ from .database import (
 from .runtime import OpusTranslator, load_opus_asset
 from .stages import StageExecutionError, _complete, _fail, _start
 
-PLANNER_CONTRACT = "rocketdict-stage12-protected-split/1"
+PLANNER_CONTRACT = "rocketdict-stage12-protected-split/2"
 
 
-def _balanced_protected_spans(text: str, *, absolute_start: int) -> list[tuple[int, int, str]]:
+def _balanced_protected_spans(
+    text: str, *, absolute_start: int
+) -> list[tuple[int, int, str]]:
     """Return only source spans whose delimiters are actually balanced.
 
     ``end`` is exclusive.  Unmatched source delimiters are intentionally absent
     from the result: planner policy must not invent structure that the immutable
-    source does not contain.
+    source does not contain.  Nested same-type delimiters are supported.  A
+    balanced outer span is enough to prevent a cut anywhere inside it.
     """
     spans: list[tuple[int, int, str]] = []
-    square_stack: list[int] = []
+    stacks: dict[str, list[int]] = {"[": [], "(": [], "{": []}
+    closing = {"]": ("[", "square"), ")": ("(", "round"), "}": ("{", "curly")}
     emphasis_start: int | None = None
+
     for offset, char in enumerate(text):
-        if char == "[":
-            square_stack.append(offset)
+        if char in stacks:
+            stacks[char].append(offset)
             continue
-        if char == "]" and square_stack:
-            opened = square_stack.pop()
-            spans.append((absolute_start + opened, absolute_start + offset + 1, "square"))
+        if char in closing:
+            opener, kind = closing[char]
+            if stacks[opener]:
+                opened = stacks[opener].pop()
+                spans.append(
+                    (absolute_start + opened, absolute_start + offset + 1, kind)
+                )
             continue
-        # Gutenberg emphasis is source structure only outside square-bracket
-        # payloads.  Nested underscores are not invented; unmatched markers are
-        # simply left unprotected and remain visible to downstream gates.
-        if char == "_" and not square_stack:
+
+        # Gutenberg emphasis is useful protection only when it is itself a
+        # balanced local source construct.  Delimiter spans already protect
+        # underscores occurring inside brackets/parentheses/braces.
+        if char == "_" and not any(stacks.values()):
             if emphasis_start is None:
                 emphasis_start = offset
             else:
@@ -59,6 +75,7 @@ def _balanced_protected_spans(text: str, *, absolute_start: int) -> list[tuple[i
                     )
                 )
                 emphasis_start = None
+
     return sorted(spans)
 
 
@@ -81,26 +98,30 @@ def _safe_forward_split_index(
     return len(tokens)
 
 
-def segment_translation_units(
+def _raw_base_units(
     content: str,
     document_segments: list[dict[str, Any]],
     context_items: list[dict[str, Any]],
-    nlp_tokens: list[dict[str, Any]],
     *,
     selected_format: str,
-    preferred_tokens: int,
 ) -> list[dict[str, Any]]:
-    if preferred_tokens < 1:
-        raise StageExecutionError("plan_preferred_unit_tokens must be positive")
     base: list[dict[str, Any]] = []
     if selected_format == "txt":
         for row in context_items:
+            start = int(row["source_start"])
+            end = int(row["source_end"])
+            sequence = int(row["sequence_number"])
             base.append(
                 {
-                    "start": int(row["source_start"]),
-                    "end": int(row["source_end"]),
+                    "start": start,
+                    "end": end,
                     "text": str(row["source_text"]),
-                    "metadata": {"source": "nlp_sentence"},
+                    "metadata": {
+                        "source": "nlp_sentence",
+                        "context_sentence_start": sequence,
+                        "context_sentence_end": sequence,
+                        "context_sentence_count": 1,
+                    },
                 }
             )
     else:
@@ -119,12 +140,94 @@ def segment_translation_units(
                 }
             )
 
+    for row in base:
+        start, end = int(row["start"]), int(row["end"])
+        if start < 0 or end <= start or end > len(content):
+            raise StageExecutionError("Stage12 planner received an invalid base source span")
+        if content[start:end] != str(row["text"]):
+            raise StageExecutionError("Stage12 planner base span differs from immutable source")
+    return base
+
+
+def _coalesce_txt_protected_boundaries(
+    content: str,
+    base: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge NLP sentence units only across balanced source structures.
+
+    The balanced spans are computed over the immutable full text, not per
+    sentence, so a boundary created by spaCy inside ``[Illustration: FIG. 10.]``
+    is visible here.  Only boundaries *inside* a genuinely balanced span are
+    removed; unmatched input delimiters remain untouched and auditable.
+    """
+    if not base:
+        return []
+    global_spans = _balanced_protected_spans(content, absolute_start=0)
+    merged: list[dict[str, Any]] = []
+    current = {
+        **base[0],
+        "metadata": dict(base[0].get("metadata") or {}),
+    }
+
+    for row in base[1:]:
+        boundary = int(row["start"])
+        current_end = int(current["end"])
+        if boundary != current_end:
+            raise StageExecutionError(
+                "Stage12 TXT context sentences are not contiguous in immutable source"
+            )
+        if _cut_inside_span(boundary, global_spans):
+            current["end"] = int(row["end"])
+            current["text"] = content[int(current["start"]):int(current["end"])]
+            metadata = dict(current.get("metadata") or {})
+            row_meta = dict(row.get("metadata") or {})
+            metadata["source"] = "nlp_sentence_group"
+            metadata["context_sentence_end"] = int(
+                row_meta.get("context_sentence_end", row_meta.get("context_sentence_start", 0))
+            )
+            metadata["context_sentence_count"] = int(
+                metadata.get("context_sentence_count") or 1
+            ) + int(row_meta.get("context_sentence_count") or 1)
+            metadata["protected_sentence_boundary_coalesced"] = True
+            current["metadata"] = metadata
+            continue
+        merged.append(current)
+        current = {
+            **row,
+            "metadata": dict(row.get("metadata") or {}),
+        }
+    merged.append(current)
+    return merged
+
+
+def segment_translation_units(
+    content: str,
+    document_segments: list[dict[str, Any]],
+    context_items: list[dict[str, Any]],
+    nlp_tokens: list[dict[str, Any]],
+    *,
+    selected_format: str,
+    preferred_tokens: int,
+) -> list[dict[str, Any]]:
+    if preferred_tokens < 1:
+        raise StageExecutionError("plan_preferred_unit_tokens must be positive")
+
+    raw_base = _raw_base_units(
+        content,
+        document_segments,
+        context_items,
+        selected_format=selected_format,
+    )
+    base = (
+        _coalesce_txt_protected_boundaries(content, raw_base)
+        if selected_format == "txt"
+        else raw_base
+    )
+
     result: list[dict[str, Any]] = []
     for row in base:
         start, end = int(row["start"]), int(row["end"])
         row_text = content[start:end]
-        if row_text != str(row["text"]):
-            raise StageExecutionError("Stage12 planner base span differs from immutable source")
         tokens = [
             token
             for token in nlp_tokens
@@ -138,7 +241,7 @@ def segment_translation_units(
                 {
                     **row,
                     "metadata": {
-                        **row["metadata"],
+                        **dict(row.get("metadata") or {}),
                         "planner_contract": PLANNER_CONTRACT,
                         "split": False,
                         "token_count": len(tokens),
@@ -173,7 +276,7 @@ def segment_translation_units(
                     "end": cut,
                     "text": content[cursor:cut],
                     "metadata": {
-                        **row["metadata"],
+                        **dict(row.get("metadata") or {}),
                         "planner_contract": PLANNER_CONTRACT,
                         "split": True,
                         "token_count": len(batch),
@@ -190,7 +293,10 @@ def segment_translation_units(
 
     if not result:
         raise StageExecutionError("Stage12 planner produced no translation units")
-    # Ordered output must remain a lossless projection of each base source span.
+
+    # Ordered output must remain a lossless projection of every planned base
+    # span.  This makes coalescing a boundary-only transformation: no source byte
+    # inside the Stage10/segment scope may disappear or be fabricated.
     for row in base:
         pieces = [
             item["text"]
