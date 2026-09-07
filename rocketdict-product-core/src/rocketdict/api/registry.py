@@ -8,7 +8,7 @@ from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
-STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/2"
+STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/3"
 NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/3"
 
 
@@ -229,17 +229,11 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
         "number": 22,
         "key": "pronunciation",
         "label": "Pronunciation evidence",
-        "implementations": [
-            {
-                "implementation_key": "cmudict-production",
-                "label": "Exact CMUdict pronunciation",
-                "production_eligible": True,
-                "testing_only": False,
-                "tags": ["cmudict", "exact", "offline", "no-generated-fallback"],
-                "required_inputs": ["lexical_entry_id"],
-                "controls": [_control("enable_generated_fallback", False)],
-            }
-        ],
+        "production_eligible": True,
+        "testing_only": False,
+        "tags": ["cmudict", "exact", "offline", "no-generated-fallback"],
+        "required_inputs": ["lexical_entry_id"],
+        "controls": [_control("enable_generated_fallback", False)],
     },
     {
         "number": 23,
