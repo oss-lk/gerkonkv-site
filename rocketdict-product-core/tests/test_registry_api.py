@@ -126,7 +126,7 @@ def test_stage18_public_identity_is_explicit_but_not_misrepresented_as_registry_
     fn = OPERATIONS["product.stage18.run"]
     assert fn.stage_number == 18
     assert fn.stage_key == "lexical_extraction"
-    assert fn.implementation_key == "workbench-aligned-content-pos-v4"
+    assert fn.implementation_key == "workbench-aligned-content-pos-v5"
     assert fn.required_inputs == ["alignment_run_id"]
     assert len(fn.adapter_descriptor_hash) == 64
     assert all(int(stage["number"]) != 18 for stage in lab_manifest()["stages"])
