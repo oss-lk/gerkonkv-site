@@ -92,8 +92,10 @@ def test_documented_literals_are_detected() -> None:
             {"1000000000": 1},
         ),
         # Real maintained R1 defects must remain visible after equivalence
-        # normalization.
-        ("diameter 2'389 Inches", "диаметр 2'38 дюйма", {"2.389": 1}, {}),
+        # normalization.  A truncated decimal is both a missing required value
+        # and a newly observed, unlicensed value; asserting both directions is
+        # intentionally stricter than the former test expectation.
+        ("diameter 2'389 Inches", "диаметр 2'38 дюйма", {"2.389": 1}, {"2.38": 1}),
         ("Project clause 1.E.5.", "Пункт проекта исчез.", {"1": 1, "5": 1}, {}),
     ],
 )
