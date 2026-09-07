@@ -129,3 +129,23 @@ def test_output_artifact_diagnostic_rejects_new_replacement_character() -> None:
     result = compare_output_artifacts("plain source", "испорчено �")
     assert result["passed"] is False
     assert result["introduced_replacement_character_count"] == 1
+
+
+def test_output_artifact_diagnostic_rejects_target_only_quote_delimiters() -> None:
+    result = compare_output_artifacts(
+        "the Sines of the red-making Rays",
+        '"Синусы красного производства"',
+    )
+    assert result["contract"] == OUTPUT_ARTIFACT_CONTRACT
+    assert result["passed"] is False
+    assert result["source_quote_delimiter_count"] == 0
+    assert result["target_quote_delimiter_count"] == 2
+    assert result["introduced_quote_delimiter_count"] == 2
+
+
+def test_output_artifact_diagnostic_allows_quote_style_substitution() -> None:
+    result = compare_output_artifacts('"quoted title"', "«переведённое название»")
+    assert result["passed"] is True
+    assert result["source_quote_delimiter_count"] == 2
+    assert result["target_quote_delimiter_count"] == 2
+    assert result["introduced_quote_delimiter_count"] == 0
