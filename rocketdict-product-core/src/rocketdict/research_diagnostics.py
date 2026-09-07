@@ -7,12 +7,33 @@ must therefore avoid contradicting the maintained hard-gate parser while still
 remaining independently versioned and auditable.
 """
 
+import re
 from typing import Any
 
 from .numeric_integrity import _target_numeric_options, extract_numeric_literals
 
 NUMERIC_ORDER_CONTRACT = "rocketdict-maintained-numeric-order/1"
 DELIMITER_CONTRACT = "rocketdict-maintained-delimiter-preservation/1"
+CRITICAL_TOKEN_CONTRACT = "rocketdict-maintained-critical-technical-token/1"
+
+_GREEK_SOURCE_RE = re.compile(r"\[Greek:\s*([^\]]*)\]", flags=re.IGNORECASE)
+_GREEK_TARGET_RE = re.compile(
+    r"\[(?:Greek|греч\.?|греческ[^:\]]*)\s*:\s*([^\]]*)\]",
+    flags=re.IGNORECASE,
+)
+_ILLUSTRATION_SOURCE_RE = re.compile(r"\[Illustration:\s*([^\]]*)\]", flags=re.IGNORECASE)
+_ILLUSTRATION_TARGET_RE = re.compile(
+    r"\[(?:Illustration|Иллюстрация)\s*:\s*([^\]]*)\]", flags=re.IGNORECASE
+)
+_FOOTNOTE_RE = re.compile(r"\[([A-Z])\]")
+_EMPH_RE = re.compile(r"_([^_\n]{1,80})_")
+_COMBINED_GREEK_SOURCE_RE = re.compile(
+    r"_([A-Za-z]{1,3})\[Greek:\s*([^\]]+)\]_", flags=re.IGNORECASE
+)
+_COMBINED_GREEK_TARGET_RE = re.compile(
+    r"_([A-Za-z]{1,3})\[(?:Greek|греч\.?|греческ[^:\]]*)\s*:\s*([^\]]+)\]_",
+    flags=re.IGNORECASE,
+)
 
 
 def compare_numeric_order(source: str, target: str) -> dict[str, Any]:
@@ -84,4 +105,68 @@ def compare_delimiter_preservation(source: str, target: str) -> dict[str, Any]:
         "source_unbalanced_kinds": unbalanced_source_kinds,
         "source_was_balanced": not unbalanced_source_kinds,
         "passed": passed,
+    }
+
+
+def _payloads(regex: re.Pattern[str], text: str) -> list[str]:
+    return [match.group(1).strip() for match in regex.finditer(text)]
+
+
+def _combined(regex: re.Pattern[str], text: str) -> list[list[str]]:
+    return [[match.group(1), match.group(2).strip()] for match in regex.finditer(text)]
+
+
+def _is_symbolic_emphasis(inner: str) -> bool:
+    value = inner.strip()
+    if re.fullmatch(r"[A-Za-z]{1,3}", value):
+        return True
+    atom = r"(?:\d+[A-Za-z]|[A-Za-z]\d+)"
+    return bool(re.fullmatch(rf"{atom}(?:\s+{atom})*", value))
+
+
+def _symbolic_emphasis_sequence(text: str) -> list[str]:
+    return [
+        match.group(1).strip()
+        for match in _EMPH_RE.finditer(text)
+        if _is_symbolic_emphasis(match.group(1))
+    ]
+
+
+def compare_critical_technical_tokens(source: str, target: str) -> dict[str, Any]:
+    """Measure preservation of source-owned technical payloads and markers.
+
+    This retains the useful frozen-R1 critical-token surface while moving it to
+    a maintained, dependency-free and independently versioned diagnostic.  It
+    never repairs or injects a token: source and target sequences are compared
+    exactly for Greek/illustration payloads, symbolic Gutenberg emphasis and
+    ASCII footnote markers.
+    """
+    checks: dict[str, dict[str, Any]] = {
+        "greek_payloads": {
+            "source": _payloads(_GREEK_SOURCE_RE, source),
+            "target": _payloads(_GREEK_TARGET_RE, target),
+        },
+        "combined_greek_variables": {
+            "source": _combined(_COMBINED_GREEK_SOURCE_RE, source),
+            "target": _combined(_COMBINED_GREEK_TARGET_RE, target),
+        },
+        "symbolic_emphasis": {
+            "source": _symbolic_emphasis_sequence(source),
+            "target": _symbolic_emphasis_sequence(target),
+        },
+        "footnote_markers": {
+            "source": _payloads(_FOOTNOTE_RE, source),
+            "target": _payloads(_FOOTNOTE_RE, target),
+        },
+        "illustration_payloads": {
+            "source": _payloads(_ILLUSTRATION_SOURCE_RE, source),
+            "target": _payloads(_ILLUSTRATION_TARGET_RE, target),
+        },
+    }
+    failed = [name for name, row in checks.items() if row["source"] != row["target"]]
+    return {
+        "contract": CRITICAL_TOKEN_CONTRACT,
+        "checks": checks,
+        "failed_checks": failed,
+        "passed": not failed,
     }
