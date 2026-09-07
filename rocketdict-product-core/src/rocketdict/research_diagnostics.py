@@ -16,7 +16,7 @@ from .numeric_integrity import _target_numeric_options, extract_numeric_literals
 NUMERIC_ORDER_CONTRACT = "rocketdict-maintained-numeric-order/1"
 DELIMITER_CONTRACT = "rocketdict-maintained-delimiter-preservation/1"
 CRITICAL_TOKEN_CONTRACT = "rocketdict-maintained-critical-technical-token/2"
-OUTPUT_ARTIFACT_CONTRACT = "rocketdict-maintained-output-artifact/1"
+OUTPUT_ARTIFACT_CONTRACT = "rocketdict-maintained-output-artifact/2"
 
 _GREEK_SOURCE_RE = re.compile(r"\[Greek:\s*([^\]]*)\]", flags=re.IGNORECASE)
 _GREEK_TARGET_RE = re.compile(
@@ -40,6 +40,7 @@ _STRUCTURAL_ID_RE = re.compile(
     r"(?<![A-Za-z0-9])(\d+(?:\.[A-Za-z]+)+\.\d+\.)(?![A-Za-z0-9])"
 )
 _HTML_ENTITY_RE = re.compile(r"&(?:[A-Za-z][A-Za-z0-9]+|#\d+|#x[0-9A-Fa-f]+);")
+_QUOTE_DELIMITERS = '"“”«»„‟‹›'
 
 
 def compare_numeric_order(source: str, target: str) -> dict[str, Any]:
@@ -183,13 +184,23 @@ def compare_critical_technical_tokens(source: str, target: str) -> dict[str, Any
     }
 
 
-def compare_output_artifacts(source: str, target: str) -> dict[str, Any]:
-    """Reject obvious serialization artifacts newly introduced by MT output.
+def _quote_delimiter_counts(text: str) -> dict[str, int]:
+    return {char: text.count(char) for char in _QUOTE_DELIMITERS if char in text}
 
-    Literal HTML/XML entities are visible corruption in plain-text Product
-    output when the immutable source did not contain them.  The Unicode
-    replacement character is treated the same way.  Exact source occurrences
-    remain licensed; this diagnostic does not decode or rewrite either side.
+
+def compare_output_artifacts(source: str, target: str) -> dict[str, Any]:
+    """Reject obvious target-only serialization/punctuation artifacts.
+
+    Literal HTML/XML entities and the Unicode replacement character are visible
+    corruption in plain-text Product output when the immutable source did not
+    contain them.  Research evidence also records quote delimiters across common
+    English/Russian styles.  Style substitution is allowed when the total quote
+    delimiter cardinality is unchanged; only *introduced* quote delimiters are
+    rejected here.  Apostrophes are intentionally excluded because they carry
+    lexical and historical numeric meaning in the corpus.
+
+    This remains a measurement surface: it does not decode, strip, normalize or
+    rewrite either source or target.
     """
     source_entities = Counter(_HTML_ENTITY_RE.findall(source))
     target_entities = Counter(_HTML_ENTITY_RE.findall(target))
@@ -197,6 +208,11 @@ def compare_output_artifacts(source: str, target: str) -> dict[str, Any]:
     source_replacement = source.count("�")
     target_replacement = target.count("�")
     introduced_replacement = max(0, target_replacement - source_replacement)
+    source_quotes = _quote_delimiter_counts(source)
+    target_quotes = _quote_delimiter_counts(target)
+    source_quote_count = sum(source_quotes.values())
+    target_quote_count = sum(target_quotes.values())
+    introduced_quote_count = max(0, target_quote_count - source_quote_count)
     return {
         "contract": OUTPUT_ARTIFACT_CONTRACT,
         "source_entities": dict(source_entities),
@@ -205,5 +221,14 @@ def compare_output_artifacts(source: str, target: str) -> dict[str, Any]:
         "source_replacement_character_count": source_replacement,
         "target_replacement_character_count": target_replacement,
         "introduced_replacement_character_count": introduced_replacement,
-        "passed": not introduced_entities and introduced_replacement == 0,
+        "source_quote_delimiters": source_quotes,
+        "target_quote_delimiters": target_quotes,
+        "source_quote_delimiter_count": source_quote_count,
+        "target_quote_delimiter_count": target_quote_count,
+        "introduced_quote_delimiter_count": introduced_quote_count,
+        "passed": (
+            not introduced_entities
+            and introduced_replacement == 0
+            and introduced_quote_count == 0
+        ),
     }
