@@ -26,6 +26,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_clause_planning_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_clause_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_context_boundary_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_parent_clause_feasibility.py'
       - '.github/workflows/rocketdict-maintained-r1-challenge.yml'
   workflow_dispatch:
 
@@ -92,6 +93,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_clause_nbest_feasibility.py
       - name: Probe full-context punctuation-preferred Stage12 boundaries
         run: python -u rocketdict-workbench/tests/real_translation_context_boundary_feasibility.py
+      - name: Probe full-parent soft clauses after boundary residuals
+        run: python -u rocketdict-workbench/tests/real_translation_parent_clause_feasibility.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -120,6 +123,7 @@ jobs:
             work/translation-challenge/maintained-r1-clause-planning-feasibility.json
             work/translation-challenge/maintained-r1-clause-nbest-feasibility.json
             work/translation-challenge/maintained-r1-context-boundary-feasibility.json
+            work/translation-challenge/maintained-r1-parent-clause-feasibility.json
             work/translation-challenge/project/**
             work/translation-challenge/runtime-evidence/**
           if-no-files-found: warn
