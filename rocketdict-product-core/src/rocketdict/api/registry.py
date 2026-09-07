@@ -229,11 +229,17 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
         "number": 22,
         "key": "pronunciation",
         "label": "Pronunciation evidence",
-        "production_eligible": True,
-        "testing_only": False,
-        "tags": ["cmudict", "exact", "offline", "no-generated-fallback"],
-        "required_inputs": ["lexical_entry_id"],
-        "controls": [_control("enable_generated_fallback", False)],
+        "implementations": [
+            {
+                "implementation_key": "cmudict-production",
+                "label": "Exact CMUdict pronunciation",
+                "production_eligible": True,
+                "testing_only": False,
+                "tags": ["cmudict", "exact", "offline", "no-generated-fallback"],
+                "required_inputs": ["lexical_entry_id"],
+                "controls": [_control("enable_generated_fallback", False)],
+            }
+        ],
     },
     {
         "number": 23,
