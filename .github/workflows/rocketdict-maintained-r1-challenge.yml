@@ -22,6 +22,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_challenge.py'
       - 'rocketdict-workbench/tests/real_translation_diagnostics.py'
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_structural_island_feasibility.py'
       - '.github/workflows/rocketdict-maintained-r1-challenge.yml'
   workflow_dispatch:
 
@@ -80,6 +81,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_diagnostics.py
       - name: Probe strict raw-model n-best feasibility on R1 problem units
         run: python -u rocketdict-workbench/tests/real_translation_nbest_feasibility.py
+      - name: Probe source-owned structural islands on remaining R1 failures
+        run: python -u rocketdict-workbench/tests/real_translation_structural_island_feasibility.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -104,6 +107,7 @@ jobs:
             work/translation-challenge/maintained-r1-baseline.json
             work/translation-challenge/maintained-r1-diagnostic-audit.json
             work/translation-challenge/maintained-r1-nbest-feasibility.json
+            work/translation-challenge/maintained-r1-structural-island-feasibility.json
             work/translation-challenge/project/**
             work/translation-challenge/runtime-evidence/**
           if-no-files-found: warn
