@@ -17,10 +17,11 @@ from .database import (
     get_run_items,
     transaction,
 )
+from .lexical_target_evidence import TargetEvidenceError, resolve_target_evidence
 
 CONTENT_POS = {"NOUN", "PROPN", "VERB", "ADJ", "ADV"}
 OBJECT_DEPENDENCIES = {"dobj", "obj", "pobj"}
-POLICY_KEY = "workbench-aligned-content-pos-v4"
+POLICY_KEY = "workbench-aligned-content-pos-v5"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS lexical_entries (
@@ -136,11 +137,14 @@ def run_stage18(
     parameters = dict(parameters or {})
     lineage = _lineage(database, int(alignment_run_id))
     nlp_run_id = int(lineage["nlp"]["id"])
+    translation_run_id = int(lineage["translation"]["id"])
     input_identity = {
         "alignment_run_id": int(alignment_run_id),
         "alignment_output_sha256": str(lineage["alignment"].get("output_sha256") or ""),
         "nlp_run_id": nlp_run_id,
         "nlp_output_sha256": str(lineage["nlp"].get("output_sha256") or ""),
+        "translation_run_id": translation_run_id,
+        "translation_output_sha256": str(lineage["translation"].get("output_sha256") or ""),
     }
     with transaction(database) as connection:
         ensure_schema(connection)
@@ -162,6 +166,18 @@ def run_stage18(
             alignments = get_run_items(
                 connection, int(alignment_run_id), kind="alignment_segment"
             )
+            translation_segments = get_run_items(
+                connection, translation_run_id, kind="translation_segment"
+            )
+        translation_by_span: dict[tuple[int, int], dict[str, Any]] = {}
+        for segment in translation_segments:
+            key = (int(segment["source_start"]), int(segment["source_end"]))
+            if key in translation_by_span:
+                raise RuntimeError(
+                    f"Stage18 translation lineage has duplicate source span {key}"
+                )
+            translation_by_span[key] = segment
+
         eligible: list[tuple[dict[str, Any], dict[str, Any], list[str]]] = []
         for token in nlp_tokens:
             payload, repairs = _token_normalized(token)
@@ -172,6 +188,7 @@ def run_stage18(
             eligible.append((token, payload, repairs))
         occurrences: list[dict[str, Any]] = []
         uncovered: list[dict[str, Any]] = []
+        table_scoped_count = 0
         for token, payload, repairs in eligible:
             start = int(token["source_start"])
             end = int(token["source_end"])
@@ -192,6 +209,44 @@ def run_stage18(
                 )
                 continue
             alignment = matches[0]
+            alignment_span = (
+                int(alignment["source_start"]),
+                int(alignment["source_end"]),
+            )
+            translation_segment = translation_by_span.get(alignment_span)
+            if translation_segment is None:
+                uncovered.append(
+                    {
+                        "nlp_run_item_id": int(token["id"]),
+                        "source_start": start,
+                        "source_end": end,
+                        "surface": token.get("source_text"),
+                        "reason": "alignment_has_no_exact_stage12_translation_segment",
+                        "alignment_span": list(alignment_span),
+                    }
+                )
+                continue
+            try:
+                target_evidence = resolve_target_evidence(
+                    token_start=start,
+                    token_end=end,
+                    alignment=alignment,
+                    translation_segment=translation_segment,
+                )
+            except TargetEvidenceError as exc:
+                uncovered.append(
+                    {
+                        "nlp_run_item_id": int(token["id"]),
+                        "source_start": start,
+                        "source_end": end,
+                        "surface": token.get("source_text"),
+                        "reason": "target_evidence_resolution_failed",
+                        "detail": str(exc),
+                    }
+                )
+                continue
+            table_scoped_count += int(target_evidence.scope == "table_logical_group")
+
             lemma = _normalize_lemma(str(payload.get("lemma") or token.get("source_text") or ""))
             if not lemma:
                 uncovered.append(
@@ -212,6 +267,8 @@ def run_stage18(
                     "payload": payload,
                     "repairs": repairs,
                     "alignment": alignment,
+                    "translation_segment": translation_segment,
+                    "target_evidence": target_evidence,
                     "lemma": lemma,
                     "pos": pos,
                     "entry_type": entry_type,
@@ -254,6 +311,7 @@ def run_stage18(
                 else:
                     entry_id = int(existing["id"])
                 entry_ids.add(entry_id)
+                target_evidence = row["target_evidence"]
                 evidence = {
                     "policy": POLICY_KEY,
                     "repairs": list(row["repairs"]),
@@ -261,6 +319,9 @@ def run_stage18(
                     "alignment_confidence": (row["alignment"].get("payload") or {}).get(
                         "confidence"
                     ),
+                    "target_evidence_scope": target_evidence.scope,
+                    "target_evidence": target_evidence.metadata,
+                    "translation_segment_id": int(row["translation_segment"]["id"]),
                 }
                 connection.execute(
                     """
@@ -278,7 +339,7 @@ def run_stage18(
                         int(row["token"]["source_start"]),
                         int(row["token"]["source_end"]),
                         str(row["token"].get("source_text") or ""),
-                        str(row["alignment"].get("target_text") or ""),
+                        target_evidence.text,
                         json.dumps(evidence, ensure_ascii=False, sort_keys=True),
                     ),
                 )
@@ -289,10 +350,13 @@ def run_stage18(
                 "stage_result_id": run_id,
                 "alignment_run_id": int(alignment_run_id),
                 "nlp_run_id": nlp_run_id,
+                "translation_run_id": translation_run_id,
                 "source_mode": "aligned",
+                "target_evidence_policy": "narrowest-stage12-structural-scope-v1",
                 "eligible_token_count": len(eligible),
                 "occurrence_count": len(occurrences),
                 "lexical_entry_count": len(entry_ids),
+                "table_scoped_target_evidence_count": table_scoped_count,
                 "coverage_complete": True,
                 "uncovered_token_count": 0,
             }
