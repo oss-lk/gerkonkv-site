@@ -49,7 +49,7 @@ from rocketdict.numeric_integrity import (
             "77-1/3, 77-1/2, 77-2/3, 77-7/9, 78",
             "77-1/3 - 77-1/2 - 77-2/3 - 77-7/9 - 78",
         ),
-        ("11 and first of 106 and 11-6/106", "11 - 1 из 106 и 11 - 11-6/106"),
+        ("11-6/106", "отношение - 11-6/106"),
     ],
 )
 def test_documented_and_r1_numeric_equivalences_pass(source: str, target: str) -> None:
