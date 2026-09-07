@@ -2,18 +2,23 @@ from __future__ import annotations
 
 """Maintained Product Stage12 translation execution.
 
-Quality evidence showed two independent planner hazards:
+Quality evidence showed three independent planner hazards:
 
 * a hard token-count cut can bisect source-owned Gutenberg/technical structure;
 * the upstream NLP sentence splitter can itself place a sentence boundary inside
-  a balanced structure such as ``[Illustration: FIG. 10.]``.
+  a balanced structure such as ``[Illustration: FIG. 10.]``;
+* malformed or excerpt-boundary Gutenberg ``_`` markers can look balanced under
+  naive odd/even pairing and falsely coalesce unrelated sentences/paragraphs.
 
 The maintained planner therefore treats the preferred token count as a soft
-budget and treats balanced source delimiters as atomic for *translation-unit
-planning*.  Adjacent NLP sentence spans are first coalesced when their boundary
-falls inside a balanced source ``[]``, ``()`` or ``{}`` span.  Token-budget cuts
-are then deferred until a later boundary outside all balanced protected spans.
-The planner never invents a missing closing delimiter for malformed input.
+budget and treats genuinely balanced source delimiters as atomic for
+*translation-unit planning*.  Adjacent NLP sentence spans are first coalesced
+when their boundary falls inside a balanced source ``[]``, ``()``, ``{}`` or
+Gutenberg emphasis span.  Emphasis opening/closing is classified from local
+source context rather than raw parity, and an unmatched emphasis opener is
+never allowed to leak across a blank paragraph boundary.  Token-budget cuts are
+then deferred until a later boundary outside all balanced protected spans.  The
+planner never invents a missing delimiter for malformed input.
 """
 
 from pathlib import Path
@@ -29,7 +34,42 @@ from .database import (
 from .runtime import OpusTranslator, load_opus_asset
 from .stages import StageExecutionError, _complete, _fail, _start
 
-PLANNER_CONTRACT = "rocketdict-stage12-protected-split/2"
+PLANNER_CONTRACT = "rocketdict-stage12-protected-split/3"
+
+
+def _starts_blank_paragraph_break(text: str, offset: int) -> bool:
+    """Return whether ``offset`` starts a blank-line paragraph separator."""
+    if offset < 0 or offset >= len(text) or text[offset] != "\n":
+        return False
+    cursor = offset + 1
+    while cursor < len(text) and text[cursor] in " \t\r":
+        cursor += 1
+    return cursor < len(text) and text[cursor] == "\n"
+
+
+def _can_open_emphasis(text: str, offset: int) -> bool:
+    """Classify a Gutenberg ``_`` as a plausible opening marker.
+
+    A source excerpt may begin after the real opener and therefore contain an
+    unmatched closer such as ``Sir_ Isaac``.  Such a marker must not become a
+    synthetic opener merely because it is the first underscore in the local
+    text.  Inline symbolic forms such as ``E_t_`` remain valid: when the marker
+    follows an alphanumeric character, another alphanumeric character on its
+    right is sufficient evidence for an embedded opening marker.
+    """
+    next_index = offset + 1
+    if next_index >= len(text):
+        return False
+    following = text[next_index]
+    if following.isspace():
+        return False
+    previous = text[offset - 1] if offset else ""
+    if previous and previous.isalnum():
+        return following.isalnum()
+    # A close-like marker immediately followed by terminal punctuation is not a
+    # plausible opener.  Other non-space characters remain allowed so quoted or
+    # typographic emphasized spans are not needlessly discarded.
+    return following not in ",.;:!?)]}"
 
 
 def _balanced_protected_spans(
@@ -41,6 +81,10 @@ def _balanced_protected_spans(
     from the result: planner policy must not invent structure that the immutable
     source does not contain.  Nested same-type delimiters are supported.  A
     balanced outer span is enough to prevent a cut anywhere inside it.
+
+    Gutenberg emphasis is additionally fail-closed: unmatched close-like
+    underscores do not shift later pairing, and an unmatched opener is discarded
+    at a blank paragraph boundary instead of spanning unrelated source blocks.
     """
     spans: list[tuple[int, int, str]] = []
     stacks: dict[str, list[int]] = {"[": [], "(": [], "{": []}
@@ -48,6 +92,11 @@ def _balanced_protected_spans(
     emphasis_start: int | None = None
 
     for offset, char in enumerate(text):
+        if emphasis_start is not None and _starts_blank_paragraph_break(text, offset):
+            # A malformed/local excerpt opener cannot license coalescing across a
+            # paragraph.  Discard it; do not fabricate a closing marker.
+            emphasis_start = None
+
         if char in stacks:
             stacks[char].append(offset)
             continue
@@ -64,9 +113,12 @@ def _balanced_protected_spans(
         # balanced local source construct.  Delimiter spans already protect
         # underscores occurring inside brackets/parentheses/braces.
         if char == "_" and not any(stacks.values()):
+            previous = text[offset - 1] if offset else ""
             if emphasis_start is None:
-                emphasis_start = offset
-            else:
+                if _can_open_emphasis(text, offset):
+                    emphasis_start = offset
+                continue
+            if offset > emphasis_start + 1 and previous and not previous.isspace():
                 spans.append(
                     (
                         absolute_start + emphasis_start,
@@ -75,6 +127,12 @@ def _balanced_protected_spans(
                     )
                 )
                 emphasis_start = None
+                continue
+            # If a malformed opener is followed by a new plausible opener before
+            # any valid closer, restart locally rather than letting bad parity
+            # contaminate all subsequent emphasis markers.
+            if _can_open_emphasis(text, offset):
+                emphasis_start = offset
 
     return sorted(spans)
 
