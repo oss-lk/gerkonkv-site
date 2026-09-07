@@ -10,6 +10,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/importing/**'
       - 'rocketdict-product-core/src/rocketdict/interpretation/**'
       - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
       - 'rocketdict-product-core/src/rocketdict/runtime.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
@@ -19,6 +20,7 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/project.py'
       - 'rocketdict-workbench/tests/real_translation_challenge.py'
+      - 'rocketdict-workbench/tests/real_translation_diagnostics.py'
       - '.github/workflows/rocketdict-maintained-r1-challenge.yml'
   workflow_dispatch:
 
@@ -73,6 +75,8 @@ jobs:
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
       - name: Run frozen maintained R1 baseline
         run: python -u rocketdict-workbench/tests/real_translation_challenge.py
+      - name: Audit R1 with current maintained diagnostics
+        run: python -u rocketdict-workbench/tests/real_translation_diagnostics.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -95,6 +99,7 @@ jobs:
             work/translation-challenge/challenge-source.txt
             work/translation-challenge/translations.jsonl
             work/translation-challenge/maintained-r1-baseline.json
+            work/translation-challenge/maintained-r1-diagnostic-audit.json
             work/translation-challenge/project/**
             work/translation-challenge/runtime-evidence/**
           if-no-files-found: warn
