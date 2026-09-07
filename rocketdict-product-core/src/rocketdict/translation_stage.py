@@ -2,23 +2,18 @@ from __future__ import annotations
 
 """Maintained Product Stage12 translation execution.
 
-Quality evidence showed three independent planner hazards:
+The planner is quality-first and source-structural.  Ordinary text keeps the
+protected-span semantics proven by planner v3: a soft token budget may not cut
+inside balanced ``[]``, ``()``, ``{}`` or valid Gutenberg ``_..._`` emphasis,
+and malformed emphasis parity may not coalesce unrelated paragraphs.
 
-* a hard token-count cut can bisect source-owned Gutenberg/technical structure;
-* the upstream NLP sentence splitter can itself place a sentence boundary inside
-  a balanced structure such as ``[Illustration: FIG. 10.]``;
-* malformed or excerpt-boundary Gutenberg ``_`` markers can look balanced under
-  naive odd/even pairing and falsely coalesce unrelated sentences/paragraphs.
-
-The maintained planner therefore treats the preferred token count as a soft
-budget and treats genuinely balanced source delimiters as atomic for
-*translation-unit planning*.  Adjacent NLP sentence spans are first coalesced
-when their boundary falls inside a balanced source ``[]``, ``()``, ``{}`` or
-Gutenberg emphasis span.  Emphasis opening/closing is classified from local
-source context rather than raw parity, and an unmatched emphasis opener is
-never allowed to leak across a blank paragraph boundary.  Token-budget cuts are
-then deferred until a later boundary outside all balanced protected spans.  The
-planner never invents a missing delimiter for malformed input.
+Planner v4 additionally recognizes conservative ASCII-table blocks in TXT
+sources before MT.  A table remains one contiguous Product translation segment
+for hard-gate/alignment coverage, while source-only logical text groups are sent
+to the real OPUS backend.  Source-owned table geometry and alpha-free
+numeric/symbolic cells are never reconstructed after MT: their exact bytes and
+source spans are known before the model call and are rendered unchanged.  No
+special table behavior is applied to subtitle cue segments.
 """
 
 from pathlib import Path
@@ -33,12 +28,18 @@ from .database import (
 )
 from .runtime import OpusTranslator, load_opus_asset
 from .stages import StageExecutionError, _complete, _fail, _start
+from .table_stage12 import (
+    TABLE_STAGE12_CONTRACT,
+    build_stage12_table_plan,
+    partition_txt_base_with_ascii_tables,
+    render_stage12_table_rank0,
+    table_plan_metrics,
+)
 
-PLANNER_CONTRACT = "rocketdict-stage12-protected-split/3"
+PLANNER_CONTRACT = "rocketdict-stage12-protected-split/4"
 
 
 def _starts_blank_paragraph_break(text: str, offset: int) -> bool:
-    """Return whether ``offset`` starts a blank-line paragraph separator."""
     if offset < 0 or offset >= len(text) or text[offset] != "\n":
         return False
     cursor = offset + 1
@@ -48,15 +49,6 @@ def _starts_blank_paragraph_break(text: str, offset: int) -> bool:
 
 
 def _can_open_emphasis(text: str, offset: int) -> bool:
-    """Classify a Gutenberg ``_`` as a plausible opening marker.
-
-    A source excerpt may begin after the real opener and therefore contain an
-    unmatched closer such as ``Sir_ Isaac``.  Such a marker must not become a
-    synthetic opener merely because it is the first underscore in the local
-    text.  Inline symbolic forms such as ``E_t_`` remain valid: when the marker
-    follows an alphanumeric character, another alphanumeric character on its
-    right is sufficient evidence for an embedded opening marker.
-    """
     next_index = offset + 1
     if next_index >= len(text):
         return False
@@ -66,26 +58,13 @@ def _can_open_emphasis(text: str, offset: int) -> bool:
     previous = text[offset - 1] if offset else ""
     if previous and previous.isalnum():
         return following.isalnum()
-    # A close-like marker immediately followed by terminal punctuation is not a
-    # plausible opener.  Other non-space characters remain allowed so quoted or
-    # typographic emphasized spans are not needlessly discarded.
     return following not in ",.;:!?)]}"
 
 
 def _balanced_protected_spans(
     text: str, *, absolute_start: int
 ) -> list[tuple[int, int, str]]:
-    """Return only source spans whose delimiters are actually balanced.
-
-    ``end`` is exclusive.  Unmatched source delimiters are intentionally absent
-    from the result: planner policy must not invent structure that the immutable
-    source does not contain.  Nested same-type delimiters are supported.  A
-    balanced outer span is enough to prevent a cut anywhere inside it.
-
-    Gutenberg emphasis is additionally fail-closed: unmatched close-like
-    underscores do not shift later pairing, and an unmatched opener is discarded
-    at a blank paragraph boundary instead of spanning unrelated source blocks.
-    """
+    """Return balanced source-owned protected spans, never fabricated closers."""
     spans: list[tuple[int, int, str]] = []
     stacks: dict[str, list[int]] = {"[": [], "(": [], "{": []}
     closing = {"]": ("[", "square"), ")": ("(", "round"), "}": ("{", "curly")}
@@ -93,8 +72,6 @@ def _balanced_protected_spans(
 
     for offset, char in enumerate(text):
         if emphasis_start is not None and _starts_blank_paragraph_break(text, offset):
-            # A malformed/local excerpt opener cannot license coalescing across a
-            # paragraph.  Discard it; do not fabricate a closing marker.
             emphasis_start = None
 
         if char in stacks:
@@ -109,9 +86,6 @@ def _balanced_protected_spans(
                 )
             continue
 
-        # Gutenberg emphasis is useful protection only when it is itself a
-        # balanced local source construct.  Delimiter spans already protect
-        # underscores occurring inside brackets/parentheses/braces.
         if char == "_" and not any(stacks.values()):
             previous = text[offset - 1] if offset else ""
             if emphasis_start is None:
@@ -128,9 +102,6 @@ def _balanced_protected_spans(
                 )
                 emphasis_start = None
                 continue
-            # If a malformed opener is followed by a new plausible opener before
-            # any valid closer, restart locally rather than letting bad parity
-            # contaminate all subsequent emphasis markers.
             if _can_open_emphasis(text, offset):
                 emphasis_start = offset
 
@@ -211,21 +182,12 @@ def _coalesce_txt_protected_boundaries(
     content: str,
     base: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Merge NLP sentence units only across balanced source structures.
-
-    The balanced spans are computed over the immutable full text, not per
-    sentence, so a boundary created by spaCy inside ``[Illustration: FIG. 10.]``
-    is visible here.  Only boundaries *inside* a genuinely balanced span are
-    removed; unmatched input delimiters remain untouched and auditable.
-    """
+    """Merge NLP sentence units only across genuinely balanced source spans."""
     if not base:
         return []
     global_spans = _balanced_protected_spans(content, absolute_start=0)
     merged: list[dict[str, Any]] = []
-    current = {
-        **base[0],
-        "metadata": dict(base[0].get("metadata") or {}),
-    }
+    current = {**base[0], "metadata": dict(base[0].get("metadata") or {})}
 
     for row in base[1:]:
         boundary = int(row["start"])
@@ -250,12 +212,21 @@ def _coalesce_txt_protected_boundaries(
             current["metadata"] = metadata
             continue
         merged.append(current)
-        current = {
-            **row,
-            "metadata": dict(row.get("metadata") or {}),
-        }
+        current = {**row, "metadata": dict(row.get("metadata") or {})}
     merged.append(current)
     return merged
+
+
+def _non_space_tokens_in_span(
+    nlp_tokens: list[dict[str, Any]], start: int, end: int
+) -> list[dict[str, Any]]:
+    return [
+        token
+        for token in nlp_tokens
+        if int(token["source_start"]) >= start
+        and int(token["source_end"]) <= end
+        and not bool((token.get("payload") or {}).get("flags", {}).get("is_space"))
+    ]
 
 
 def segment_translation_units(
@@ -281,25 +252,47 @@ def segment_translation_units(
         if selected_format == "txt"
         else raw_base
     )
+    if selected_format == "txt":
+        try:
+            base = partition_txt_base_with_ascii_tables(content, base)
+        except ValueError as exc:
+            raise StageExecutionError(f"Stage12 ASCII-table partition failed: {exc}") from exc
 
     result: list[dict[str, Any]] = []
     for row in base:
         start, end = int(row["start"]), int(row["end"])
         row_text = content[start:end]
-        tokens = [
-            token
-            for token in nlp_tokens
-            if int(token["source_start"]) >= start
-            and int(token["source_end"]) <= end
-            and not bool((token.get("payload") or {}).get("flags", {}).get("is_space"))
-        ]
+        tokens = _non_space_tokens_in_span(nlp_tokens, start, end)
+        metadata = dict(row.get("metadata") or {})
+
+        if metadata.get("source") == "ascii_table":
+            try:
+                plan = build_stage12_table_plan(row_text, absolute_start=start)
+                metrics = table_plan_metrics(plan)
+            except ValueError as exc:
+                raise StageExecutionError(f"Stage12 ASCII-table planning failed: {exc}") from exc
+            result.append(
+                {
+                    **row,
+                    "metadata": {
+                        **metadata,
+                        "planner_contract": PLANNER_CONTRACT,
+                        "split": False,
+                        "token_count": int(metrics["max_logical_group_word_proxy"]),
+                        "table_source_token_count": len(tokens),
+                        **metrics,
+                    },
+                }
+            )
+            continue
+
         spans = _balanced_protected_spans(row_text, absolute_start=start)
         if len(tokens) <= preferred_tokens:
             result.append(
                 {
                     **row,
                     "metadata": {
-                        **dict(row.get("metadata") or {}),
+                        **metadata,
                         "planner_contract": PLANNER_CONTRACT,
                         "split": False,
                         "token_count": len(tokens),
@@ -334,7 +327,7 @@ def segment_translation_units(
                     "end": cut,
                     "text": content[cursor:cut],
                     "metadata": {
-                        **dict(row.get("metadata") or {}),
+                        **metadata,
                         "planner_contract": PLANNER_CONTRACT,
                         "split": True,
                         "token_count": len(batch),
@@ -352,9 +345,6 @@ def segment_translation_units(
     if not result:
         raise StageExecutionError("Stage12 planner produced no translation units")
 
-    # Ordered output must remain a lossless projection of every planned base
-    # span.  This makes coalescing a boundary-only transformation: no source byte
-    # inside the Stage10/segment scope may disappear or be fabricated.
     for row in base:
         pieces = [
             item["text"]
@@ -430,28 +420,104 @@ def run_stage12(
             selected_format=str(document["selected_format"]),
             preferred_tokens=preferred,
         )
-        max_unit_tokens = max(
-            int((row.get("metadata") or {}).get("token_count") or 0) for row in units
-        )
+
+        table_plans: dict[int, Any] = {}
+        request_texts: list[str] = []
+        request_refs: list[tuple[int, int | None]] = []
+        request_proxy_counts: list[int] = []
+        for unit_index, unit in enumerate(units):
+            metadata = dict(unit.get("metadata") or {})
+            if metadata.get("source") == "ascii_table":
+                try:
+                    plan = build_stage12_table_plan(
+                        str(unit["text"]), absolute_start=int(unit["start"])
+                    )
+                except ValueError as exc:
+                    raise StageExecutionError(
+                        f"Stage12 ASCII-table execution planning failed: {exc}"
+                    ) from exc
+                table_plans[unit_index] = plan
+                for group in plan.groups:
+                    request_texts.append(group.source_text)
+                    request_refs.append((unit_index, int(group.index)))
+                    request_proxy_counts.append(max(1, len(group.source_text.split())))
+            else:
+                request_texts.append(str(unit["text"]))
+                request_refs.append((unit_index, None))
+                request_proxy_counts.append(
+                    max(1, int(metadata.get("token_count") or 0))
+                )
+
+        max_request_tokens = max(request_proxy_counts, default=0)
         translator = OpusTranslator(device=device, compute_type=compute_type)
         translated = translator.translate(
-            [str(row["text"]) for row in units],
+            request_texts,
             beam_size=beam_size,
             num_hypotheses=num_hypotheses,
-            max_decoding_length=max(128, max(preferred, max_unit_tokens) * 8),
-        )
+            max_decoding_length=max(128, max(preferred, max_request_tokens) * 8),
+        ) if request_texts else []
+        if len(translated) != len(request_refs):
+            raise StageExecutionError("OPUS returned a different Stage12 request cardinality")
+        generated = {
+            reference: hypotheses
+            for reference, hypotheses in zip(request_refs, translated, strict=True)
+        }
+
         asset = load_opus_asset()
         items: list[dict[str, Any]] = []
-        for sequence, (unit, hypotheses) in enumerate(zip(units, translated, strict=True)):
-            if not hypotheses:
-                raise StageExecutionError(
-                    f"OPUS returned no hypothesis for translation unit {sequence}"
-                )
-            target = str(hypotheses[0].get("text") or "").strip()
-            if not target:
-                raise StageExecutionError(
-                    f"OPUS returned empty target for translation unit {sequence}"
-                )
+        table_group_total = 0
+        table_multi_piece_total = 0
+        table_preserved_chars = 0
+        for sequence, unit in enumerate(units):
+            metadata = dict(unit.get("metadata") or {})
+            if metadata.get("source") == "ascii_table":
+                plan = table_plans[sequence]
+                hypotheses_by_group = {
+                    int(group.index): generated[(sequence, int(group.index))]
+                    for group in plan.groups
+                }
+                try:
+                    target, group_evidence = render_stage12_table_rank0(
+                        plan, hypotheses_by_group
+                    )
+                except ValueError as exc:
+                    raise StageExecutionError(
+                        f"Stage12 ASCII-table rendering failed: {exc}"
+                    ) from exc
+                metrics = table_plan_metrics(plan)
+                table_group_total += int(metrics["logical_group_count"])
+                table_multi_piece_total += int(metrics["multi_piece_group_count"])
+                table_preserved_chars += int(metrics["preserved_source_character_count"])
+                payload = {
+                    "planner": metadata,
+                    "hypotheses": [],
+                    "selected_rank": 0,
+                    "composite_real_mt": True,
+                    "table": {
+                        "stage12_contract": TABLE_STAGE12_CONTRACT,
+                        "structure_contract": metadata.get("table_structure_contract"),
+                        "logical_contract": metadata.get("table_logical_contract"),
+                        "metrics": metrics,
+                        "logical_groups": group_evidence,
+                    },
+                }
+            else:
+                hypotheses = generated[(sequence, None)]
+                if not hypotheses:
+                    raise StageExecutionError(
+                        f"OPUS returned no hypothesis for translation unit {sequence}"
+                    )
+                target = str(hypotheses[0].get("text") or "").strip()
+                if not target:
+                    raise StageExecutionError(
+                        f"OPUS returned empty target for translation unit {sequence}"
+                    )
+                payload = {
+                    "planner": metadata,
+                    "hypotheses": hypotheses,
+                    "selected_rank": 0,
+                }
+
             items.append(
                 {
                     "sequence_number": sequence,
@@ -460,13 +526,10 @@ def run_stage12(
                     "source_end": int(unit["end"]),
                     "source_text": str(unit["text"]),
                     "target_text": target,
-                    "payload": {
-                        "planner": dict(unit.get("metadata") or {}),
-                        "hypotheses": hypotheses,
-                        "selected_rank": 0,
-                    },
+                    "payload": payload,
                 }
             )
+
         source_chars = sum(len(str(row["source_text"] or "")) for row in items)
         if source_chars <= 0:
             raise StageExecutionError("Stage12 translated zero source characters")
@@ -485,7 +548,13 @@ def run_stage12(
             "model_manifest_sha256": asset.manifest_sha256,
             "compute_type": compute_type,
             "planner_contract": PLANNER_CONTRACT,
-            "max_translation_unit_tokens": max_unit_tokens,
+            "table_stage12_contract": TABLE_STAGE12_CONTRACT,
+            "table_block_count": len(table_plans),
+            "table_logical_group_count": table_group_total,
+            "table_multi_piece_group_count": table_multi_piece_total,
+            "table_preserved_source_character_count": table_preserved_chars,
+            "model_request_count": len(request_texts),
+            "max_translation_unit_tokens": max_request_tokens,
             "real_mt": True,
             "network_used": False,
         }
