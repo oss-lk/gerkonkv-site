@@ -16,19 +16,19 @@ from typing import Any
 
 from .stages import StageExecutionError, _quality_run
 
-CONTRACT = "rocketdict-maintained-numeric-integrity/2"
+CONTRACT = "rocketdict-maintained-numeric-integrity/3"
 
 _ORDINAL_SUFFIX = r"(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))"
 # Space-grouping is deliberately allowed after an arbitrary-length leading
-# digit group.  Real R1 evidence contains model output such as ``11/178 000``
+# digit group. Real R1 evidence contains model output such as ``11/178 000``
 # and ``961/72000 000``; these are formatting variants of the exact source
 # values, not newly invented numbers.
 _GROUPED_INT = r"(?:\d{1,3}(?:,\d{3})+|\d+(?:[\s\u00a0\u202f]\d{3})*)"
 _SIGN = r"[+\-−]?\s*"
 
-# Numeric boundaries are digit-based rather than Python-word-based.  This is
+# Numeric boundaries are digit-based rather than Python-word-based. This is
 # necessary for Gutenberg/source markup such as ``_Obs._16`` and technical
-# payloads where a digit may touch an underscore or letter.  Structural-token
+# payloads where a digit may touch an underscore or letter. Structural-token
 # identity remains a separate hard diagnostic; counting its digits here adds a
 # second fail-closed signal rather than licensing changes.
 _NUMERIC_RE = re.compile(
@@ -44,6 +44,7 @@ _NUMERIC_RE = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 _ORDINAL_SUFFIX_RE = re.compile(rf"{_ORDINAL_SUFFIX}$", re.IGNORECASE)
+_SPACED_MINUS_RE = re.compile(r"^[-−]\s+\d")
 _CRITICAL_SYMBOLS = ("%", "°", "±", "=", "<", ">", "×", "÷")
 _NUMBER_WORDS = {
     "zero": 0,
@@ -74,9 +75,9 @@ _NUMBER_WORDS = {
     "seventy": 70,
     "eighty": 80,
     "ninety": 90,
-    # Exact source word -> target digit licences.  This does not parse arbitrary
+    # Exact source word -> target digit licences. This does not parse arbitrary
     # prose quantities; it only permits a model to render the explicit word as
-    # the corresponding literal.  ``an hundred`` is present in frozen R1.
+    # the corresponding literal. ``an hundred`` is present in frozen R1.
     "hundred": 100,
 }
 _ORDINAL_WORDS = {
@@ -124,7 +125,7 @@ def _strip_ordinal_suffix(token: str) -> str:
 
 def _normalize_integer(raw: str) -> str:
     compact = re.sub(r"[\s\u00a0\u202f]", "", raw)
-    # At integer-only positions commas are grouping punctuation.  Decimal-comma
+    # At integer-only positions commas are grouping punctuation. Decimal-comma
     # ambiguity is handled separately by ``normalize_numeric_options``.
     compact = compact.replace(",", "")
     sign = ""
@@ -196,7 +197,7 @@ def normalize_numeric_literal(raw: str) -> str:
 
 
 def normalize_numeric_options(raw: str) -> tuple[str, ...]:
-    """Return conservative interpretations for ``1,000``-style ambiguity."""
+    """Return conservative intrinsic interpretations of one numeric token."""
     primary = normalize_numeric_literal(raw)
     compact = (
         raw.casefold()
@@ -212,6 +213,33 @@ def normalize_numeric_options(raw: str) -> tuple[str, ...]:
     grouped = _normalize_integer(match.group(1) + match.group(2))
     decimal = normalize_numeric_literal(match.group(1) + "." + match.group(2))
     return tuple(dict.fromkeys((grouped, decimal)))
+
+
+def _spaced_dash_can_be_separator(text: str, literal: NumericLiteral) -> bool:
+    """Return whether a spaced leading ``-`` is syntactically separator-like.
+
+    R1 exposed model output such as ``POF - 42`` and
+    ``77-1/3 - 77-1/2``. Treating every ``- 42`` as unary minus creates false
+    numeric corruption. We license an unsigned interpretation only when the
+    spaced dash follows completed alphanumeric/closing-delimiter content. A
+    token at the beginning of the segment, or after an opening/math operator,
+    remains strictly signed. This preserves ``- 6/106`` as a real negative and
+    does not make direct ``-42`` ambiguous.
+    """
+    if not _SPACED_MINUS_RE.match(literal.raw):
+        return False
+    prefix = text[: literal.start].rstrip()
+    if not prefix:
+        return False
+    return prefix[-1].isalnum() or prefix[-1] in ")] }_".replace(" ", "")
+
+
+def _target_numeric_options(text: str, literal: NumericLiteral) -> tuple[str, ...]:
+    options = list(normalize_numeric_options(literal.raw))
+    if _spaced_dash_can_be_separator(text, literal):
+        unsigned_raw = re.sub(r"^[-−]\s+", "", literal.raw, count=1)
+        options.extend(normalize_numeric_options(unsigned_raw))
+    return tuple(dict.fromkeys(options))
 
 
 def extract_numeric_literals(text: str) -> list[NumericLiteral]:
@@ -275,7 +303,7 @@ def compare_numeric_integrity(source: str, target: str) -> dict[str, Any]:
     allowed = required + licensed
     observed: Counter[str] = Counter()
     for item in extract_numeric_literals(target):
-        options = normalize_numeric_options(item.raw)
+        options = _target_numeric_options(target, item)
         chosen = next((value for value in options if observed[value] < allowed[value]), options[0])
         observed[chosen] += 1
 
