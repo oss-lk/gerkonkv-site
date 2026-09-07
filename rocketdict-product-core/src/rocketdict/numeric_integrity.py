@@ -14,11 +14,13 @@ from pathlib import Path
 import re
 from typing import Any
 
+from .numeric_words import extract_russian_ordinals
 from .stages import StageExecutionError, _quality_run
 
-CONTRACT = "rocketdict-maintained-numeric-integrity/3"
+CONTRACT = "rocketdict-maintained-numeric-integrity/4"
 
 _ORDINAL_SUFFIX = r"(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))"
+_ENG_DIGIT_ORDINAL_RE = re.compile(r"^\s*\d+(?:st|nd|rd|th)\s*$", re.IGNORECASE)
 # Space-grouping is deliberately allowed after an arbitrary-length leading
 # digit group. Real R1 evidence contains model output such as ``11/178 000``
 # and ``961/72000 000``; these are formatting variants of the exact source
@@ -262,6 +264,24 @@ def numeric_counter(text: str) -> Counter[str]:
     return Counter(item.canonical for item in extract_numeric_literals(text))
 
 
+def is_english_digit_ordinal(literal: NumericLiteral) -> bool:
+    """Whether a source literal is an ordinary ``1st``/``2nd``/``18th`` ordinal.
+
+    Old notation such as ``42d`` and identifiers like ``2D`` are deliberately
+    excluded.  Fractions/decimals/grouped values are also excluded because the
+    Russian word-equivalence evidence applies only to ordinary integer ordinals.
+    """
+    return _ENG_DIGIT_ORDINAL_RE.fullmatch(literal.raw) is not None
+
+
+def source_digit_ordinal_counter(source: str) -> Counter[str]:
+    return Counter(
+        literal.canonical
+        for literal in extract_numeric_literals(source)
+        if is_english_digit_ordinal(literal)
+    )
+
+
 def spelled_numeric_licenses(source: str) -> Counter[str]:
     """License only explicit English cardinal/ordinal number words in source."""
     words = re.findall(r"(?<![A-Za-z])([A-Za-z]+)(?![A-Za-z])", source.casefold())
@@ -297,25 +317,69 @@ def _positive_delta(left: Counter[str], right: Counter[str]) -> dict[str, int]:
     return {key: left[key] - right[key] for key in left if left[key] > right[key]}
 
 
+def _russian_ordinal_credit(
+    source: str,
+    target: str,
+    *,
+    required: Counter[str],
+    explicit_observed: Counter[str],
+) -> tuple[Counter[str], Counter[str]]:
+    """Credit matching Russian ordinal words only for residual source ordinals.
+
+    Target ordinal prose is not itself treated as a numeric addition.  It can
+    only satisfy an otherwise-missing source literal that was explicitly an
+    English digit ordinal (``st/nd/rd/th``).  This prevents a cardinal source
+    ``18`` from being silently licensed by target ``восемнадцатый`` and keeps
+    unrelated Russian ordinal prose outside the literal-addition semantics.
+    """
+    source_ordinals = source_digit_ordinal_counter(source)
+    candidates = Counter(match.canonical for match in extract_russian_ordinals(target))
+    residual = required - explicit_observed
+    credit: Counter[str] = Counter()
+    for value in source_ordinals:
+        amount = min(source_ordinals[value], candidates[value], residual[value])
+        if amount > 0:
+            credit[value] = amount
+    return credit, candidates
+
+
 def compare_numeric_integrity(source: str, target: str) -> dict[str, Any]:
     required = numeric_counter(source)
     licensed = spelled_numeric_licenses(source)
     allowed = required + licensed
-    observed: Counter[str] = Counter()
+    explicit_observed: Counter[str] = Counter()
     for item in extract_numeric_literals(target):
         options = _target_numeric_options(target, item)
-        chosen = next((value for value in options if observed[value] < allowed[value]), options[0])
-        observed[chosen] += 1
+        chosen = next(
+            (value for value in options if explicit_observed[value] < allowed[value]),
+            options[0],
+        )
+        explicit_observed[chosen] += 1
 
-    missing = _positive_delta(required, observed)
-    excess = _positive_delta(observed, allowed)
+    ordinal_credit, ordinal_candidates = _russian_ordinal_credit(
+        source,
+        target,
+        required=required,
+        explicit_observed=explicit_observed,
+    )
+    effective_observed = explicit_observed + ordinal_credit
+    missing = _positive_delta(required, effective_observed)
+
+    # Duplicates/additions remain an explicit-literal concern.  Russian ordinal
+    # words only satisfy a demonstrated residual source ordinal requirement and
+    # never create target numeric additions by themselves.
+    excess = _positive_delta(explicit_observed, allowed)
     duplicate_required = {key: value for key, value in excess.items() if key in required}
     unlicensed_additions = {key: value for key, value in excess.items() if key not in required}
     return {
         "contract": CONTRACT,
         "required": dict(required),
-        "observed": dict(observed),
+        "observed": dict(effective_observed),
+        "explicit_observed": dict(explicit_observed),
         "licensed_spelled": dict(licensed),
+        "source_digit_ordinals": dict(source_digit_ordinal_counter(source)),
+        "target_russian_ordinal_candidates": dict(ordinal_candidates),
+        "target_russian_ordinal_credit": dict(ordinal_credit),
         "missing": missing,
         "duplicate_required": duplicate_required,
         "unlicensed_additions": unlicensed_additions,
