@@ -151,10 +151,6 @@ def main() -> int:
         rows = get_run_items(connection, assembly_id, kind="assembly_segment")
         gate_rows = connection.execute(
             "SELECT implementation, parameters_json FROM stage_runs "
-            "WHERE stage_number=15 AND status='completed' AND assembly_id IS NULL "
-            "ORDER BY id"
-        ).fetchall() if False else connection.execute(
-            "SELECT implementation, parameters_json FROM stage_runs "
             "WHERE stage_number=15 AND status='completed' ORDER BY id"
         ).fetchall()
 
