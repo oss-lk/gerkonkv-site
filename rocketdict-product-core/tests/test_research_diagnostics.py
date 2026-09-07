@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 
 from rocketdict.research_diagnostics import (
+    CRITICAL_TOKEN_CONTRACT,
     DELIMITER_CONTRACT,
     NUMERIC_ORDER_CONTRACT,
+    compare_critical_technical_tokens,
     compare_delimiter_preservation,
     compare_numeric_order,
 )
@@ -79,3 +81,29 @@ def test_target_added_balanced_pair_still_fails() -> None:
     result = compare_delimiter_preservation("Lectiones Opticae", "(Lectiones Opticae)")
     assert result["passed"] is False
     assert result["source_was_balanced"] is True
+
+
+def test_critical_technical_tokens_accept_preserved_payloads_and_localized_labels() -> None:
+    source = "[Illustration: FIG. 1.] [Greek: ab] _q_ [C]"
+    target = "[Иллюстрация: FIG. 1.] [греческом: ab] _q_ [C]"
+    result = compare_critical_technical_tokens(source, target)
+    assert result["contract"] == CRITICAL_TOKEN_CONTRACT
+    assert result["passed"] is True
+    assert result["failed_checks"] == []
+
+
+@pytest.mark.parametrize(
+    ("source", "target", "failed"),
+    [
+        ("They are [Greek: letter].", "Они обозначены буквой.", "greek_payloads"),
+        ("Point _q_ remains.", "Точка q_ остаётся.", "symbolic_emphasis"),
+        ("See note [C].", "См. примечание [С].", "footnote_markers"),
+        ("[Illustration: FIG. 2.]", "[Иллюстрация: FIG.]", "illustration_payloads"),
+    ],
+)
+def test_critical_technical_tokens_keep_real_corruption_visible(
+    source: str, target: str, failed: str
+) -> None:
+    result = compare_critical_technical_tokens(source, target)
+    assert result["passed"] is False
+    assert failed in result["failed_checks"]
