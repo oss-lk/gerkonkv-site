@@ -24,6 +24,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_structural_island_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_clause_planning_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_clause_nbest_feasibility.py'
       - '.github/workflows/rocketdict-maintained-r1-challenge.yml'
   workflow_dispatch:
 
@@ -86,6 +87,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_structural_island_feasibility.py
       - name: Probe clause-aware planning on non-structural R1 residuals
         run: python -u rocketdict-workbench/tests/real_translation_clause_planning_feasibility.py
+      - name: Probe fine-grained clause n-best on remaining R1 residuals
+        run: python -u rocketdict-workbench/tests/real_translation_clause_nbest_feasibility.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -112,6 +115,7 @@ jobs:
             work/translation-challenge/maintained-r1-nbest-feasibility.json
             work/translation-challenge/maintained-r1-structural-island-feasibility.json
             work/translation-challenge/maintained-r1-clause-planning-feasibility.json
+            work/translation-challenge/maintained-r1-clause-nbest-feasibility.json
             work/translation-challenge/project/**
             work/translation-challenge/runtime-evidence/**
           if-no-files-found: warn
