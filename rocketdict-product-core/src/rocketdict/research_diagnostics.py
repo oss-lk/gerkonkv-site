@@ -11,9 +11,14 @@ from collections import Counter
 import re
 from typing import Any
 
-from .numeric_integrity import _target_numeric_options, extract_numeric_literals
+from .numeric_integrity import (
+    _target_numeric_options,
+    extract_numeric_literals,
+    is_english_digit_ordinal,
+)
+from .numeric_words import extract_russian_ordinals
 
-NUMERIC_ORDER_CONTRACT = "rocketdict-maintained-numeric-order/1"
+NUMERIC_ORDER_CONTRACT = "rocketdict-maintained-numeric-order/2"
 DELIMITER_CONTRACT = "rocketdict-maintained-delimiter-preservation/1"
 CRITICAL_TOKEN_CONTRACT = "rocketdict-maintained-critical-technical-token/2"
 OUTPUT_ARTIFACT_CONTRACT = "rocketdict-maintained-output-artifact/2"
@@ -47,28 +52,65 @@ def compare_numeric_order(source: str, target: str) -> dict[str, Any]:
     """Check that explicit source numeric values survive in source order.
 
     Exact counts/additions are intentionally left to the Product numeric hard
-    gate.  This diagnostic asks only whether the canonical required sequence is
-    a subsequence of target numeric tokens, while reusing the same target-token
-    ambiguity semantics as the hard gate (grouped thousands, apostrophe
-    decimals, spaced dash separators, etc.).
+    gate.  Target events include explicit numeric literals plus conservative
+    Russian ordinal words.  A Russian ordinal word may match only a source
+    literal that was itself an ordinary English digit ordinal (``st/nd/rd/th``),
+    mirroring Product numeric-v4 semantics without licensing cardinal/technical
+    identifiers.  Explicit numeric-token ambiguity remains shared with the hard
+    gate (grouped thousands, apostrophe decimals, spaced dash separators, etc.).
     """
-    required = [item.canonical for item in extract_numeric_literals(source)]
+    source_literals = extract_numeric_literals(source)
+    required = [item.canonical for item in source_literals]
+    required_is_ordinal = [is_english_digit_ordinal(item) for item in source_literals]
+
     target_literals = extract_numeric_literals(target)
     observed_primary = [item.canonical for item in target_literals]
-    observed_options: list[list[str]] = []
+    numeric_options_by_start = {
+        (item.start, item.end): list(_target_numeric_options(target, item))
+        for item in target_literals
+    }
+    events: list[dict[str, Any]] = [
+        {
+            "kind": "numeric_literal",
+            "start": item.start,
+            "end": item.end,
+            "raw": item.raw,
+            "primary": item.canonical,
+            "options": numeric_options_by_start[(item.start, item.end)],
+        }
+        for item in target_literals
+    ]
+    events.extend(
+        {
+            "kind": "russian_ordinal_word",
+            "start": match.start,
+            "end": match.end,
+            "raw": match.raw,
+            "primary": match.canonical,
+            "options": [match.canonical],
+        }
+        for match in extract_russian_ordinals(target)
+    )
+    events.sort(key=lambda row: (int(row["start"]), int(row["end"]), str(row["kind"])))
+
     matched_target_indices: list[int] = []
     cursor = 0
-    for index, item in enumerate(target_literals):
-        options = list(_target_numeric_options(target, item))
-        observed_options.append(options)
-        if cursor < len(required) and required[cursor] in options:
+    for index, event in enumerate(events):
+        if cursor >= len(required):
+            break
+        if event["kind"] == "russian_ordinal_word" and not required_is_ordinal[cursor]:
+            continue
+        if required[cursor] in list(event["options"]):
             matched_target_indices.append(index)
             cursor += 1
+
     return {
         "contract": NUMERIC_ORDER_CONTRACT,
         "required_sequence": required,
+        "required_is_english_digit_ordinal": required_is_ordinal,
         "observed_primary_sequence": observed_primary,
-        "observed_options": observed_options,
+        "observed_options": [list(_target_numeric_options(target, item)) for item in target_literals],
+        "observed_events": events,
         "matched_target_indices": matched_target_indices,
         "matched_required_count": cursor,
         "required_count": len(required),
