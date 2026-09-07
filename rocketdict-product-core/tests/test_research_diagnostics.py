@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import pytest
+
+from rocketdict.research_diagnostics import (
+    DELIMITER_CONTRACT,
+    NUMERIC_ORDER_CONTRACT,
+    compare_delimiter_preservation,
+    compare_numeric_order,
+)
+
+
+@pytest.mark.parametrize(
+    ("source", "target"),
+    [
+        (
+            "100 Foot, 4 Inches, 961/72000000 parts",
+            "100 футов, 4 дюйма, 961/72000 000 частей",
+        ),
+        (
+            "1/178000, 3/178000, 11/178000",
+            "1/178000, 3/178000, 11/178 000",
+        ),
+        (
+            "1'688, 2'389, 2'925",
+            "1'688, 2'389, 2'925",
+        ),
+        (
+            "42 then 50",
+            "POF - 42, затем POG - 50",
+        ),
+    ],
+)
+def test_numeric_order_uses_maintained_numeric_equivalences(source: str, target: str) -> None:
+    result = compare_numeric_order(source, target)
+    assert result["contract"] == NUMERIC_ORDER_CONTRACT
+    assert result["passed"] is True
+    assert result["matched_required_count"] == result["required_count"]
+
+
+def test_numeric_order_keeps_real_loss_visible() -> None:
+    result = compare_numeric_order(
+        "1'688, 2'389, 2'925",
+        "1'688, 2'38, 2'925",
+    )
+    assert result["passed"] is False
+    assert result["required_sequence"] == ["1.688", "2.389", "2.925"]
+    assert result["observed_primary_sequence"] == ["1.688", "2.38", "2.925"]
+    assert result["matched_required_count"] == 1
+
+
+def test_numeric_order_is_order_sensitive_even_when_values_exist() -> None:
+    result = compare_numeric_order("1 2 3", "1 3 2")
+    assert result["passed"] is False
+    assert result["required_sequence"] == ["1", "2", "3"]
+
+
+def test_balanced_delimiters_require_exact_counts() -> None:
+    assert compare_delimiter_preservation("[Greek: x] (note)", "[Greek: x] (прим.)")["passed"] is True
+    result = compare_delimiter_preservation("[Greek: x]", "Greek: x")
+    assert result["passed"] is False
+    assert result["delimiters"]["square"]["exactly_preserved"] is False
+
+
+def test_unbalanced_source_is_preserved_not_synthetically_repaired() -> None:
+    preserved = compare_delimiter_preservation("_Boyle_) as when", "_Boyle_) как когда")
+    assert preserved["contract"] == DELIMITER_CONTRACT
+    assert preserved["passed"] is True
+    assert preserved["source_was_balanced"] is False
+    assert preserved["source_unbalanced_kinds"] == ["round"]
+
+    fabricated = compare_delimiter_preservation("_Boyle_) as when", "(_Boyle_) как когда")
+    assert fabricated["passed"] is False
+    assert fabricated["delimiters"]["round"]["source"] == [0, 1]
+    assert fabricated["delimiters"]["round"]["target"] == [1, 1]
+
+
+def test_target_added_balanced_pair_still_fails() -> None:
+    result = compare_delimiter_preservation("Lectiones Opticae", "(Lectiones Opticae)")
+    assert result["passed"] is False
+    assert result["source_was_balanced"] is True
