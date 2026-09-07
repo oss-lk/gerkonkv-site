@@ -124,12 +124,16 @@ def test_logical_render_uses_one_translation_then_blanks_continuation_slots() ->
 
 
 def test_logical_render_rejects_incomplete_mapping() -> None:
+    # The repeated pipe column is intentional: lane inference is conservative
+    # and does not create a visual boundary from a one-off ``A | B`` line.
     table = (
         "------+------\n"
         "Head  | Other\n"
+        "more  | field\n"
         "------+------\n"
     )
     pieces = plan_ascii_table_pieces(table)
     groups = plan_logical_table_text_groups(table, pieces)
+    assert len(groups) == 2
     with pytest.raises(ValueError, match="mapping mismatch"):
         render_logical_ascii_table(table, pieces, groups, {groups[0].index: "Заголовок"})
