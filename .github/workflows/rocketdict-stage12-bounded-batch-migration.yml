@@ -1,0 +1,77 @@
+name: RocketDict Stage12 Bounded Batch Migration
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'tools/stage12_bounded_batch_execution_migration.py'
+      - '.github/workflows/rocketdict-stage12-bounded-batch-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply assertion-heavy bounded Stage12 execution migration
+        run: python tools/stage12_bounded_batch_execution_migration.py
+      - name: Install maintained Product Core, Workbench and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+          python -m pip install -e ./rocketdict-workbench
+          python -m pip install pytest
+      - name: Compile changed maintained modules
+        run: |
+          python -m py_compile rocketdict-product-core/src/rocketdict/translation_stage.py
+          python -m py_compile rocketdict-product-core/src/rocketdict/api/registry.py
+          python -m py_compile rocketdict-product-core/tests/test_translation_stage_batching.py
+      - name: Run focused Stage12 bounded-batch regressions
+        run: |
+          pytest -q rocketdict-product-core/tests/test_translation_stage_batching.py
+          pytest -q rocketdict-product-core/tests/test_translation_stage_planner.py rocketdict-product-core/tests/test_translation_stage_structural_labels.py rocketdict-product-core/tests/test_table_stage12.py
+      - name: Run complete dependency-light Product and Workbench suites
+        run: |
+          pytest -q rocketdict-product-core/tests
+          pytest -q rocketdict-workbench/tests --ignore=rocketdict-workbench/tests/test_real_core_integration.py
+      - name: Validate and commit bounded Stage12 execution
+        run: |
+          set -euo pipefail
+          expected=$(cat <<'EOF'
+          .github/workflows/rocketdict-full-opticks-numeric-stress.yml
+          rocketdict-product-core/src/rocketdict/api/registry.py
+          rocketdict-product-core/src/rocketdict/translation_stage.py
+          rocketdict-product-core/tests/test_translation_stage_batching.py
+          EOF
+          )
+          observed=$(git status --short | sed -E 's/^.. //' | sort)
+          expected_sorted=$(printf '%s\n' "$expected" | sed 's/^ *//' | sed '/^$/d' | sort)
+          if [ "$observed" != "$expected_sorted" ]; then
+            echo "Unexpected migration diff" >&2
+            echo "Observed:" >&2
+            printf '%s\n' "$observed" >&2
+            echo "Expected:" >&2
+            printf '%s\n' "$expected_sorted" >&2
+            exit 1
+          fi
+          grep -q 'rocketdict-stage12-bounded-request-batch/1' rocketdict-product-core/src/rocketdict/translation_stage.py
+          grep -q '_control("request_batch_size", 48)' rocketdict-product-core/src/rocketdict/api/registry.py
+          grep -q '\[heartbeat\] full Opticks Product Stage12/numeric audit active' .github/workflows/rocketdict-full-opticks-numeric-stress.yml
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/rocketdict-full-opticks-numeric-stress.yml \
+            rocketdict-product-core/src/rocketdict/api/registry.py \
+            rocketdict-product-core/src/rocketdict/translation_stage.py \
+            rocketdict-product-core/tests/test_translation_stage_batching.py
+          git commit -m 'Bound Product Stage12 CTranslate2 request batches'
+          git push origin HEAD:chatgpt/product-core-forward
