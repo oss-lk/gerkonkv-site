@@ -22,6 +22,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_feasibility.py'
       - '.github/workflows/rocketdict-full-opticks-numeric-stress.yml'
   workflow_dispatch:
 
@@ -77,6 +78,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py
       - name: Escalate unresolved isolated numeric failures with raw n-best
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
+      - name: Probe explicit structural-label split with real MT only
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_feasibility.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -96,6 +99,7 @@ jobs:
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
             work/full-opticks-numeric-stress/full-opticks-nbest-escalation.json
+            work/full-opticks-numeric-stress/full-opticks-structural-label-feasibility.json
             work/full-opticks-numeric-stress/project/**
             work/full-opticks-numeric-stress/runtime-evidence/**
           if-no-files-found: warn
