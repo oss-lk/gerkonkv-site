@@ -5,87 +5,101 @@ This file stores durable conclusions from the **maintained Product** translation
 ## Current maintained contracts
 
 - Production MT baseline: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian, acceptance compute type `float32`.
-- Stage12 planner: `rocketdict-stage12-protected-split/3` in `rocketdict-product-core/src/rocketdict/translation_stage.py`.
-- Stage15 numeric/symbol evaluator: `rocketdict-maintained-numeric-integrity/3` in `rocketdict-product-core/src/rocketdict/numeric_integrity.py`.
-- Research output-artifact diagnostic: `rocketdict-maintained-output-artifact/2`; target-only HTML entities/replacement characters and target-introduced quote characters are rejected by the research selector. These research diagnostics are not additional Product release gates by themselves.
+- Stage12 planner: `rocketdict-stage12-protected-split/4` in `rocketdict-product-core/src/rocketdict/translation_stage.py`.
+- Stage12 ASCII-table execution: explicit source-side table parsing/logical grouping; source-owned geometry and alpha-free numeric/symbolic cells are preserved from pre-MT spans while logical text groups use real OPUS. This removed the previous table-specific numeric failure class without translating a whole table as prose or injecting missing values after MT.
+- Stage15 numeric/symbol evaluator: `rocketdict-maintained-numeric-integrity/4` in `rocketdict-product-core/src/rocketdict/numeric_integrity.py`.
+- Research diagnostics remain measurement surfaces, not extra Product hard gates by themselves: numeric order `/2`, delimiter preservation `/1`, critical technical token `/2`, output artifact `/2`.
 - Planner/evaluator semantics that can change output or cache interpretation are versioned. Do not silently reuse results produced under an older contract as equivalent current evidence.
 
 ## Proven Product baseline
 
-The maintained direct real Stage8→25 path and the unified user-facing `rocketdict-product-run` source→Stage25 path, including replay of the same immutable Stage25 export, are green. Product Core workflow run `34159939929` is a verified example after the Stage12 `/3` and current diagnostics work: dependency-light and real-runtime jobs both passed.
+The maintained direct real Stage8→25 path and the unified user-facing `rocketdict-product-run` source→Stage25 path, including replay of the same immutable Stage25 export, are green. The old L1 blocker claiming that unified Product orchestration was still red is retired.
 
-This retired the old L1 blocker that claimed unified Product orchestration was still red.
+After the full-Opticks structural-label research addition, Product Core workflow run `34194487158` again passed both dependency-light and real-runtime jobs, including the direct maintained-core Stage8→25 smoke and the unified real `rocketdict-product-run` smoke. Research additions therefore did not regress the existing end-to-end Product path.
 
 ## Frozen maintained R1 challenge
 
-The current deterministic R1 challenge is a **diagnostic stress set**, not a representative continuous corpus:
+The deterministic R1 challenge is a **diagnostic stress set**, not a representative continuous corpus. Its distant excerpts can create synthetic joins, split Gutenberg emphasis and detach section labels from their prose. A policy that repairs R1 is not promotion evidence until the same failure class is shown on contiguous source.
 
-- 5,143 words;
-- immutable selection SHA-256 `665f1ee5ad1778ac8ab1b1b2ae0da7e17a05a0321b8a25cb6d47d74294f4af32`;
-- Stage12 planner `/3` produces 155 translation units;
-- empty outputs = 0;
-- backend errors = 0;
-- current hard-gate failures = 7 events: numeric/symbol 5, punctuation 1, length-ratio 1.
+Durable R1 conclusions still apply:
 
-The frozen selection intentionally joins distant excerpts. Consequently some apparent structure failures are **selection-boundary artifacts**. In particular, section labels such as `1.E.5.` / `1.F.4.` can be separated from the prose they introduce, and an excerpt can begin/end inside Gutenberg `_..._` emphasis. Do not promote a Product policy solely because it repairs such a synthetic join. Validate the class against contiguous source evidence first.
+- protected-span-aware Stage12 planning is a real positive change;
+- arbitrary punctuation-preferred cuts did not solve the difficult long colour/range case;
+- fine-grained clause/list splitting can make integrity metrics greener while degrading Russian semantics or introducing output artifacts;
+- raw n-best hypotheses are legitimate research candidates, but broad n-best is not a universal fallback;
+- source-owned structural islands can be useful for unambiguous structure, but wholesale islanding is not Product policy.
 
-Primary L3 evidence: `.github/workflows/rocketdict-maintained-r1-challenge.yml`, `rocketdict-workbench/tests/real_translation_challenge.py`, and the `rocketdict-maintained-r1-challenge` workflow artifacts.
+Historical `numeric-islands-v1` remains a negative branch. Do not reintroduce numeric placeholders or post-hoc literal repair under another name.
 
-## Durable Stage12 findings
+## Full contiguous Opticks numeric evidence
 
-### Protected planner `/3` is a positive production change
+The current primary heavy translation evidence is the complete pinned Project Gutenberg *Opticks* source (`SHA-256 1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`). Workflow run `34193562442` at commit `ca722e6f6442b1ce51cc5ad2c9713e7133fb4232` completed successfully and retained the research DB plus JSON evidence.
 
-Stage12 must not cut inside balanced source-owned `[]`, `()`, `{}` or valid Gutenberg emphasis. It also must not let malformed/excerpt-boundary `_` parity coalesce unrelated sentences or paragraphs. The `/3` parser classifies emphasis from local source context and drops an unmatched opener at a blank paragraph boundary rather than inventing a closer.
+Under current Stage8/10 + Stage12 `/4` semantics:
 
-This fixed a real planner defect and passed Product Core unit/regression tests plus the real direct/unified Product smoke. On frozen R1 it reduced structural/punctuation noise without creating numeric regressions.
+- source characters: `586543`;
+- Stage8 tokens: `129825`;
+- Stage10 context sentences: `3001`;
+- Stage12 planned units: `3320`, with byte-exact full-source coverage;
+- numeric-bearing units translated with real rank0 OPUS: `671`;
+- table numeric-bearing units: `6`;
+- table rank0 numeric failures: `0`;
+- ordinary rank0 numeric failures: `42` total numeric failures;
+- failures isolated from punctuation/length/delimiter/critical-token/output-artifact concerns: `29`;
+- beam6/n-best6 strict raw-model rescues: `10`;
+- the Stage8/10 research DB hash was unchanged by inference.
 
-Evidence: `rocketdict-product-core/src/rocketdict/translation_stage.py`; `test_translation_stage_planner.py`; `test_translation_stage_emphasis_regression.py`; Product Core workflow.
+This is contiguous full-corpus evidence, not the old discontinuous R1 selection. It proves that the table-specific structural fix generalizes, but it also proves that rank0 OPUS still has non-table numeric/structural failures on the acceptance corpus.
 
-### Arbitrary punctuation-preferred cuts are not promoted
+Primary L3: `rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py`, `.github/workflows/rocketdict-full-opticks-numeric-stress.yml`, workflow run `34193562442`, artifact `10043196475`.
 
-A full-parent-context DOE tested moving the 64-token split to preceding comma/semicolon/colon boundaries. Natural-looking `54/60/13` groups still left the central long colour/range enumeration badly compressed by OPUS. Therefore merely choosing a nearby punctuation boundary is not a sufficient general Product policy.
+## Staged high-beam n-best result: useful evidence, not Product policy
 
-### Fine-grained clause/list splitting is research-only
+The same full-corpus run escalated the `19` isolated failures not rescued by beam6 to raw OPUS beam12 and then beam16, using the unchanged complete strict verdict and no target rewriting.
 
-Smaller list clauses can make the difficult numeric colour enumeration mechanically pass current integrity checks, but manual target review found weak or misleading Russian phrasing and target-introduced quotation artifacts. After output-artifact contract `/2`, some earlier apparent successes were correctly rejected. Integrity-green is necessary but not sufficient evidence of translation quality.
+- additional rescues: `7`;
+- residuals after beam6→12→16: `12`;
+- residual sequences: `494, 638, 739, 1132, 1541, 2280, 2336, 2365, 2622, 2643, 2737, 2885`.
 
-Do not promote broad clause splitting or a list planner without stronger semantic evidence on contiguous source.
+Manual review shows why mechanical rescue is still insufficient. At least one high-beam candidate that passes the current selector for source angle notation `2'' 45'''` renders it as Russian `2 футов 45'` — a semantic unit error. Other selected hypotheses can preserve structural numbers while leaving weak/malformed section-label text. Therefore **do not promote staged high-beam n-best as Product fallback** from the current evidence.
 
-## Durable n-best findings
+The apostrophe/prime notation finding also exposes a diagnostic gap: maintained numeric `/4` interprets compact forms such as `4'58` as historical apostrophe-decimals, while *Opticks* also uses apostrophes as minute/second/third prime marks. A target can therefore preserve the digits yet corrupt the prime-unit semantics and still satisfy the current numeric/strict selector. Any future n-best promotion must first distinguish apostrophe-decimal notation from numeric prime notation and evaluate prime-mark semantics explicitly; do not weaken numeric matching to hide this class.
 
-Raw n-best selection is allowed as a research candidate because it chooses an existing model hypothesis; it must never append/reconstruct missing literals after MT.
+Primary L3: `rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py`; run `34193562442`; `full-opticks-nbest-escalation.json`.
 
-Broad n-best is **not** safe as a universal fallback. Some candidates satisfy one hard invariant by deleting or materially changing useful content. Frozen R1 demonstrated this for non-numeric failures.
+## Explicit structural-label split: mechanically successful, semantically rejected
 
-A narrower numeric-only audit scopes retry only when rank-0 fails numeric/symbol preservation while punctuation, length, delimiter, critical-token and output-artifact checks otherwise pass. Under fixed beam6/n-best6 R1 evidence this scope reduced automatically to sequences `44` and `131`, both with a strictly eligible rank1 candidate. However locality differs materially: the `2'389 → 2'38` case is almost a one-token correction (target similarity ≈0.998), while the `_Exper._ 2.` case changes noticeably more text (≈0.786). Similarity is evidence only, not a semantic-quality guarantee.
+A follow-up full-Opticks research probe at commits `65e0a15a53bc31bdfb152ab4d021df6d63c2ab6c` / `4e735ff5d8f06415600538427f0999b49dca2238` isolated the five remaining staged-n-best residuals containing explicit `_Exper._`, `_Obs._` or `_Qu._` labels. It translated the surrounding prose and the label separately with real OPUS; it allowed only source-owned whitespace passthrough and explicitly prohibited placeholder round-trips, alphabetic source passthrough and post-translation literal injection.
 
-Therefore **do not enable a production numeric retry from R1 alone**. Validate prevalence, rescue rate, rank stability and candidate quality on contiguous full-corpus units first.
+Workflow run `34194513480` passed and the probe mechanically rescued all five residuals at beam6 rank0:
 
-Primary L3 evidence: `real_translation_nbest_feasibility.py`, `real_translation_numeric_nbest_policy_feasibility.py`, maintained R1 artifacts.
+- scoped/rescued sequences: `494, 1132, 1541, 2622, 2643`;
+- residual after the label split within that scope: `0`.
 
-## Structural-island finding
+This mechanism is **not promoted**. Manual target review found `_Exper._ 11.` / `_Exper._ 15.` translated as `Специалист...` or `Эксперты...`, `_Qu._` rendered as `Q.`/`К.` or retained in English, and only `_Obs._` produced a superficially plausible abbreviation. The checker was green while the structural-label semantics were poor. This is exactly the failure mode the Product quality-first rule is meant to prevent.
 
-Source-owned structural islands can mechanically preserve Gutenberg/technical tokens that MT drops, but wholesale islanding is not a proven Product policy. Inline symbolic fragments can damage grammar/context when detached from prose, and several frozen-R1 section-label successes are selection artifacts. Treat explicit document structure separately from ordinary prose only when the source structure and provenance are unambiguous and contiguous-source evidence supports the behavior.
+The corpus also shows that these labels are genuine source structure rather than isolated test artifacts: the immutable Opticks text contains many emphasized numbered `Exper/Obs/Qu/Prop` labels, and Stage10 frequently splits their Gutenberg emphasis across context-sentence boundaries. Any future solution should operate on byte-exact immutable source structure before MT boundaries, but it must also define semantically acceptable target handling rather than merely preserving the number.
 
-Historical `numeric-islands-v1` remains a negative branch; do not confuse structural parsing with numeric placeholder repair.
+Primary L3: `rocketdict-workbench/tests/real_translation_full_opticks_structural_label_feasibility.py`; workflow run `34194513480`; artifact `10043544860`; `full-opticks-structural-label-feasibility.json`.
 
-## Current heavy evidence frontier
+## Current residual frontier
 
-A separate full-contiguous-Opticks numeric stress exists at:
+After separating the five label cases conceptually, the staged-n-best residual set contains seven non-label cases:
 
-- `rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py`
-- `.github/workflows/rocketdict-full-opticks-numeric-stress.yml`
+- numeric prime/angle notation: `638`, `2336`;
+- long-unit content loss including a numeric literal: `739`;
+- fraction/formula corruption: `2280`;
+- very large-number corruption: `2365`, `2737`, `2885`.
 
-It runs real maintained Stage8/10 on the complete pinned Opticks source, materializes current Stage12 `/3` units byte-exactly, translates every numeric-bearing planned unit with rank0, and requests beam6/n-best6 only for actual rank0 numeric failures. It does not mutate the Stage8/10 research DB and does not perform synthetic target repair.
-
-Workflow run `34160613314` was still executing when this memory entry was first written. Its artifact/result is L3 and must be inspected before deciding whether a production numeric-retry selector is justified. Update this paragraph rather than appending history once that conclusion is known.
+These are not one defect and must not be addressed by one broad fallback. The next high-value work is to make prime-notation diagnostics semantically correct, then re-score the raw full-corpus evidence before changing generation policy. Large-number/formula cases should remain a distinct model/planner research branch. Structural-label handling requires a source-structure plus semantic-target design, not label-only MT.
 
 ## Promotion rules for translation-quality changes
 
-1. Never make a hard gate green by weakening the evaluator when the source/target evidence shows a real loss.
-2. Separate evaluator defects, planner defects, source-selection artifacts and model defects before changing Product behavior.
-3. Prefer source/planner fixes when the defect is created before MT; prefer raw-model candidate selection only when evidence shows the model already produced a better hypothesis.
-4. No post-hoc literal injection, numeric placeholders presented as final MT, or fabricated closing structure.
+1. Never make a hard gate green by weakening the evaluator when source/target evidence shows a real loss.
+2. Separate evaluator defects, planner defects, source-selection artifacts, structural-document semantics and model defects before changing Product behavior.
+3. Prefer source/planner fixes when the defect is created before MT; prefer raw-model candidate selection only when evidence shows the model already produced a semantically better hypothesis.
+4. No post-hoc literal injection, numeric placeholders presented as final MT, fabricated closing structure, or corpus-specific target patch lists.
 5. A research candidate must preserve source identity and be replayable/config-versioned before Product promotion.
-6. Mechanical integrity pass is not sufficient for semantic promotion. Inspect target quality and validate on contiguous source beyond the frozen stress set.
-7. Product promotion must retain zero empty/backend failures and must not create regressions in the direct or unified real Stage8→25 gates.
+6. Mechanical integrity pass is necessary but not sufficient. Inspect target-language semantics and validate on contiguous source.
+7. Product promotion must retain zero empty/backend failures and must not regress direct or unified real Stage8→25 gates.
+8. High-beam/n-best selection must not be promoted until prime/unit notation and other known selector blind spots are represented in the evidence surface.
