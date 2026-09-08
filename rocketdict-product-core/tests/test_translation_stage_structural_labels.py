@@ -77,16 +77,19 @@ def test_planner_v6_isolates_block_label_even_when_old_context_splits_it_three_w
     assert "".join(str(row["text"]) for row in units) == content
 
 
-def test_planner_v6_coalesces_label_boundary_whitespace_into_following_prose() -> None:
-    content = "Lead paragraph.\n\n_Exper._ 11.\n\nFollowing prose."
+@pytest.mark.parametrize("separator", [" ", "\n\n"])
+def test_planner_v6_coalesces_label_boundary_whitespace_into_following_prose(
+    separator: str,
+) -> None:
+    content = f"Lead paragraph.\n\n_Exper._ 11.{separator}Following prose."
     label_start = content.index("_Exper._")
     label_end = label_start + len("_Exper._ 11.")
-    # Reproduce the full-Opticks failure shape: Stage10 ends one sentence after
-    # the label's source-owned blank separator, so isolating the exact label
-    # would otherwise leave a standalone "\n\n" unit.
+    # Reproduce both full-Opticks failure shapes: Stage10 can end its label
+    # sentence after a single space or a blank-line separator. Isolating the
+    # exact label must not leave that separator as a standalone MT request.
     context = [
-        _context(0, 0, label_end + 2, content),
-        _context(1, label_end + 2, len(content), content),
+        _context(0, 0, label_end + len(separator), content),
+        _context(1, label_end + len(separator), len(content), content),
     ]
 
     units = segment_translation_units(
@@ -105,7 +108,7 @@ def test_planner_v6_coalesces_label_boundary_whitespace_into_following_prose() -
     assert labels[0]["end"] == label_end
     assert not [row for row in units if not str(row["text"]).strip()]
     following = next(row for row in units if int(row["start"]) == label_end)
-    assert following["text"].startswith("\n\nFollowing prose.")
+    assert following["text"] == f"{separator}Following prose."
     assert following["metadata"]["structural_label_boundary_whitespace_coalesced"] is True
     assert following["metadata"]["planner_contract"] == PLANNER_CONTRACT
     assert "".join(str(row["text"]) for row in units) == content
