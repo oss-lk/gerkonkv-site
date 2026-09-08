@@ -1,0 +1,77 @@
+name: RocketDict Structural Label Canonicalization
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py'
+      - '.github/workflows/rocketdict-structural-label-canonicalization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  structural-label-canonicalization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE_RUN_ID: '34205049701'
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/input/full-opticks-numeric-stress
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained real-MT runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify official OPUS EN-RU archive
+        run: |
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Download immutable full-Opticks v5 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: rocketdict-full-opticks-numeric-stress
+          path: work/input
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: oss-lk/gerkonkv-site
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Verify canonicalization inputs
+        run: |
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-numeric-stress.json"
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-nbest-escalation.json"
+      - name: Probe source-side structural-label canonicalization
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py
+      - name: Upload canonicalization evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-structural-label-canonicalization
+          path: |
+            work/opus-asset-build.json
+            work/input/full-opticks-numeric-stress/full-opticks-structural-label-canonicalization.json
+          if-no-files-found: error
+          retention-days: 90
