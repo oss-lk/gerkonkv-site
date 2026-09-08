@@ -15,9 +15,10 @@ import re
 from typing import Any
 
 from .numeric_words import extract_russian_ordinals
+from .prime_notation import compare_numeric_prime_notation
 from .stages import StageExecutionError, _quality_run
 
-CONTRACT = "rocketdict-maintained-numeric-integrity/4"
+CONTRACT = "rocketdict-maintained-numeric-integrity/5"
 
 _ORDINAL_SUFFIX = r"(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))"
 _ENG_DIGIT_ORDINAL_RE = re.compile(r"^\s*\d+(?:st|nd|rd|th)\s*$", re.IGNORECASE)
@@ -371,6 +372,7 @@ def compare_numeric_integrity(source: str, target: str) -> dict[str, Any]:
     excess = _positive_delta(explicit_observed, allowed)
     duplicate_required = {key: value for key, value in excess.items() if key in required}
     unlicensed_additions = {key: value for key, value in excess.items() if key not in required}
+    prime_notation = compare_numeric_prime_notation(source, target)
     return {
         "contract": CONTRACT,
         "required": dict(required),
@@ -383,7 +385,13 @@ def compare_numeric_integrity(source: str, target: str) -> dict[str, Any]:
         "missing": missing,
         "duplicate_required": duplicate_required,
         "unlicensed_additions": unlicensed_additions,
-        "passed": not missing and not duplicate_required and not unlicensed_additions,
+        "prime_notation": prime_notation,
+        "passed": (
+            not missing
+            and not duplicate_required
+            and not unlicensed_additions
+            and prime_notation["passed"] is True
+        ),
     }
 
 
@@ -430,6 +438,11 @@ def _numeric_issues(
                 "duplicate_required_literals": _expand_counts(dict(numeric["duplicate_required"])),
                 "unlicensed_target_literals": _expand_counts(dict(numeric["unlicensed_additions"])),
                 "symbol_mismatch": dict(result["symbol_mismatch"]),
+                "prime_notation_mismatch": (
+                    None
+                    if numeric["prime_notation"]["passed"] is True
+                    else dict(numeric["prime_notation"])
+                ),
                 "numeric_detail": numeric,
             }
         )

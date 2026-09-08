@@ -56,7 +56,7 @@ def compare_numeric_order(source: str, target: str) -> dict[str, Any]:
     gate. Target events include explicit numeric literals plus conservative
     Russian ordinal words. A Russian ordinal word may match only a source
     literal that was itself an ordinary English digit ordinal (``st/nd/rd/th``),
-    mirroring Product numeric-v4 semantics without licensing cardinal/technical
+    mirroring Product numeric literal-equivalence semantics without licensing cardinal/technical
     identifiers. Explicit numeric-token ambiguity remains shared with the hard
     gate (grouped thousands, apostrophe decimals, spaced dash separators, etc.).
     """
@@ -190,8 +190,9 @@ def compare_critical_technical_tokens(source: str, target: str) -> dict[str, Any
     never repairs or injects a token: source and target sequences are compared
     exactly for Greek/illustration payloads, symbolic Gutenberg emphasis, ASCII
     footnote markers, immutable Gutenberg section identifiers such as
-    ``1.F.4.``, and conservative numeric prime-mark notation. Prime notation is
-    research-only and deliberately does not change the Product numeric hard gate.
+    ``1.F.4.``, and conservative numeric prime-mark notation. The prime subcheck
+    mirrors promoted Product numeric-v5 prime semantics so research selection cannot
+    silently admit a candidate that the Product hard gate rejects.
     """
     prime = compare_numeric_prime_notation(source, target)
     checks: dict[str, dict[str, Any]] = {

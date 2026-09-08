@@ -253,3 +253,69 @@ def test_gate_contract_version_prevents_reusing_old_parameterless_pass(tmp_path:
         ).fetchone()
     assert row is not None
     assert json.loads(str(row["parameters_json"])) == {"evaluator_contract": CONTRACT}
+
+
+def test_prime_semantics_are_part_of_numeric_hard_gate() -> None:
+    source = "it exceeds not 2'' 45''' or 3''."
+    target = "она не превышает 2 футов 45' или 3''."
+    result = compare_numeric_integrity(source, target)
+
+    # Legacy numeric-v4 preserved all three digit values here and therefore
+    # passed. V5 must additionally preserve the ordered prime-unit signature.
+    assert result["missing"] == {}
+    assert result["duplicate_required"] == {}
+    assert result["unlicensed_additions"] == {}
+    assert result["prime_notation"]["passed"] is False
+    assert result["prime_notation"]["source_signature"] == [
+        {"value": "2", "prime_count": 2},
+        {"value": "45", "prime_count": 3},
+        {"value": "3", "prime_count": 2},
+    ]
+    assert result["passed"] is False
+    assert evaluate_numeric_symbol_pair(source, target)["passed"] is False
+
+
+def test_stage15_gate_blocks_prime_semantic_corruption(tmp_path: Path) -> None:
+    db = tmp_path / "prime-hard-gate.sqlite"
+    bootstrap_database(db)
+    source = "it exceeds not 2'' 45''' or 3''."
+    target = "она не превышает 2 футов 45' или 3''."
+    with transaction(db) as connection:
+        assembly_id, cache_hit = begin_run(
+            connection,
+            stage_number=14,
+            stage_key="refinement",
+            implementation="glossary_refinement-current",
+            input_identity={"seed": "prime-v5-hard-gate"},
+            parameters={},
+        )
+        assert cache_hit is False
+        replace_run_items(
+            connection,
+            assembly_id,
+            [
+                {
+                    "sequence_number": 0,
+                    "kind": "assembly_segment",
+                    "source_start": 0,
+                    "source_end": len(source),
+                    "source_text": source,
+                    "target_text": target,
+                    "payload": {},
+                }
+            ],
+        )
+        finish_run(
+            connection,
+            assembly_id,
+            {
+                "schema": "rocketdict-product-stage14/1",
+                "assembly_id": assembly_id,
+                "segment_count": 1,
+                "real_mt_lineage": True,
+            },
+        )
+
+    result = run_numeric_symbol_gate(db, assembly_id=assembly_id)
+    assert result["passed"] is False
+    assert result["failure_count"] == 1

@@ -9,7 +9,7 @@ from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
 STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/4"
-NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/4"
+NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/5"
 
 
 def _canon(value: Any) -> str:
