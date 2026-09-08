@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-"""Research-only full-Opticks differential for major-punctuation soft cuts.
+"""Research-only full-Opticks differential for conservative punctuation cuts.
 
-This probe rebuilds the planner-v8 plan from the immutable successful Opticks
-artifact while changing only the ordinary safe split choice: at an over-budget
-cut it may backtrack a configured number of lexical tokens to source-owned
-``; : . ! ?`` punctuation outside protected spans.  The source text is never
-rewritten.  Only contexts whose ordinary Stage12 boundaries actually change are
-translated again with the same real OPUS rank0 generation and compared against
-the persisted Product output using the unchanged complete strict verdict.
+The probe rebuilds planner-v8 from the immutable successful Opticks artifact and
+changes only ordinary safe split choice. It may backtrack a configured number
+of lexical tokens to source-owned punctuation outside protected spans. The
+allowed punctuation set is supplied by the workflow, and a fail-closed option
+rejects a boundary when the punctuation is immediately adjacent to a protected
+span (for example Gutenberg ``_r_; _s_`` technical notation).
 
-The result answers the promotion question that the earlier numeric shadow could
-not: whether the candidate causes any hard/strict regressions outside numeric
-units.  It is feasibility evidence, not Product policy.
+Only contexts whose ordinary Stage12 boundaries actually change are translated
+again with the same real OPUS rank0 generation and compared against persisted
+Product output using the unchanged complete strict verdict. Source bytes are
+never rewritten; target text is never repaired. This is feasibility evidence,
+not Product policy.
 """
 
 from collections import defaultdict
@@ -23,12 +24,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from rocketdict.database import (
-    connect,
-    get_document,
-    get_document_segments,
-    get_run_items,
-)
+from rocketdict.database import connect, get_document, get_document_segments, get_run_items
 from rocketdict.runtime import OpusTranslator
 import rocketdict.translation_stage as translation_stage
 from rocketdict.translation_stage import PLANNER_CONTRACT
@@ -36,18 +32,16 @@ from rocketdict.translation_stage import PLANNER_CONTRACT
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from real_translation_nbest_feasibility import _verdict  # noqa: E402
 
-SCHEMA = "rocketdict-full-opticks-major-punctuation-differential/1"
+SCHEMA = "rocketdict-full-opticks-major-punctuation-differential/2"
 BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/3"
 RAW_SOURCE_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
 EXPECTED_BASELINE_RUN_ID = "34244876537"
 EXPECTED_BASELINE_ARTIFACT_ID = "10064356708"
-EXPECTED_BASELINE_ARTIFACT_DIGEST = (
-    "sha256:7c77092dc86516983a7917931e9b000e6c2774595562e8854623a9faff4979b4"
-)
-MAJOR = frozenset({";", ":", ".", "!", "?"})
+EXPECTED_BASELINE_ARTIFACT_DIGEST = "sha256:7c77092dc86516983a7917931e9b000e6c2774595562e8854623a9faff4979b4"
 BATCH_SIZE = 48
 FOCUS_START = 132834
 FOCUS_END = 133465
+_ALLOWED_PUNCTUATION = frozenset({";", ":", ".", "!", "?"})
 
 
 def _sha(path: Path) -> str:
@@ -59,13 +53,7 @@ def _sha(path: Path) -> str:
 
 
 def _canonical_sha(value: Any) -> str:
-    raw = json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode("utf-8")
+    raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -74,14 +62,30 @@ def _token_text(token: dict[str, Any]) -> str:
     return str(value if value is not None else token.get("text") or "")
 
 
+def _parse_punctuation_policy(raw: str) -> frozenset[str]:
+    values = frozenset(raw)
+    if not values:
+        raise RuntimeError("major-punctuation policy must not be empty")
+    if not values <= _ALLOWED_PUNCTUATION:
+        raise RuntimeError(f"unsupported major-punctuation policy: {sorted(values)!r}")
+    return values
+
+
+def _adjacent_to_protected_span(
+    tokens: list[dict[str, Any]],
+    punctuation_index: int,
+    split_index: int,
+    spans: list[tuple[int, int, str]],
+) -> bool:
+    punctuation_start = int(tokens[punctuation_index]["source_start"])
+    cut = int(tokens[split_index]["source_start"])
+    return any(int(end) == punctuation_start or int(start) == cut for start, end, _kind in spans)
+
+
 def _counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
     hard = sum(1 for row in rows if row["verdict"].get("product_hard_passed") is not True)
     strict = sum(1 for row in rows if row["verdict"].get("strictly_eligible") is not True)
-    numeric = sum(
-        1
-        for row in rows
-        if (row["verdict"].get("numeric_symbol") or {}).get("passed") is not True
-    )
+    numeric = sum(1 for row in rows if (row["verdict"].get("numeric_symbol") or {}).get("passed") is not True)
     return {
         "unit_count": len(rows),
         "hard_failure_count": hard,
@@ -92,21 +96,11 @@ def _counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _translate(
-    translator: OpusTranslator,
-    texts: list[str],
-    *,
-    max_decoding_length: int,
-) -> list[list[dict[str, Any]]]:
+def _translate(translator: OpusTranslator, texts: list[str], *, max_decoding_length: int) -> list[list[dict[str, Any]]]:
     output: list[list[dict[str, Any]]] = []
     for start in range(0, len(texts), BATCH_SIZE):
         batch = texts[start : start + BATCH_SIZE]
-        generated = translator.translate(
-            batch,
-            beam_size=6,
-            num_hypotheses=1,
-            max_decoding_length=max_decoding_length,
-        )
+        generated = translator.translate(batch, beam_size=6, num_hypotheses=1, max_decoding_length=max_decoding_length)
         if len(generated) != len(batch):
             raise RuntimeError("major-punctuation OPUS batch cardinality mismatch")
         output.extend(generated)
@@ -119,13 +113,10 @@ def main() -> int:
     lookback = int(os.environ.get("ROCKETDICT_MAJOR_LOOKBACK_TOKENS", "8"))
     if lookback < 1 or lookback > 32:
         raise RuntimeError("major-punctuation lookback must be in 1..32")
+    punctuation = _parse_punctuation_policy(os.environ.get("ROCKETDICT_MAJOR_PUNCTUATION", ";:"))
+    avoid_protected_adjacency = os.environ.get("ROCKETDICT_AVOID_PROTECTED_ADJACENCY", "1") == "1"
 
-    root = Path(
-        os.environ.get(
-            "ROCKETDICT_NUMERIC_STRESS_ROOT",
-            "work/full-opticks-artifact/full-opticks-numeric-stress",
-        )
-    ).resolve()
+    root = Path(os.environ.get("ROCKETDICT_NUMERIC_STRESS_ROOT", "work/full-opticks-artifact/full-opticks-numeric-stress")).resolve()
     baseline_path = root / "full-opticks-numeric-stress.json"
     database = root / "project" / "data" / "rocketdict.sqlite"
     if not baseline_path.is_file() or not database.is_file():
@@ -162,19 +153,16 @@ def main() -> int:
 
     original_split = translation_stage._safe_forward_split_index
     choices: list[dict[str, Any]] = []
+    rejected_protected_adjacent = 0
 
-    def shadow_split(
-        tokens: list[dict[str, Any]],
-        *,
-        desired_index: int,
-        spans: list[tuple[int, int, str]],
-    ) -> int:
+    def shadow_split(tokens: list[dict[str, Any]], *, desired_index: int, spans: list[tuple[int, int, str]]) -> int:
+        nonlocal rejected_protected_adjacent
         if desired_index >= len(tokens):
             return len(tokens)
         maintained = original_split(tokens, desired_index=desired_index, spans=spans)
         lower = max(0, desired_index - lookback)
         for punctuation_index in range(desired_index - 1, lower - 1, -1):
-            if _token_text(tokens[punctuation_index]) not in MAJOR:
+            if _token_text(tokens[punctuation_index]) not in punctuation:
                 continue
             split_index = punctuation_index + 1
             if split_index >= len(tokens):
@@ -182,17 +170,18 @@ def main() -> int:
             cut = int(tokens[split_index]["source_start"])
             if translation_stage._cut_inside_span(cut, spans):
                 continue
+            if avoid_protected_adjacency and _adjacent_to_protected_span(tokens, punctuation_index, split_index, spans):
+                rejected_protected_adjacent += 1
+                continue
             if split_index != maintained:
-                choices.append(
-                    {
-                        "desired_index": desired_index,
-                        "maintained_split_index": maintained,
-                        "shadow_split_index": split_index,
-                        "backtrack_tokens": desired_index - split_index,
-                        "punctuation": _token_text(tokens[punctuation_index]),
-                        "cut": cut,
-                    }
-                )
+                choices.append({
+                    "desired_index": desired_index,
+                    "maintained_split_index": maintained,
+                    "shadow_split_index": split_index,
+                    "backtrack_tokens": desired_index - split_index,
+                    "punctuation": _token_text(tokens[punctuation_index]),
+                    "cut": cut,
+                })
             return split_index
         return maintained
 
@@ -200,16 +189,11 @@ def main() -> int:
     translation_stage._safe_forward_split_index = shadow_split
     try:
         shadow_units = translation_stage.segment_translation_units(
-            content,
-            segments,
-            context_items,
-            nlp_tokens,
-            selected_format="txt",
-            preferred_tokens=preferred_tokens,
+            content, segments, context_items, nlp_tokens,
+            selected_format="txt", preferred_tokens=preferred_tokens,
         )
     finally:
         translation_stage._safe_forward_split_index = original_split
-
     if "".join(str(unit["text"]) for unit in shadow_units) != content:
         raise RuntimeError("major-punctuation shadow is not byte-exact")
 
@@ -253,8 +237,7 @@ def main() -> int:
     jobs: list[tuple[int, int, dict[str, Any]]] = []
     max_tokens = preferred_tokens
     for sequence in changed_contexts:
-        rows = sorted(shadow_by_context[sequence], key=lambda row: int(row["start"]))
-        for index, unit in enumerate(rows):
+        for index, unit in enumerate(sorted(shadow_by_context[sequence], key=lambda row: int(row["start"]))):
             planner = dict(unit.get("metadata") or {})
             max_tokens = max(max_tokens, int(planner.get("token_count") or 1))
             jobs.append((sequence, index, unit))
@@ -282,20 +265,17 @@ def main() -> int:
             "source_text": str(unit["text"]),
             "target_text": None,
         }
-        generated_by_context[sequence].append(
-            {
-                "source_start": int(unit["start"]),
-                "source_end": int(unit["end"]),
-                "source_text": str(unit["text"]),
-                "target_text": target,
-                "verdict": _verdict(
-                    source_row,
-                    target,
-                    punctuation_parameters=punctuation_parameters,
-                    length_parameters=length_parameters,
-                ),
-            }
-        )
+        generated_by_context[sequence].append({
+            "source_start": int(unit["start"]),
+            "source_end": int(unit["end"]),
+            "source_text": str(unit["text"]),
+            "target_text": target,
+            "verdict": _verdict(
+                source_row, target,
+                punctuation_parameters=punctuation_parameters,
+                length_parameters=length_parameters,
+            ),
+        })
 
     hard_rescues: list[int] = []
     hard_regressions: list[int] = []
@@ -317,20 +297,17 @@ def main() -> int:
                 "source_text": str(row["source_text"]),
                 "target_text": None,
             }
-            baseline_rows.append(
-                {
-                    "source_start": int(row["source_start"]),
-                    "source_end": int(row["source_end"]),
-                    "source_text": str(row["source_text"]),
-                    "target_text": target,
-                    "verdict": _verdict(
-                        source_row,
-                        target,
-                        punctuation_parameters=punctuation_parameters,
-                        length_parameters=length_parameters,
-                    ),
-                }
-            )
+            baseline_rows.append({
+                "source_start": int(row["source_start"]),
+                "source_end": int(row["source_end"]),
+                "source_text": str(row["source_text"]),
+                "target_text": target,
+                "verdict": _verdict(
+                    source_row, target,
+                    punctuation_parameters=punctuation_parameters,
+                    length_parameters=length_parameters,
+                ),
+            })
         candidate_rows = sorted(generated_by_context[sequence], key=lambda value: int(value["source_start"]))
         before = _counts(baseline_rows)
         after = _counts(candidate_rows)
@@ -367,7 +344,7 @@ def main() -> int:
 
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "full strict/hard differential for source-derived major-punctuation backtracking",
+        "purpose": "full strict/hard differential for conservative source-derived punctuation backtracking",
         "promotion_allowed": False,
         "source_rewriting": False,
         "target_rewriting": False,
@@ -381,10 +358,12 @@ def main() -> int:
         "baseline_json_sha256": _sha(baseline_path),
         "candidate_policy": {
             "lookback_tokens": lookback,
-            "major_punctuation": sorted(MAJOR),
+            "punctuation": sorted(punctuation),
+            "avoid_protected_adjacency": avoid_protected_adjacency,
             "fallback": "maintained_planner_v8_split_choice",
         },
         "changed_split_choice_count": len(choices),
+        "rejected_protected_adjacent_boundary_count": rejected_protected_adjacent,
         "changed_context_count": len(changed_contexts),
         "changed_context_sequences": changed_contexts,
         "hard_rescue_count": len(hard_rescues),
@@ -405,40 +384,24 @@ def main() -> int:
         "results": results,
     }
     payload["evidence_sha256"] = _canonical_sha(payload)
-    output_root = Path(
-        os.environ.get("ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT", "work/major-punctuation-differential")
-    ).resolve()
+    output_root = Path(os.environ.get("ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT", "work/major-punctuation-differential")).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
     output = output_root / "full-opticks-major-punctuation-differential.json"
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(
-        json.dumps(
-            {
-                key: payload[key]
-                for key in (
-                    "schema",
-                    "candidate_policy",
-                    "changed_context_count",
-                    "hard_rescue_count",
-                    "hard_rescue_context_sequences",
-                    "hard_regression_count",
-                    "hard_regression_context_sequences",
-                    "strict_rescue_count",
-                    "strict_rescue_context_sequences",
-                    "strict_regression_count",
-                    "strict_regression_context_sequences",
-                    "numeric_rescue_count",
-                    "numeric_rescue_context_sequences",
-                    "numeric_regression_count",
-                    "numeric_regression_context_sequences",
-                    "evidence_sha256",
-                )
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        flush=True,
-    )
+    print(json.dumps({
+        key: payload[key]
+        for key in (
+            "schema", "candidate_policy", "changed_split_choice_count",
+            "rejected_protected_adjacent_boundary_count", "changed_context_count",
+            "hard_rescue_count", "hard_rescue_context_sequences",
+            "hard_regression_count", "hard_regression_context_sequences",
+            "strict_rescue_count", "strict_rescue_context_sequences",
+            "strict_regression_count", "strict_regression_context_sequences",
+            "numeric_rescue_count", "numeric_rescue_context_sequences",
+            "numeric_regression_count", "numeric_regression_context_sequences",
+            "evidence_sha256",
+        )
+    }, ensure_ascii=False, indent=2), flush=True)
     return 0
 
 
