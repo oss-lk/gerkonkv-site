@@ -1,0 +1,59 @@
+name: RocketDict Full Opticks Product Stage12 V3 Migration
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'tools/full_opticks_product_stage12_v3_migration.py'
+      - '.github/workflows/rocketdict-full-opticks-stage12-v3-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply full Opticks Product Stage12 evidence v3 migration
+        run: python tools/full_opticks_product_stage12_v3_migration.py
+      - name: Install maintained Product Core, Workbench and test runner
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench pytest
+      - name: Compile migrated full-corpus harnesses
+        run: |
+          python -m py_compile \
+            rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py \
+            rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py \
+            rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
+      - name: Run dependency-light Product and Workbench regressions
+        run: |
+          python -m pytest -q rocketdict-product-core/tests
+          python -m pytest -q \
+            rocketdict-workbench/tests/test_product_profile.py \
+            rocketdict-workbench/tests/test_product_preflight.py \
+            rocketdict-workbench/tests/test_core_compatibility.py
+      - name: Validate and commit full Opticks v3 harness
+        env:
+          BRANCH: chatgpt/product-core-forward
+        run: |
+          git diff --check
+          git status --short
+          test -n "$(git status --porcelain)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py \
+            rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py \
+            rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
+          git commit -m "Run full Opticks numeric audit on Product Stage12"
+          git push origin "HEAD:${BRANCH}"
