@@ -10,6 +10,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_nbest_escalation.py'
       - '.github/workflows/rocketdict-full-opticks-prime-feasibility.yml'
   workflow_dispatch:
 
@@ -70,6 +71,8 @@ jobs:
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
       - name: Compare source-side prime mechanisms on all ordinary prime units
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_prime_feasibility.py
+      - name: Escalate raw whole-unit n-best for source-defined prime failures
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_prime_nbest_escalation.py
       - name: Record runtime evidence
         if: always()
         run: |
@@ -85,6 +88,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/prime-feasibility/full-opticks-prime-feasibility.json
+            work/prime-feasibility/full-opticks-prime-nbest-escalation.json
             work/prime-feasibility/runtime-evidence/**
           if-no-files-found: warn
           retention-days: 90
