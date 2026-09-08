@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from rocketdict.api.registry import (
+    STAGE12_BLOCK_SECTION_IDENTIFIER_CONTRACT,
+    STAGE12_PLANNER_CONTRACT,
+    lab_manifest,
+)
 from rocketdict.block_section_identifiers import (
     BLOCK_SECTION_IDENTIFIER_CONTRACT,
     detect_block_section_identifiers,
@@ -43,3 +48,19 @@ def test_parse_identifier_allows_source_owned_surrounding_whitespace() -> None:
     parsed = parse_block_section_identifier_unit("1.F.3. \n\n")
     assert parsed.identifier == "1.F.3."
     assert parsed.block_level is True
+
+
+def test_registry_publishes_planner_v8_block_identifier_contract() -> None:
+    assert STAGE12_PLANNER_CONTRACT == "rocketdict-stage12-protected-split/8"
+    assert STAGE12_BLOCK_SECTION_IDENTIFIER_CONTRACT == BLOCK_SECTION_IDENTIFIER_CONTRACT
+    manifest = lab_manifest(probe_runtime=False)
+    stage12 = next(row for row in manifest["stages"] if int(row["number"]) == 12)
+    implementation = next(
+        row
+        for row in stage12["implementations"]
+        if row["implementation_key"] == "opus-en-ru-ct2"
+    )
+    controls = {row["key"]: row.get("default") for row in implementation["controls"]}
+    assert controls["planner_contract"] == STAGE12_PLANNER_CONTRACT
+    assert controls["block_section_identifier_contract"] == BLOCK_SECTION_IDENTIFIER_CONTRACT
+    assert "block-section-id-aware" in implementation["tags"]
