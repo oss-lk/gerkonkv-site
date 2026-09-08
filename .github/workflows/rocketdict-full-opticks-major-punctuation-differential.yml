@@ -22,7 +22,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lookback: [8, 16]
+        include:
+          - policy: semicolon
+            punctuation: ';'
+          - policy: semicolon-colon
+            punctuation: ';:'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -33,8 +37,10 @@ jobs:
       ROCKETDICT_BASELINE_RUN_ID: '34244876537'
       ROCKETDICT_BASELINE_ARTIFACT_ID: '10064356708'
       ROCKETDICT_BASELINE_ARTIFACT_DIGEST: 'sha256:7c77092dc86516983a7917931e9b000e6c2774595562e8854623a9faff4979b4'
-      ROCKETDICT_MAJOR_LOOKBACK_TOKENS: ${{ matrix.lookback }}
-      ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT: ${{ github.workspace }}/work/major-punctuation-${{ matrix.lookback }}
+      ROCKETDICT_MAJOR_LOOKBACK_TOKENS: '8'
+      ROCKETDICT_MAJOR_PUNCTUATION: ${{ matrix.punctuation }}
+      ROCKETDICT_AVOID_PROTECTED_ADJACENCY: '1'
+      ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT: ${{ github.workspace }}/work/major-punctuation-${{ matrix.policy }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +78,7 @@ jobs:
           rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
-      - name: Run full strict major-punctuation differential
+      - name: Run narrowed strict punctuation differential
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_major_punctuation_differential.py
       - name: Record runtime evidence
         if: always()
@@ -81,14 +87,14 @@ jobs:
           python -VV > "$ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT/runtime-evidence/python.txt" || true
           python -m pip freeze | sort > "$ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT/runtime-evidence/pip-freeze.txt" || true
           sha256sum work/opus-2020-02-11.zip > "$ROCKETDICT_MAJOR_DIFFERENTIAL_ROOT/runtime-evidence/opus.sha256" || true
-      - name: Upload major-punctuation differential evidence
+      - name: Upload narrowed punctuation differential evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-full-opticks-major-punctuation-differential-${{ matrix.lookback }}
+          name: rocketdict-full-opticks-major-punctuation-differential-${{ matrix.policy }}
           path: |
             work/opus-asset-build.json
-            work/major-punctuation-${{ matrix.lookback }}/full-opticks-major-punctuation-differential.json
-            work/major-punctuation-${{ matrix.lookback }}/runtime-evidence/**
+            work/major-punctuation-${{ matrix.policy }}/full-opticks-major-punctuation-differential.json
+            work/major-punctuation-${{ matrix.policy }}/runtime-evidence/**
           if-no-files-found: warn
           retention-days: 90
