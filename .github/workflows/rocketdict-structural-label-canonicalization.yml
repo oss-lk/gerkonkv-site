@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/product-core-forward]
     paths:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_whole_unit.py'
       - '.github/workflows/rocketdict-structural-label-canonicalization.yml'
   workflow_dispatch:
 
@@ -66,6 +67,8 @@ jobs:
           test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-nbest-escalation.json"
       - name: Probe source-side structural-label canonicalization
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py
+      - name: Probe whole-unit rank0 canonicalization
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_whole_unit.py
       - name: Upload canonicalization evidence
         uses: actions/upload-artifact@v4
         with:
@@ -73,5 +76,6 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/input/full-opticks-numeric-stress/full-opticks-structural-label-canonicalization.json
+            work/input/full-opticks-numeric-stress/full-opticks-structural-label-whole-unit.json
           if-no-files-found: error
           retention-days: 90
