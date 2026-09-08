@@ -1,5 +1,6 @@
 name: RocketDict Prime V5 Migration
 
+# One-shot migration trigger; remove after successful promotion.
 on:
   push:
     branches: [chatgpt/product-core-forward]
