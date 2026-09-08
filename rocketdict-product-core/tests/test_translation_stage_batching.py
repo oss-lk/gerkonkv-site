@@ -48,6 +48,21 @@ def test_bounded_primary_batches_preserve_request_order_and_cardinality() -> Non
     assert [row[0]["text"] for row in rows] == [f"target:{text}" for text in texts]
 
 
+def test_bounded_primary_batches_allow_exact_maximum_and_split_after_it() -> None:
+    translator = _FakeTranslator()
+    texts = [f"source-{index}" for index in range(MAX_REQUEST_BATCH_SIZE + 1)]
+    rows = _translate_primary_request_batches(
+        translator,
+        texts,
+        batch_size=MAX_REQUEST_BATCH_SIZE,
+        beam_size=6,
+        num_hypotheses=1,
+        max_decoding_length=512,
+    )
+    assert [len(batch) for batch in translator.calls] == [MAX_REQUEST_BATCH_SIZE, 1]
+    assert [row[0]["text"] for row in rows] == [f"target:{text}" for text in texts]
+
+
 def test_bounded_primary_batches_fail_closed_on_backend_cardinality_drift() -> None:
     with pytest.raises(StageExecutionError, match="batch cardinality"):
         _translate_primary_request_batches(
