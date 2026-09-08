@@ -10,6 +10,7 @@ from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
 STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/7"
 STAGE12_STRUCTURAL_LABEL_CONTRACT = "rocketdict-stage12-block-structural-label-opus/1"
+STAGE12_REQUEST_BATCH_CONTRACT = "rocketdict-stage12-bounded-request-batch/1"
 NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/5"
 
 
@@ -71,7 +72,7 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "OPUS EN-RU CTranslate2 Marian",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["real-mt", "offline", "opus", "ctranslate2", "structure-aware-planner", "structural-label-aware"],
+                "tags": ["real-mt", "offline", "opus", "ctranslate2", "structure-aware-planner", "structural-label-aware", "bounded-batch"],
                 "required_inputs": ["context_run_id"],
                 "controls": [
                     _control("allow_download", False),
@@ -80,6 +81,8 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                     _control("run_assemble", True),
                     _control("planner_contract", STAGE12_PLANNER_CONTRACT),
                     _control("structural_label_contract", STAGE12_STRUCTURAL_LABEL_CONTRACT),
+                    _control("request_batch_contract", STAGE12_REQUEST_BATCH_CONTRACT),
+                    _control("request_batch_size", 48),
                     _control("plan_preferred_unit_tokens", 64),
                     _control("beam_size", 6),
                     _control("num_hypotheses", 1),

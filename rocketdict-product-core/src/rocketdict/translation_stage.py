@@ -21,6 +21,10 @@ and ASCII-table partitioning into adjacent ordinary prose, so every ordinary MT
 request remains lexical. Structural label model input still expands only the
 documented abbreviation and selects only strict raw OPUS candidates. Inline
 labels stay ordinary prose; table spans remain unchanged.
+
+Primary OPUS requests are executed in bounded, ordered batches. This is an
+execution/resource contract only: it does not change planner-v7 source units,
+model inputs, generation settings, raw hypotheses or output ordering.
 """
 
 from pathlib import Path
@@ -52,6 +56,9 @@ from .table_stage12 import (
 )
 
 PLANNER_CONTRACT = "rocketdict-stage12-protected-split/7"
+REQUEST_BATCH_CONTRACT = "rocketdict-stage12-bounded-request-batch/1"
+DEFAULT_REQUEST_BATCH_SIZE = 48
+MAX_REQUEST_BATCH_SIZE = 128
 
 
 def _starts_blank_paragraph_break(text: str, offset: int) -> bool:
@@ -389,6 +396,46 @@ def segment_translation_units(
     return result
 
 
+def _translate_primary_request_batches(
+    translator: OpusTranslator,
+    texts: list[str],
+    *,
+    batch_size: int,
+    beam_size: int,
+    num_hypotheses: int,
+    max_decoding_length: int,
+) -> list[list[dict[str, Any]]]:
+    """Translate primary Stage12 requests in bounded order-preserving batches.
+
+    Batch boundaries are not source/planner boundaries and never enter target
+    assembly. A backend cardinality drift fails closed before any result can be
+    persisted.
+    """
+    if batch_size < 1 or batch_size > MAX_REQUEST_BATCH_SIZE:
+        raise StageExecutionError(
+            f"Stage12 request batch size must be in 1..{MAX_REQUEST_BATCH_SIZE}"
+        )
+    output: list[list[dict[str, Any]]] = []
+    for start in range(0, len(texts), batch_size):
+        batch = texts[start : start + batch_size]
+        translated = translator.translate(
+            batch,
+            beam_size=beam_size,
+            num_hypotheses=num_hypotheses,
+            max_decoding_length=max_decoding_length,
+        )
+        if len(translated) != len(batch):
+            raise StageExecutionError(
+                "OPUS returned a different Stage12 request batch cardinality"
+            )
+        output.extend(translated)
+    if len(output) != len(texts):
+        raise StageExecutionError(
+            "OPUS returned a different Stage12 total request cardinality"
+        )
+    return output
+
+
 def _translate_structural_label_units(
     translator: OpusTranslator,
     labels: dict[int, StructuralLabel],
@@ -495,6 +542,27 @@ def run_stage12(
     preferred = int(effective.get("plan_preferred_unit_tokens") or 64)
     beam_size = int(effective.get("beam_size") or 6)
     num_hypotheses = int(effective.get("num_hypotheses") or 1)
+    requested_batch_contract = str(
+        effective.get("request_batch_contract") or REQUEST_BATCH_CONTRACT
+    )
+    if requested_batch_contract != REQUEST_BATCH_CONTRACT:
+        raise StageExecutionError(
+            f"Unsupported Stage12 request batch contract {requested_batch_contract!r}; "
+            f"expected {REQUEST_BATCH_CONTRACT!r}"
+        )
+    effective["request_batch_contract"] = REQUEST_BATCH_CONTRACT
+    raw_batch_size = effective.get("request_batch_size", DEFAULT_REQUEST_BATCH_SIZE)
+    if isinstance(raw_batch_size, bool):
+        raise StageExecutionError("Stage12 request_batch_size must be an integer")
+    try:
+        request_batch_size = int(raw_batch_size)
+    except (TypeError, ValueError) as exc:
+        raise StageExecutionError("Stage12 request_batch_size must be an integer") from exc
+    if request_batch_size < 1 or request_batch_size > MAX_REQUEST_BATCH_SIZE:
+        raise StageExecutionError(
+            f"Stage12 request_batch_size must be in 1..{MAX_REQUEST_BATCH_SIZE}"
+        )
+    effective["request_batch_size"] = request_batch_size
 
     with connect(database, readonly=True) as connection:
         context_run = get_run(connection, int(context_run_id))
@@ -584,8 +652,10 @@ def run_stage12(
 
         max_request_tokens = max(request_proxy_counts, default=0)
         translator = OpusTranslator(device=device, compute_type=compute_type)
-        translated = translator.translate(
+        translated = _translate_primary_request_batches(
+            translator,
             request_texts,
+            batch_size=request_batch_size,
             beam_size=beam_size,
             num_hypotheses=num_hypotheses,
             max_decoding_length=max(128, max(preferred, max_request_tokens) * 8),
@@ -715,6 +785,13 @@ def run_stage12(
             "model_manifest_sha256": asset.manifest_sha256,
             "compute_type": compute_type,
             "planner_contract": PLANNER_CONTRACT,
+            "request_batch_contract": REQUEST_BATCH_CONTRACT,
+            "request_batch_size": request_batch_size,
+            "primary_model_batch_count": (
+                (len(request_texts) + request_batch_size - 1) // request_batch_size
+                if request_texts
+                else 0
+            ),
             "structural_label_contract": STRUCTURAL_LABEL_CONTRACT,
             "structural_label_unit_count": len(structural_label_plans),
             "structural_label_escalated_unit_count": int(structural_execution["escalated_count"]),
