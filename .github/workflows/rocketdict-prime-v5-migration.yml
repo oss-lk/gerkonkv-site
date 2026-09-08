@@ -24,10 +24,10 @@ jobs:
           python-version: '3.12'
       - name: Apply assertion-heavy migration
         run: python tools/prime_v5_migration.py
-      - name: Install maintained Product Core
+      - name: Install maintained Product Core and test runner
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ./rocketdict-product-core
+          python -m pip install -e ./rocketdict-product-core pytest
       - name: Run focused prime and public-contract regressions
         run: |
           python -m pytest -q \
