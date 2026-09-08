@@ -69,6 +69,22 @@ def _audit_selected(
     return prior, safe, invalidated
 
 
+def _summary_text(
+    *,
+    beam6_prior: list[int],
+    beam6_invalidated: list[dict[str, Any]],
+    staged_prior: list[int],
+    staged_invalidated: list[dict[str, Any]],
+    residual_prime_rows: list[dict[str, Any]],
+) -> str:
+    return (
+        "prime-notation rescore audited "
+        f"{len(beam6_prior)} beam6 and {len(staged_prior)} staged selected rescues; "
+        f"invalidated {len(beam6_invalidated)} beam6 and {len(staged_invalidated)} staged rescues; "
+        f"{len(residual_prime_rows)} unresolved staged residuals contain numeric prime notation"
+    )
+
+
 def rescore(baseline_path: Path, escalation_path: Path) -> dict[str, Any]:
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     escalation = json.loads(escalation_path.read_text(encoding="utf-8"))
@@ -115,6 +131,15 @@ def rescore(baseline_path: Path, escalation_path: Path) -> dict[str, Any]:
                 }
             )
 
+    beam6_invalidated_sequences = [
+        int(row["planned_sequence"]) for row in beam6_invalidated
+    ]
+    staged_invalidated_sequences = [
+        int(row["planned_sequence"]) for row in staged_invalidated
+    ]
+    residual_prime_sequences = [
+        int(row["planned_sequence"]) for row in residual_prime_rows
+    ]
     payload: dict[str, Any] = {
         "schema": SCHEMA,
         "purpose": "read-only conservative prime-notation audit of already generated full-Opticks n-best selections",
@@ -131,22 +156,24 @@ def rescore(baseline_path: Path, escalation_path: Path) -> dict[str, Any]:
         "beam6_prime_safe_rescue_count": len(beam6_safe),
         "beam6_prime_safe_rescue_sequences": beam6_safe,
         "beam6_invalidated_count": len(beam6_invalidated),
+        "beam6_invalidated_sequences": beam6_invalidated_sequences,
         "beam6_invalidated": beam6_invalidated,
         "staged_prior_strict_rescue_count": len(staged_prior),
         "staged_prior_strict_rescue_sequences": staged_prior,
         "staged_prime_safe_rescue_count": len(staged_safe),
         "staged_prime_safe_rescue_sequences": staged_safe,
         "staged_invalidated_count": len(staged_invalidated),
+        "staged_invalidated_sequences": staged_invalidated_sequences,
         "staged_invalidated": staged_invalidated,
         "residual_prime_notation_count": len(residual_prime_rows),
-        "residual_prime_notation_sequences": [
-            int(row["planned_sequence"]) for row in residual_prime_rows
-        ],
+        "residual_prime_notation_sequences": residual_prime_sequences,
         "residual_prime_notation": residual_prime_rows,
-        "conclusion": (
-            "prime notation does not invalidate the beam6 selected rescues, "
-            "but invalidates staged rescue sequence 745; residual sequences 638 and 2336 "
-            "also contain unresolved prime-notation corruption"
+        "conclusion": _summary_text(
+            beam6_prior=beam6_prior,
+            beam6_invalidated=beam6_invalidated,
+            staged_prior=staged_prior,
+            staged_invalidated=staged_invalidated,
+            residual_prime_rows=residual_prime_rows,
         ),
     }
     payload["evidence_sha256"] = _canonical_sha(payload)
@@ -172,9 +199,10 @@ def main() -> int:
                 "schema": payload["schema"],
                 "beam6_prior_strict_rescue_count": payload["beam6_prior_strict_rescue_count"],
                 "beam6_prime_safe_rescue_count": payload["beam6_prime_safe_rescue_count"],
+                "beam6_invalidated_sequences": payload["beam6_invalidated_sequences"],
                 "staged_prior_strict_rescue_count": payload["staged_prior_strict_rescue_count"],
                 "staged_prime_safe_rescue_count": payload["staged_prime_safe_rescue_count"],
-                "staged_invalidated_count": payload["staged_invalidated_count"],
+                "staged_invalidated_sequences": payload["staged_invalidated_sequences"],
                 "residual_prime_notation_sequences": payload["residual_prime_notation_sequences"],
                 "evidence_sha256": payload["evidence_sha256"],
             },
