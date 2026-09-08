@@ -2,11 +2,11 @@ from __future__ import annotations
 
 """Read-only full-Opticks audit for Product Stage12 block section identifiers.
 
-This audit runs only after the actual Product Stage12 full-corpus harness.  It
-verifies the narrow planner-v8 contract on the immutable source and persisted
+This audit runs only after the actual Product Stage12 full-corpus harness. It
+verifies the narrow planner-v8 contract on immutable source and persisted
 translation segments: all block-level Gutenberg license identifiers are exact
 source-owned structure, receive no MT request, and survive byte-for-byte; inline
-references remain ordinary prose.  Nothing is translated, rewritten or repaired
+references remain ordinary prose. Nothing is translated, rewritten or repaired
 here and the Product database must remain byte-identical.
 """
 
@@ -20,7 +20,7 @@ from rocketdict.block_section_identifiers import (
     BLOCK_SECTION_IDENTIFIER_CONTRACT,
     detect_block_section_identifiers,
 )
-from rocketdict.database import connect, get_document, get_run_items
+from rocketdict.database import connect, get_document, get_run, get_run_items
 from rocketdict.translation_stage import PLANNER_CONTRACT
 
 SCHEMA = "rocketdict-full-opticks-block-section-audit/1"
@@ -50,6 +50,13 @@ def _canonical_sha(value: Any) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def _span_value(row: dict[str, Any], key: str) -> int:
+    value = row.get(key)
+    if value is None or isinstance(value, bool):
+        return -1
+    return int(value)
+
+
 def main() -> int:
     root = Path(
         os.environ.get("ROCKETDICT_NUMERIC_STRESS_ROOT", "work/full-opticks-numeric-stress")
@@ -69,18 +76,24 @@ def main() -> int:
     if baseline.get("stage12_planner_contract") != PLANNER_CONTRACT:
         raise RuntimeError("Full Opticks baseline does not use the current Product planner")
 
-    stage12 = dict(baseline.get("stage12") or {})
-    if stage12.get("block_section_identifier_contract") != BLOCK_SECTION_IDENTIFIER_CONTRACT:
-        raise RuntimeError("Full Opticks Stage12 block-section contract drift")
-    if int(stage12.get("block_section_identifier_unit_count") or -1) != EXPECTED_BLOCK_IDENTIFIERS:
-        raise RuntimeError("Pinned Opticks Stage12 must preserve exactly 21 block section identifiers")
-
+    baseline_stage12 = dict(baseline.get("stage12") or {})
+    translation_run_id = int(baseline_stage12["translation_run_id"])
     database_sha_before = _sha_file(database)
     document_version_id = int(baseline["document_version_id"])
-    translation_run_id = int(stage12["translation_run_id"])
     with connect(database, readonly=True) as connection:
         document = get_document(connection, document_version_id)
+        stage12_run = get_run(connection, translation_run_id)
         items = get_run_items(connection, translation_run_id, kind="translation_segment")
+    if int(stage12_run["stage_number"]) != 12 or stage12_run["status"] != "completed":
+        raise RuntimeError("Persisted translation run is not a completed Product Stage12 run")
+    stage12_output = dict(stage12_run.get("output") or {})
+    if stage12_output.get("planner_contract") != PLANNER_CONTRACT:
+        raise RuntimeError("Persisted Product Stage12 planner contract drift")
+    if stage12_output.get("block_section_identifier_contract") != BLOCK_SECTION_IDENTIFIER_CONTRACT:
+        raise RuntimeError("Persisted Product Stage12 block-section contract drift")
+    if int(stage12_output.get("block_section_identifier_unit_count") or -1) != EXPECTED_BLOCK_IDENTIFIERS:
+        raise RuntimeError("Pinned Opticks Stage12 must preserve exactly 21 block section identifiers")
+
     content = str(document["content_text"])
     if str(document.get("text_sha256") or "") != str(baseline.get("source_text_sha256") or ""):
         raise RuntimeError("Persisted document identity drift")
@@ -121,9 +134,9 @@ def main() -> int:
         matches = [
             row
             for row in structured_rows
-            if int((row["planner"] or {}).get("block_section_identifier_core_start") or -1)
+            if _span_value(row["planner"], "block_section_identifier_core_start")
             == identifier.source_start
-            and int((row["planner"] or {}).get("block_section_identifier_core_end") or -1)
+            and _span_value(row["planner"], "block_section_identifier_core_end")
             == identifier.source_end
         ]
         if len(matches) != 1:
@@ -132,8 +145,8 @@ def main() -> int:
             )
         row = matches[0]
         payload = dict(row["payload"].get("block_section_identifier") or {})
-        source_start = int(row["source_start"])
-        source_end = int(row["source_end"])
+        source_start = _span_value(row, "source_start")
+        source_end = _span_value(row, "source_end")
         source_text = str(row.get("source_text") or "")
         target_text = str(row.get("target_text") or "")
         if source_start != identifier.source_start or source_end < identifier.source_end:
@@ -175,8 +188,8 @@ def main() -> int:
         matches = [
             row
             for row in ordinary_rows
-            if int(row.get("source_start") or -1) <= identifier.source_start
-            and int(row.get("source_end") or -1) >= identifier.source_end
+            if _span_value(row, "source_start") <= identifier.source_start
+            and _span_value(row, "source_end") >= identifier.source_end
         ]
         if len(matches) != 1:
             raise RuntimeError(
@@ -205,6 +218,8 @@ def main() -> int:
         "source_sha256": OPTICKS_SHA256,
         "planner_contract": PLANNER_CONTRACT,
         "block_section_identifier_contract": BLOCK_SECTION_IDENTIFIER_CONTRACT,
+        "translation_run_id": translation_run_id,
+        "stage12_output_sha256": str(stage12_run.get("output_sha256") or ""),
         "total_identifier_count": len(all_identifiers),
         "block_identifier_count": len(block_identifiers),
         "inline_identifier_count": len(inline_identifiers),
