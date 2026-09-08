@@ -1,5 +1,6 @@
 name: RocketDict Product Core
 
+# Prime-v5 verification trigger; workflow behavior is unchanged.
 on:
   push:
     branches: [main, chatgpt/product-core-forward]
