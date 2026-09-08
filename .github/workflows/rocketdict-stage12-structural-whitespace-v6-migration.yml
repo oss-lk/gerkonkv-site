@@ -1,0 +1,65 @@
+name: RocketDict Stage12 Structural Whitespace V6 Migration
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'tools/stage12_structural_whitespace_v6_migration.py'
+      - '.github/workflows/rocketdict-stage12-structural-whitespace-v6-migration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply assertion-heavy Stage12 planner v6 migration
+        run: python tools/stage12_structural_whitespace_v6_migration.py
+      - name: Install maintained Product Core, Workbench and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          python -m pip install -e ./rocketdict-product-core
+          python -m pip install -e ./rocketdict-workbench
+      - name: Compile changed maintained modules
+        run: |
+          python -m py_compile \
+            rocketdict-product-core/src/rocketdict/structural_labels.py \
+            rocketdict-product-core/src/rocketdict/translation_stage.py \
+            rocketdict-product-core/src/rocketdict/api/registry.py \
+            rocketdict-product-core/tests/test_translation_stage_structural_labels.py
+      - name: Run focused Stage12 v6 regressions
+        run: |
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_structural_labels.py \
+            rocketdict-product-core/tests/test_translation_stage_planner.py \
+            rocketdict-product-core/tests/test_translation_stage_structural_labels.py
+      - name: Run complete dependency-light Product and Workbench suites
+        run: |
+          python -m pytest -q rocketdict-product-core/tests --ignore=rocketdict-product-core/tests/real_runtime_smoke.py
+          python -m pytest -q rocketdict-workbench/tests
+      - name: Validate and commit Stage12 planner v6
+        env:
+          BRANCH: chatgpt/product-core-forward
+        run: |
+          git diff --check
+          git status --short
+          test -n "$(git status --porcelain)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            rocketdict-product-core/src/rocketdict/structural_labels.py \
+            rocketdict-product-core/src/rocketdict/translation_stage.py \
+            rocketdict-product-core/src/rocketdict/api/registry.py \
+            rocketdict-product-core/tests/test_translation_stage_structural_labels.py
+          git commit -m "Coalesce structural-label boundary whitespace in Stage12 v6"
+          git push origin "HEAD:${BRANCH}"
