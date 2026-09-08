@@ -15,12 +15,12 @@ numeric/symbolic cells are never reconstructed after MT: their exact bytes and
 source spans are known before the model call and are rendered unchanged.  No
 special table behavior is applied to subtitle cue segments.
 
-Planner v6 isolates evidence-backed Gutenberg block structural labels before
-MT and coalesces split-created whitespace-only boundary fragments into adjacent
-ordinary prose so every model request remains lexical. Label spans themselves
-stay byte-exact; only their separate model input expands the documented
-abbreviation, and only strict raw OPUS candidates may be selected. Inline
-labels stay ordinary prose.
+Planner v7 keeps evidence-backed Gutenberg block structural labels byte-exact
+and coalesces split-created whitespace-only boundaries from both structural-label
+and ASCII-table partitioning into adjacent ordinary prose, so every ordinary MT
+request remains lexical. Structural label model input still expands only the
+documented abbreviation and selects only strict raw OPUS candidates. Inline
+labels stay ordinary prose; table spans remain unchanged.
 """
 
 from pathlib import Path
@@ -51,7 +51,7 @@ from .table_stage12 import (
     table_plan_metrics,
 )
 
-PLANNER_CONTRACT = "rocketdict-stage12-protected-split/6"
+PLANNER_CONTRACT = "rocketdict-stage12-protected-split/7"
 
 
 def _starts_blank_paragraph_break(text: str, offset: int) -> bool:

@@ -39,6 +39,90 @@ class Stage12TablePlan:
     groups: tuple[LogicalTableTextGroup, ...]
 
 
+def _coalesce_table_split_boundary_whitespace(
+    content: str, rows: Sequence[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Attach table-split whitespace-only fragments to adjacent ordinary prose.
+
+    Only fragments explicitly created by ``ascii_table_boundary_split`` are
+    eligible. Table spans themselves are never extended or rewritten. If no
+    ordinary neighbor exists inside the non-table slice, fail closed instead of
+    inventing passthrough semantics.
+    """
+    output = [
+        {**row, "metadata": dict(row.get("metadata") or {})}
+        for row in rows
+    ]
+
+    def is_split_whitespace(row: dict[str, Any]) -> bool:
+        metadata = dict(row.get("metadata") or {})
+        return bool(metadata.get("ascii_table_boundary_split")) and not str(
+            row.get("text") or ""
+        ).strip()
+
+    def merge(
+        whitespace: dict[str, Any], neighbor: dict[str, Any], *, prepend: bool
+    ) -> dict[str, Any]:
+        metadata = dict(neighbor.get("metadata") or {})
+        if metadata.get("source") == "ascii_table":
+            raise ValueError("table boundary whitespace cannot extend an ASCII table")
+        whitespace_metadata = dict(whitespace.get("metadata") or {})
+        metadata.setdefault("source_before_table_split", metadata.get("source"))
+        metadata["source"] = "nlp_sentence_fragment"
+        metadata["ascii_table_boundary_split"] = True
+        metadata["ascii_table_boundary_whitespace_coalesced"] = True
+
+        starts = [
+            int(value)
+            for value in (
+                metadata.get("context_sentence_start"),
+                whitespace_metadata.get("context_sentence_start"),
+            )
+            if value is not None
+        ]
+        ends = [
+            int(value)
+            for value in (
+                metadata.get("context_sentence_end"),
+                whitespace_metadata.get("context_sentence_end"),
+            )
+            if value is not None
+        ]
+        if starts and ends:
+            metadata["context_sentence_start"] = min(starts)
+            metadata["context_sentence_end"] = max(ends)
+            metadata["context_sentence_count"] = (
+                int(metadata["context_sentence_end"])
+                - int(metadata["context_sentence_start"])
+                + 1
+            )
+
+        if prepend:
+            start = int(whitespace["start"])
+            end = int(neighbor["end"])
+        else:
+            start = int(neighbor["start"])
+            end = int(whitespace["end"])
+        return {
+            "start": start,
+            "end": end,
+            "text": content[start:end],
+            "metadata": metadata,
+        }
+
+    while len(output) > 1 and is_split_whitespace(output[0]):
+        whitespace = output.pop(0)
+        output[0] = merge(whitespace, output[0], prepend=True)
+
+    while len(output) > 1 and is_split_whitespace(output[-1]):
+        whitespace = output.pop()
+        output[-1] = merge(whitespace, output[-1], prepend=False)
+
+    if len(output) == 1 and is_split_whitespace(output[0]):
+        raise ValueError("table partition produced isolated whitespace-only source gap")
+    return output
+
+
 def _slice_base_rows(
     content: str,
     base: Sequence[dict[str, Any]],
@@ -71,6 +155,9 @@ def _slice_base_rows(
         )
     if output and "".join(str(row["text"]) for row in output) != content[start:end]:
         raise ValueError("Stage12 non-table base slicing is not byte-exact")
+    output = _coalesce_table_split_boundary_whitespace(content, output)
+    if output and "".join(str(row["text"]) for row in output) != content[start:end]:
+        raise ValueError("Stage12 table-boundary whitespace coalescing is not byte-exact")
     return output
 
 

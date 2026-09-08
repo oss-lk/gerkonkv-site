@@ -192,7 +192,7 @@ def test_structural_label_execution_fails_closed_without_raw_acceptable_candidat
 
 
 def test_registry_publishes_planner_v6_and_structural_label_contract() -> None:
-    assert PLANNER_CONTRACT == "rocketdict-stage12-protected-split/6"
+    assert PLANNER_CONTRACT == "rocketdict-stage12-protected-split/7"
     assert STAGE12_PLANNER_CONTRACT == PLANNER_CONTRACT
     assert STAGE12_STRUCTURAL_LABEL_CONTRACT == STRUCTURAL_LABEL_CONTRACT
     manifest = lab_manifest(probe_runtime=False)

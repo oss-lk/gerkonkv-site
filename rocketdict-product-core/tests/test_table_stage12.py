@@ -55,6 +55,33 @@ def test_partition_replaces_table_inside_one_nlp_sentence_byte_exactly() -> None
     assert rows[1]["end"] == rows[2]["start"]
 
 
+def test_partition_coalesces_split_newline_after_table_into_following_prose() -> None:
+    table = (
+        "------+------\n"
+        "Head  | Other\n"
+        "More  | Text \n"
+        "Tail  | Text \n"
+        "------+------\n"
+    )
+    content = table + "\nFollowing prose."
+    table_end = len(table)
+    # Match the full-Opticks shape: one Stage10 sentence ends one byte after
+    # the detected table, leaving a split-created newline outside the table.
+    base = [
+        _base(0, table_end + 1, content, sequence=0),
+        _base(table_end + 1, len(content), content, sequence=1),
+    ]
+    rows = partition_txt_base_with_ascii_tables(content, base)
+
+    assert rows[0]["metadata"]["source"] == "ascii_table"
+    assert rows[0]["text"] == table
+    assert not [row for row in rows if not str(row["text"]).strip()]
+    assert rows[1]["start"] == table_end
+    assert rows[1]["text"] == "\nFollowing prose."
+    assert rows[1]["metadata"]["ascii_table_boundary_whitespace_coalesced"] is True
+    assert "".join(str(row["text"]) for row in rows) == content
+
+
 def test_single_pipe_prose_is_not_promoted_to_table() -> None:
     content = "A | B is a one-off notation, not an ASCII table."
     base = [_base(0, len(content), content)]
