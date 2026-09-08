@@ -10,6 +10,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/importing/**'
       - 'rocketdict-product-core/src/rocketdict/interpretation/**'
       - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/prime_notation.py'
       - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
       - 'rocketdict-product-core/src/rocketdict/runtime.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
@@ -21,6 +22,7 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/project.py'
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_feasibility.py'
       - '.github/workflows/rocketdict-full-opticks-numeric-stress.yml'
@@ -76,6 +78,8 @@ jobs:
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
       - name: Run full contiguous Opticks numeric stress
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py
+      - name: Measure all rank-0 numeric prime notation on full Opticks
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py
       - name: Escalate unresolved isolated numeric failures with raw n-best
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
       - name: Probe explicit structural-label split with real MT only
@@ -98,6 +102,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
+            work/full-opticks-numeric-stress/full-opticks-prime-stress.json
             work/full-opticks-numeric-stress/full-opticks-nbest-escalation.json
             work/full-opticks-numeric-stress/full-opticks-structural-label-feasibility.json
             work/full-opticks-numeric-stress/project/**
