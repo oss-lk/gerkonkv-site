@@ -6,6 +6,7 @@ on:
     paths:
       - 'rocketdict-product-core/src/rocketdict/api/**'
       - 'rocketdict-product-core/src/rocketdict/assets.py'
+      - 'rocketdict-product-core/src/rocketdict/block_section_identifiers.py'
       - 'rocketdict-product-core/src/rocketdict/database.py'
       - 'rocketdict-product-core/src/rocketdict/importing/**'
       - 'rocketdict-product-core/src/rocketdict/interpretation/**'
@@ -19,6 +20,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/table_stage12.py'
       - 'rocketdict-product-core/src/rocketdict/table_structure.py'
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-product-core/tests/test_block_section_identifiers.py'
       - 'rocketdict-product-core/tests/test_table_logical_structure.py'
       - 'rocketdict-product-core/tests/test_table_stage12.py'
       - 'rocketdict-product-core/tests/test_table_structure.py'
@@ -28,6 +30,7 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/product_preflight.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/project.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_block_section_identifiers.py'
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py'
@@ -94,6 +97,8 @@ jobs:
             sleep 30
           done
           wait "$child"
+      - name: Audit Product block section identifiers on immutable Opticks
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_block_section_identifiers.py
       - name: Measure numeric prime notation on the current Product plan
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py
       - name: Escalate unresolved ordinary isolated numeric failures for research
@@ -116,6 +121,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
+            work/full-opticks-numeric-stress/full-opticks-block-section-audit.json
             work/full-opticks-numeric-stress/full-opticks-prime-stress.json
             work/full-opticks-numeric-stress/full-opticks-nbest-escalation.json
             work/full-opticks-numeric-stress/project/**
