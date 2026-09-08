@@ -55,6 +55,33 @@ def test_partition_replaces_table_inside_one_nlp_sentence_byte_exactly() -> None
     assert rows[1]["end"] == rows[2]["start"]
 
 
+def test_partition_coalesces_split_newline_before_table_into_preceding_prose() -> None:
+    table = (
+        "------+------\n"
+        "Head  | Other\n"
+        "More  | Text \n"
+        "Tail  | Text \n"
+        "------+------\n"
+    )
+    content = "Leading prose.\n" + table
+    table_start = len("Leading prose.\n")
+    # Symmetric boundary case: Stage10 starts a sentence one byte before the
+    # detected table, leaving a split-created newline before the table.
+    base = [
+        _base(0, table_start - 1, content, sequence=0),
+        _base(table_start - 1, len(content), content, sequence=1),
+    ]
+    rows = partition_txt_base_with_ascii_tables(content, base)
+
+    assert rows[-1]["metadata"]["source"] == "ascii_table"
+    assert rows[-1]["text"] == table
+    assert not [row for row in rows if not str(row["text"]).strip()]
+    assert rows[0]["end"] == table_start
+    assert rows[0]["text"] == "Leading prose.\n"
+    assert rows[0]["metadata"]["ascii_table_boundary_whitespace_coalesced"] is True
+    assert "".join(str(row["text"]) for row in rows) == content
+
+
 def test_partition_coalesces_split_newline_after_table_into_following_prose() -> None:
     table = (
         "------+------\n"
