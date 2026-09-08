@@ -1,0 +1,54 @@
+name: RocketDict Prime V5 Migration
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-prime-v5-migration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply assertion-heavy migration
+        run: python tools/prime_v5_migration.py
+      - name: Install maintained Product Core
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+      - name: Run focused prime and public-contract regressions
+        run: |
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_prime_notation.py \
+            rocketdict-product-core/tests/test_numeric_integrity.py \
+            rocketdict-product-core/tests/test_numeric_public_contract.py \
+            rocketdict-product-core/tests/test_research_diagnostics.py
+      - name: Run complete dependency-light Product Core suite
+        run: python -m pytest -q rocketdict-product-core/tests
+      - name: Validate and commit migration
+        env:
+          BRANCH: chatgpt/product-core-forward
+        run: |
+          git diff --check
+          git status --short
+          test -n "$(git status --porcelain)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            rocketdict-product-core/src/rocketdict/numeric_integrity.py \
+            rocketdict-product-core/src/rocketdict/api/registry.py \
+            rocketdict-product-core/src/rocketdict/research_diagnostics.py \
+            rocketdict-product-core/tests/test_numeric_integrity.py
+          git commit -m "Promote prime notation to numeric hard gate v5"
+          git push origin "HEAD:${BRANCH}"
