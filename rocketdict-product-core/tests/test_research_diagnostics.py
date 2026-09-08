@@ -86,8 +86,8 @@ def test_target_added_balanced_pair_still_fails() -> None:
 
 
 def test_critical_technical_tokens_accept_preserved_payloads_and_localized_labels() -> None:
-    source = "[Illustration: FIG. 1.] [Greek: ab] _q_ [C] 1.F.4."
-    target = "[Иллюстрация: FIG. 1.] [греческом: ab] _q_ [C] 1.F.4."
+    source = "[Illustration: FIG. 1.] [Greek: ab] _q_ [C] 1.F.4. 26' 13''"
+    target = "[Иллюстрация: FIG. 1.] [греческом: ab] _q_ [C] 1.F.4. 26′13″"
     result = compare_critical_technical_tokens(source, target)
     assert result["contract"] == CRITICAL_TOKEN_CONTRACT
     assert result["passed"] is True
@@ -102,6 +102,11 @@ def test_critical_technical_tokens_accept_preserved_payloads_and_localized_label
         ("See note [C].", "См. примечание [С].", "footnote_markers"),
         ("[Illustration: FIG. 2.]", "[Иллюстрация: FIG.]", "illustration_payloads"),
         ("Section 1.F.4.", "Раздел 1.F.4", "structural_identifiers"),
+        (
+            "it exceeds not 2'' 45''' or 3''.",
+            "она не превышает 2 футов 45' или 3''.",
+            "numeric_prime_notation",
+        ),
     ],
 )
 def test_critical_technical_tokens_keep_real_corruption_visible(
@@ -110,6 +115,15 @@ def test_critical_technical_tokens_keep_real_corruption_visible(
     result = compare_critical_technical_tokens(source, target)
     assert result["passed"] is False
     assert failed in result["failed_checks"]
+
+
+def test_critical_tokens_do_not_misclassify_apostrophe_decimals_as_prime_notation() -> None:
+    result = compare_critical_technical_tokens(
+        "diameter 1'699 and 0'000625 Inches",
+        "диаметр 1,699 и 0,000625 дюйма",
+    )
+    assert result["passed"] is True
+    assert result["checks"]["numeric_prime_notation"] == {"source": [], "target": []}
 
 
 def test_output_artifact_diagnostic_rejects_target_only_html_entities() -> None:
