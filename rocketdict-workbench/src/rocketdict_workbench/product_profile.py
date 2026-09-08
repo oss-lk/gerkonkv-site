@@ -151,8 +151,8 @@ def build_product_profile(lab_manifest: dict[str, Any], *, source_kind: str = "s
         "quality_gates": gates,
         "workbench_stages": {
             "18": {
-                "implementation": "workbench-aligned-content-pos-v4",
-                "policy": "approved alignment + full saved NLP + verified stream-offset projection; content POS/dictionary MWE eligibility; narrow object-POS repair; spaCy vector-OOV is never treated as lexical unknown; common-word NER does not change entry type",
+                "implementation": "workbench-aligned-content-pos-v5",
+                "policy": "approved alignment + full saved NLP + verified stream-offset projection; content POS/dictionary MWE eligibility; narrow object-POS repair; spaCy vector-OOV is never treated as lexical unknown; common-word NER does not change entry type; table-scoped target evidence remains local to its logical table group",
                 "requires_alignment": True,
                 "offset_projection_fail_closed": True,
                 "repairs_are_recorded_in_token_source_and_component_settings": True,

@@ -6,7 +6,7 @@ from typing import Any
 
 from .core import RocketDictCore
 
-POLICY_KEY = "workbench-aligned-content-pos-v4"
+POLICY_KEY = "workbench-aligned-content-pos-v5"
 CONTENT_POS = {"NOUN", "PROPN", "VERB", "ADJ", "ADV"}
 FUNCTION_POS = {"DET", "AUX", "ADP", "PRON", "PART", "CCONJ", "SCONJ", "PUNCT", "SPACE", "SYM", "NUM"}
 OBJECT_DEPENDENCIES = {"dobj", "obj", "pobj"}
@@ -83,10 +83,10 @@ def candidate_is_product_eligible(candidate: dict[str, Any]) -> tuple[bool, str]
 def _helper_code() -> str:
     """Stable Stage18 runner identity material retained for Workbench evidence.
 
-    Stage18 execution/storage now belongs to the maintained Product Core.  The
+    Stage18 execution/storage now belongs to the maintained Product Core. The
     old helper embedded the historical SQLAlchemy ORM implementation and made
     the unified Product runtime depend on a package the maintained core neither
-    needs nor declares.  Keep a deterministic marker here because
+    needs nor declares. Keep a deterministic marker here because
     ``post_gate_pipeline`` includes it in its frozen runner identity, but never
     execute a second implementation of Stage18 from Workbench.
     """
@@ -99,12 +99,12 @@ def run_product_aligned_lexical_extraction(
     alignment_run_id: int,
     *,
     settings: dict[str, Any] | None = None,
-    actor: str = "rocketdict-workbench:aligned-content-pos-v4",
+    actor: str = "rocketdict-workbench:aligned-content-pos-v5",
 ) -> dict[str, Any]:
     """Execute the validated Stage18 policy through the maintained public API.
 
     ``actor`` remains in the compatibility signature because older Workbench
-    callers supplied it.  It is deliberately not sent to Product Core: the
+    callers supplied it. It is deliberately not sent to Product Core: the
     maintained Stage18 operation is identified by its public operation,
     implementation key, input identity and parameter hash rather than by the
     historical ORM actor string.

@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import json
 
+from rocketdict.lexical import POLICY_KEY as CORE_STAGE18_POLICY_KEY
 from rocketdict_workbench.aligned_lexical import (
     POLICY_KEY,
     candidate_is_product_eligible,
     normalize_product_token,
     run_product_aligned_lexical_extraction,
 )
+
+
+def test_stage18_bridge_policy_matches_maintained_core() -> None:
+    assert POLICY_KEY == "workbench-aligned-content-pos-v5"
+    assert POLICY_KEY == CORE_STAGE18_POLICY_KEY
 
 
 def test_content_and_dictionary_mwe_policy() -> None:
