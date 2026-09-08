@@ -1,6 +1,6 @@
 name: RocketDict Product Core
 
-# Prime-v5 verification trigger; workflow behavior is unchanged.
+# Maintained Product verification, including Stage12 planner v5 structural labels.
 on:
   push:
     branches: [main, chatgpt/product-core-forward]
@@ -118,22 +118,22 @@ jobs:
           print(json.dumps(evidence,ensure_ascii=False,indent=2))
           for stage in ('stage8','stage12','stage20','stage21','stage22'):
               if evidence[stage].get('available') is not True:
-                  raise SystemExit(f'{stage} production evidence is not available: {evidence[stage]}')
+                  raise SystemExit(f'{stage} is not available')
           PY
       - name: Run real maintained-core Stage8 through Stage25 smoke
-        run: python rocketdict-product-core/tests/real_runtime_smoke.py
+        run: python -u rocketdict-product-core/tests/real_runtime_smoke.py
       - name: Run real unified rocketdict-product-run source through Stage25 smoke
         run: python -u rocketdict-workbench/tests/real_product_run_smoke.py
       - name: Record runtime identities and resources
         if: always()
         run: |
-          mkdir -p work/evidence
-          python -VV > work/evidence/python.txt || true
-          python -m pip freeze | sort > work/evidence/pip-freeze.txt || true
-          df -h > work/evidence/disk.txt || true
-          free -h > work/evidence/memory.txt || true
-          sha256sum work/opus-2020-02-11.zip > work/evidence/opus.sha256 || true
-          sha256sum "$ROCKETDICT_CEFRJ_ASSET" > work/evidence/cefrj.sha256 || true
+          mkdir -p work/runtime-evidence
+          python -VV > work/runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/runtime-evidence/pip-freeze.txt || true
+          df -h > work/runtime-evidence/disk.txt || true
+          free -h > work/runtime-evidence/memory.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/runtime-evidence/opus.sha256 || true
+          sha256sum "$ROCKETDICT_CEFRJ_ASSET" > work/runtime-evidence/cefrj.sha256 || true
       - name: Upload real-runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -141,11 +141,8 @@ jobs:
           name: rocketdict-product-core-real-runtime
           path: |
             work/opus-asset-build.json
-            work/real-smoke/real-runtime-smoke.json
-            work/real-smoke/product-export.json
-            work/product-run-smoke/real-product-run-smoke.json
-            work/product-run-smoke/real-product-run-failure.json
-            work/product-run-smoke/*.product-export.json
-            work/evidence/**
+            work/real-smoke/**
+            work/product-run-smoke/**
+            work/runtime-evidence/**
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 90
