@@ -169,3 +169,110 @@ def evaluate_structural_label_hypotheses(
         "selected": selected,
         "candidates": candidates,
     }
+
+
+
+def _slice_base_rows(
+    content: str,
+    base: Sequence[dict[str, Any]],
+    *,
+    start: int,
+    end: int,
+) -> list[dict[str, Any]]:
+    """Slice existing Stage12 TXT base rows without inventing source bytes."""
+    if end <= start:
+        return []
+    output: list[dict[str, Any]] = []
+    for row in base:
+        row_start = int(row["start"])
+        row_end = int(row["end"])
+        left = max(start, row_start)
+        right = min(end, row_end)
+        if right <= left:
+            continue
+        metadata = dict(row.get("metadata") or {})
+        if left != row_start or right != row_end:
+            if metadata.get("source") == "ascii_table":
+                raise ValueError("supported structural label overlaps an ASCII-table unit")
+            metadata["source_before_structural_label_split"] = metadata.get("source")
+            metadata["source"] = "nlp_sentence_fragment"
+            metadata["structural_label_boundary_split"] = True
+        output.append(
+            {
+                "start": left,
+                "end": right,
+                "text": content[left:right],
+                "metadata": metadata,
+            }
+        )
+    if output and "".join(str(row["text"]) for row in output) != content[start:end]:
+        raise ValueError("structural-label non-label slicing is not byte-exact")
+    return output
+
+
+def partition_txt_base_with_block_structural_labels(
+    content: str,
+    base: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Make supported block labels standalone byte-exact Stage12 base units.
+
+    Detection runs on the complete immutable TXT source, not on already split
+    context fragments. This is required because full-Opticks evidence proved
+    that planner /4 cut 48/109 supported labels across Stage12 boundaries.
+    Inline labels remain ordinary prose.
+    """
+    if not base:
+        return []
+    scope_start = int(base[0]["start"])
+    scope_end = int(base[-1]["end"])
+    if scope_end <= scope_start:
+        raise ValueError("Stage12 structural-label base scope is empty")
+    if "".join(str(row["text"]) for row in base) != content[scope_start:scope_end]:
+        raise ValueError("Stage12 structural-label input base is not contiguous")
+
+    labels = [
+        label
+        for label in detect_structural_labels(content, block_only=True)
+        if label.source_end > scope_start and label.source_start < scope_end
+    ]
+    for label in labels:
+        if label.source_start < scope_start or label.source_end > scope_end:
+            raise ValueError("block structural label crosses Stage12 TXT scope")
+        for row in base:
+            if (row.get("metadata") or {}).get("source") != "ascii_table":
+                continue
+            if label.source_start < int(row["end"]) and label.source_end > int(row["start"]):
+                raise ValueError("supported structural label overlaps an ASCII table")
+
+    output: list[dict[str, Any]] = []
+    cursor = scope_start
+    for label_index, label in enumerate(labels):
+        if label.source_start < cursor:
+            raise ValueError("supported structural labels overlap")
+        output.extend(_slice_base_rows(content, base, start=cursor, end=label.source_start))
+        output.append(
+            {
+                "start": int(label.source_start),
+                "end": int(label.source_end),
+                "text": content[label.source_start:label.source_end],
+                "metadata": {
+                    "source": "structural_label",
+                    "structural_label_index": label_index,
+                    "structural_label_contract": STRUCTURAL_LABEL_CONTRACT,
+                    "structural_label_kind": label.kind,
+                    "structural_label_number": label.number,
+                    "canonical_model_input": label.canonical_model_input,
+                },
+            }
+        )
+        cursor = int(label.source_end)
+    output.extend(_slice_base_rows(content, base, start=cursor, end=scope_end))
+
+    if not output:
+        raise ValueError("Stage12 structural-label partition produced no source units")
+    if "".join(str(row["text"]) for row in output) != content[scope_start:scope_end]:
+        raise ValueError("Stage12 structural-label partition is not byte-exact")
+    for left, right in zip(output, output[1:]):
+        if int(left["end"]) != int(right["start"]):
+            raise ValueError("Stage12 structural-label partition produced a source gap")
+    return output

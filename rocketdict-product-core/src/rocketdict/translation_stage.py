@@ -14,6 +14,11 @@ to the real OPUS backend.  Source-owned table geometry and alpha-free
 numeric/symbolic cells are never reconstructed after MT: their exact bytes and
 source spans are known before the model call and are rendered unchanged.  No
 special table behavior is applied to subtitle cue segments.
+
+Planner v5 additionally isolates evidence-backed Gutenberg block structural
+labels before MT. Their immutable source spans stay byte-exact; only the
+separate model input expands the documented abbreviation, and only strict
+raw OPUS candidates may be selected. Inline labels stay ordinary prose.
 """
 
 from pathlib import Path
@@ -28,6 +33,14 @@ from .database import (
 )
 from .runtime import OpusTranslator, load_opus_asset
 from .stages import StageExecutionError, _complete, _fail, _start
+from .structural_labels import (
+    STRUCTURAL_LABEL_CONTRACT,
+    STRUCTURAL_LABEL_GENERATION_CELLS,
+    StructuralLabel,
+    evaluate_structural_label_hypotheses,
+    parse_structural_label_unit,
+    partition_txt_base_with_block_structural_labels,
+)
 from .table_stage12 import (
     TABLE_STAGE12_CONTRACT,
     build_stage12_table_plan,
@@ -36,7 +49,7 @@ from .table_stage12 import (
     table_plan_metrics,
 )
 
-PLANNER_CONTRACT = "rocketdict-stage12-protected-split/4"
+PLANNER_CONTRACT = "rocketdict-stage12-protected-split/5"
 
 
 def _starts_blank_paragraph_break(text: str, offset: int) -> bool:
@@ -255,8 +268,9 @@ def segment_translation_units(
     if selected_format == "txt":
         try:
             base = partition_txt_base_with_ascii_tables(content, base)
+            base = partition_txt_base_with_block_structural_labels(content, base)
         except ValueError as exc:
-            raise StageExecutionError(f"Stage12 ASCII-table partition failed: {exc}") from exc
+            raise StageExecutionError(f"Stage12 source-structure partition failed: {exc}") from exc
 
     result: list[dict[str, Any]] = []
     for row in base:
@@ -264,6 +278,22 @@ def segment_translation_units(
         row_text = content[start:end]
         tokens = _non_space_tokens_in_span(nlp_tokens, start, end)
         metadata = dict(row.get("metadata") or {})
+
+        if metadata.get("source") == "structural_label":
+            result.append(
+                {
+                    **row,
+                    "metadata": {
+                        **metadata,
+                        "planner_contract": PLANNER_CONTRACT,
+                        "split": False,
+                        "token_count": len(tokens),
+                        "protected_span_count": 1,
+                        "structural_label_atomic": True,
+                    },
+                }
+            )
+            continue
 
         if metadata.get("source") == "ascii_table":
             try:
@@ -357,6 +387,79 @@ def segment_translation_units(
     return result
 
 
+def _translate_structural_label_units(
+    translator: OpusTranslator,
+    labels: dict[int, StructuralLabel],
+) -> dict[str, Any]:
+    """Translate only source-defined structural-label units with staged raw OPUS.
+
+    This is deliberately not a generic n-best fallback.  Each request is a
+    canonical source-side expansion of a byte-exact block label, and acceptance
+    is delegated to the strict maintained structural-label selector.
+    """
+    selected: dict[int, dict[str, Any]] = {}
+    cells: dict[int, list[dict[str, Any]]] = {index: [] for index in labels}
+    unresolved = list(labels)
+    request_count = 0
+
+    for beam_size, num_hypotheses in STRUCTURAL_LABEL_GENERATION_CELLS:
+        if not unresolved:
+            break
+        requests = [labels[index].canonical_model_input for index in unresolved]
+        generated = translator.translate(
+            requests,
+            beam_size=beam_size,
+            num_hypotheses=num_hypotheses,
+            max_decoding_length=128,
+        )
+        request_count += len(requests)
+        if len(generated) != len(unresolved):
+            raise StageExecutionError(
+                "OPUS returned a different structural-label request cardinality"
+            )
+        rescued: set[int] = set()
+        for index, hypotheses in zip(unresolved, generated, strict=True):
+            evaluation = evaluate_structural_label_hypotheses(labels[index], hypotheses)
+            cell = {
+                "generation": {
+                    "beam_size": beam_size,
+                    "num_hypotheses": num_hypotheses,
+                },
+                "evaluation": evaluation,
+                "hypotheses": hypotheses,
+            }
+            cells[index].append(cell)
+            choice = evaluation.get("selected")
+            if isinstance(choice, dict):
+                selected[index] = {
+                    "target_text": str(choice["target_text"]),
+                    "rank": int(choice["rank"]),
+                    "generation": dict(cell["generation"]),
+                    "hypotheses": hypotheses,
+                }
+                rescued.add(index)
+        unresolved = [index for index in unresolved if index not in rescued]
+
+    if unresolved:
+        details = [
+            f"{labels[index].kind}:{labels[index].number}" for index in unresolved
+        ]
+        raise StageExecutionError(
+            "real OPUS produced no acceptable structural-label hypothesis: "
+            + ", ".join(details)
+        )
+    return {
+        "selected": selected,
+        "cells": cells,
+        "request_count": request_count,
+        "escalated_count": sum(
+            1
+            for row in selected.values()
+            if int(row["generation"]["beam_size"]) > STRUCTURAL_LABEL_GENERATION_CELLS[0][0]
+        ),
+    }
+
+
 def run_stage12(
     database: Path | str,
     *,
@@ -376,6 +479,15 @@ def run_stage12(
             f"Unsupported Stage12 planner contract {requested_planner!r}; expected {PLANNER_CONTRACT!r}"
         )
     effective["planner_contract"] = PLANNER_CONTRACT
+    requested_structural = str(
+        effective.get("structural_label_contract") or STRUCTURAL_LABEL_CONTRACT
+    )
+    if requested_structural != STRUCTURAL_LABEL_CONTRACT:
+        raise StageExecutionError(
+            f"Unsupported Stage12 structural-label contract {requested_structural!r}; "
+            f"expected {STRUCTURAL_LABEL_CONTRACT!r}"
+        )
+    effective["structural_label_contract"] = STRUCTURAL_LABEL_CONTRACT
     device = str(effective.get("device") or "cpu")
     compute_type = str(effective.get("compute_type") or "float32")
     preferred = int(effective.get("plan_preferred_unit_tokens") or 64)
@@ -422,6 +534,7 @@ def run_stage12(
         )
 
         table_plans: dict[int, Any] = {}
+        structural_label_plans: dict[int, StructuralLabel] = {}
         request_texts: list[str] = []
         request_refs: list[tuple[int, int | None]] = []
         request_proxy_counts: list[int] = []
@@ -441,6 +554,25 @@ def run_stage12(
                     request_texts.append(group.source_text)
                     request_refs.append((unit_index, int(group.index)))
                     request_proxy_counts.append(max(1, len(group.source_text.split())))
+            elif metadata.get("source") == "structural_label":
+                try:
+                    label = parse_structural_label_unit(str(unit["text"]))
+                except ValueError as exc:
+                    raise StageExecutionError(
+                        f"Stage12 structural-label unit parsing failed: {exc}"
+                    ) from exc
+                if (
+                    str(metadata.get("structural_label_contract") or "")
+                    != STRUCTURAL_LABEL_CONTRACT
+                    or str(metadata.get("structural_label_kind") or "") != label.kind
+                    or str(metadata.get("structural_label_number") or "") != label.number
+                    or str(metadata.get("canonical_model_input") or "")
+                    != label.canonical_model_input
+                ):
+                    raise StageExecutionError(
+                        "Stage12 structural-label planner/execution metadata drift"
+                    )
+                structural_label_plans[unit_index] = label
             else:
                 request_texts.append(str(unit["text"]))
                 request_refs.append((unit_index, None))
@@ -461,6 +593,14 @@ def run_stage12(
         generated = {
             reference: hypotheses
             for reference, hypotheses in zip(request_refs, translated, strict=True)
+        }
+        structural_execution = _translate_structural_label_units(
+            translator, structural_label_plans
+        ) if structural_label_plans else {
+            "selected": {},
+            "cells": {},
+            "request_count": 0,
+            "escalated_count": 0,
         }
 
         asset = load_opus_asset()
@@ -499,6 +639,31 @@ def run_stage12(
                         "logical_contract": metadata.get("table_logical_contract"),
                         "metrics": metrics,
                         "logical_groups": group_evidence,
+                    },
+                }
+            elif metadata.get("source") == "structural_label":
+                selection = structural_execution["selected"].get(sequence)
+                if not isinstance(selection, dict):
+                    raise StageExecutionError(
+                        f"Stage12 lacks selected structural-label hypothesis for unit {sequence}"
+                    )
+                target = str(selection["target_text"]).strip()
+                if not target:
+                    raise StageExecutionError(
+                        f"Stage12 selected an empty structural-label target for unit {sequence}"
+                    )
+                payload = {
+                    "planner": metadata,
+                    "hypotheses": list(selection["hypotheses"]),
+                    "selected_rank": int(selection["rank"]),
+                    "structural_label": {
+                        "contract": STRUCTURAL_LABEL_CONTRACT,
+                        "canonical_model_input": structural_label_plans[sequence].canonical_model_input,
+                        "generation": dict(selection["generation"]),
+                        "cells": structural_execution["cells"][sequence],
+                        "raw_model_selection": True,
+                        "target_rewriting": False,
+                        "source_bytes_rewritten": False,
                     },
                 }
             else:
@@ -548,13 +713,20 @@ def run_stage12(
             "model_manifest_sha256": asset.manifest_sha256,
             "compute_type": compute_type,
             "planner_contract": PLANNER_CONTRACT,
+            "structural_label_contract": STRUCTURAL_LABEL_CONTRACT,
+            "structural_label_unit_count": len(structural_label_plans),
+            "structural_label_escalated_unit_count": int(structural_execution["escalated_count"]),
+            "structural_label_model_request_count": int(structural_execution["request_count"]),
             "table_stage12_contract": TABLE_STAGE12_CONTRACT,
             "table_block_count": len(table_plans),
             "table_logical_group_count": table_group_total,
             "table_multi_piece_group_count": table_multi_piece_total,
             "table_preserved_source_character_count": table_preserved_chars,
-            "model_request_count": len(request_texts),
-            "max_translation_unit_tokens": max_request_tokens,
+            "model_request_count": len(request_texts) + int(structural_execution["request_count"]),
+            "max_translation_unit_tokens": max(
+                max_request_tokens,
+                2 if structural_label_plans else 0,
+            ),
             "real_mt": True,
             "network_used": False,
         }
