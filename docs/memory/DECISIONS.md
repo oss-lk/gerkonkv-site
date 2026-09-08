@@ -6,17 +6,17 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 **Decision.** Speed, storage and context-cost optimizations may not reduce Product quality or evidence. Real EN→RU MT is mandatory; fake/identity/mock/dictionary substitution is never Product translation. Hard gates must not be weakened merely to pass CI, and source/corpus truncation must never be silent.
 
-**Why.** The Product is explicitly quality-first and full-corpus research repeatedly found failures that can look superficially successful: translation compression, numeric corruption, prime/unit corruption and document-structure loss.
+**Why.** Full-corpus research repeatedly finds failures that can look superficially successful: semantic compression, numeric corruption, prime/unit corruption and document-structure loss.
 
 **Evidence.** `rocketdict/PRODUCT_TARGET.md`; `docs/memory/TRANSLATION_QUALITY.md`; maintained R1/full-*Opticks* workflows/artifacts.
 
-## Maintained Product Core is the forward implementation; recovery is evidence, not the critical path
+## Maintained Product Core is the forward implementation
 
-**Decision.** New Product work targets `rocketdict-product-core` plus Workbench unified orchestration. Historical 0.30.x/checkpoint recovery remains provenance/compatibility evidence but does not block the maintained Product path without a specific evidence-based reason.
+**Decision.** New Product work targets `rocketdict-product-core` plus Workbench unified orchestration. Historical 0.30.x/checkpoint recovery remains provenance/compatibility evidence but is not the critical path without a specific evidence-based reason.
 
-**Why.** Direct and unified real source→Stage25 paths are green and replay-safe.
+**Why.** Direct and unified real source→Stage25 paths are green and replay-safe under the current planner `/8` line.
 
-**Evidence.** Product Core run `34225159869`; `rocketdict-product-core/README.md`; Workbench maintained pipeline/tests.
+**Evidence.** Product Core run `34250903497`; `rocketdict-product-core/README.md`; Workbench maintained pipeline/tests.
 
 ## Product assets and downstream evidence are pinned and fail-closed
 
@@ -42,13 +42,13 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 **Evidence.** `rocketdict/PRODUCT_TARGET.md`; Product Core/full-*Opticks* workflows.
 
-## Translation-quality promotion requires contiguous evidence, not checker gaming
+## Translation-quality promotion requires contiguous evidence and semantic review
 
-**Decision.** A maintained translation-quality change may be promoted only when the failure class is correctly identified (planner vs evaluator vs source-selection vs document structure vs execution resource vs model), the candidate remains raw/evidence-backed rather than synthetically repaired, and evidence extends to contiguous source when boundaries matter. Mechanical gate success alone is insufficient if target-language review exposes semantic degradation.
+**Decision.** A maintained translation-quality change may be promoted only when the failure class is correctly identified (planner vs evaluator vs source-selection vs document structure vs execution resource vs model), the candidate remains raw/evidence-backed rather than synthetically repaired, and evidence extends to contiguous source when boundaries matter. Mechanical gate success is insufficient when target-language review exposes semantic degradation.
 
-Raw OPUS n-best hypotheses are legitimate research candidates; post-hoc insertion of missing numbers/structure is not. Broad n-best fallback, arbitrary punctuation splitting and wholesale structural-island splitting are not Product policies.
+Raw OPUS n-best hypotheses are legitimate research candidates; post-hoc insertion of missing numbers/structure is not. Broad n-best fallback, arbitrary punctuation splitting, generic structural islands and evaluator weakening are not Product policies.
 
-**Why.** R1 and full-*Opticks* research demonstrated evaluator blind spots, planning defects, artificial joins and mechanically green but semantically poor hypotheses.
+**Why.** R1 and full-*Opticks* research repeatedly produced mechanically green but semantically poor hypotheses.
 
 **Evidence.** `docs/memory/TRANSLATION_QUALITY.md`; maintained Stage12/numeric source; R1/full-*Opticks* artifacts.
 
@@ -56,47 +56,73 @@ Raw OPUS n-best hypotheses are legitimate research candidates; post-hoc insertio
 
 **Decision.** Stage15 numeric/symbol integrity uses `rocketdict-maintained-numeric-integrity/5`; prime/unit notation is fail-closed and must not be collapsed into apostrophe-decimal semantics.
 
-**Why.** Complete *Opticks* evidence found 17 prime-bearing units / 38 prime events and 11 rank0 prime corruptions. Numeric `/5` catches all prime failures under current planner evidence.
+**Why.** Current planner `/8` complete *Opticks* evidence still finds 17 prime-bearing units / 38 prime events and 11 rank0 prime corruptions. Numeric `/5` catches every one.
 
-**Evidence.** `numeric_integrity.py`; `prime_notation.py`; full-*Opticks* runs `34205049701` and `34224998708`.
+**Evidence.** `numeric_integrity.py`; `prime_notation.py`; full-*Opticks* run `34244876537`, artifact `10064356708`.
+
+## Prime-fragment structural decomposition is rejected despite mechanical success
+
+**Decision.** Do not promote the research branch that preserves numeric prime-expression fragments byte-exact while separately translating surrounding prose.
+
+**Why.** It reaches 16/16 strict mechanical success on ordinary prime units, but removing local context produces semantically unacceptable Russian in real full-corpus examples (`53 deg.` → `53 балла`, `hundred Feet` → `сто ног`). Quality-first rules prohibit trading semantics for gate success.
+
+Whole-unit Unicode prime normalization and semantic hints are also rejected as current Product preprocessing: the former yields 0/16 strict success; the latter rescues 0/11 baseline failures. Whole-unit beam6→12→16 rescues only 4/11 prime failures and does not justify a generic fallback.
+
+**Evidence.** Prime feasibility run `34249764521`, artifact `10065557329`; staged n-best evidence in run `34248620999`, artifact `10065076540`.
 
 ## Structural Gutenberg labels require planner isolation plus narrow raw-OPUS selection
 
 **Decision.** Supported block labels `_Exper._ N.`, `_Obs._ N.`, `_Qu._ N.` are a source-document structure class. Product planner isolates the 108 block labels byte-exact; the single inline occurrence remains ordinary prose. Only the abbreviation in model input may be expanded to `Experiment`, `Observation`, `Query`; beam6 is attempted first and beam12 only for unresolved labels; only strict raw `Эксперимент/Наблюдение/Вопрос N.` with the same number is accepted; failure is fail-closed.
 
-**Why.** Planner `/4` fragmented 48/109 labels. Exhaustive real-OPUS inventory gave acceptable raw candidates for 106/109 at beam6 and 109/109 after beam12. Planner `/7` full-corpus evidence then produced 108 structural-label units with zero label numeric failures.
+**Why.** Exhaustive real-OPUS inventory gave acceptable raw candidates for 106/109 at beam6 and 109/109 after beam12. Current full-corpus evidence keeps the class numerically clean.
 
-**Evidence.** `structural_labels.py`; structural-label tests; runs/artifacts documented in `TRANSLATION_QUALITY.md`; full-*Opticks* run `34224998708`.
+**Evidence.** `structural_labels.py`; structural-label tests; full-*Opticks* artifacts documented in `TRANSLATION_QUALITY.md`.
 
-## Source-owned block section identifiers are preserved, inline references are translated
+## Source-owned block section identifiers are a closed maintained class
 
-**Decision.** Narrow block identifiers of form `digit.A.` or `digit.A.digit.` are source-owned Gutenberg document structure when they occur at paragraph/block start. They may be isolated byte-exact and excluded from MT under `rocketdict-stage12-block-section-identifier/1`. Inline references such as `paragraph 1.F.3` remain ordinary linguistic prose and must not be captured.
+**Decision.** Narrow block identifiers of form `digit.A.` or `digit.A.digit.` are source-owned Gutenberg document structure when they occur at block/paragraph start. They are isolated byte-exact and excluded from MT under `rocketdict-stage12-block-section-identifier/1`. Inline references remain ordinary linguistic prose.
 
-**Why.** Planner `/7` full-corpus evidence showed repeated omission/Cyrillicization of block IDs inside prose units. Corpus inventory found 26 narrow occurrences, 21 block-level; only 12/21 block IDs were preserved exactly under `/7`. Preserving the block token pre-MT removes a genuine document-structure defect without inventing target text or changing inline prose semantics.
+**Why.** Planner `/7` lost or Cyrillicized 9/21 block identifiers. Planner `/8` full-corpus audit preserves 21/21 block identifiers exactly, performs zero model requests for them, and keeps all 5 inline identifiers on the ordinary MT path.
 
-**Evidence.** `block_section_identifiers.py`; `test_block_section_identifiers.py`; planner `/8` migration run `34236048593`; full-*Opticks* `/7` artifact `10056028661`. Independent `/8` real/full-corpus acceptance is required before treating promotion as fully verified.
+**Evidence.** `block_section_identifiers.py`; block-section tests; full-*Opticks* run `34244876537`, artifact `10064356708`.
 
 ## Stage12 backend batching is an execution contract, not a planner contract
 
 **Decision.** Primary Stage12 OPUS requests use `rocketdict-stage12-bounded-request-batch/1`, default batch size `48`, maximum `128`. Backend batch boundaries must preserve request order/cardinality and must not alter planner spans, model inputs, generation settings or output assembly. Batch contract/size are part of Stage12 cache/config/output provenance.
 
-**Why.** Two full-corpus attempts terminated with hosted-runner `exit 143` while ~3.3k requests were submitted in one `translate_batch`. Bounded execution passed focused/full dependency-light regressions, direct/unified real Product smoke, and completed full Product Stage12 on the complete *Opticks* corpus.
+**Why.** Monolithic full-corpus inference caused repeated hosted-runner `exit 143`. Bounded execution completed full Product Stage12 and preserves direct/unified real Product behavior.
 
-**Evidence.** `translation_stage.py`; `test_translation_stage_batching.py`; Product Core run `34225159869`; full-*Opticks* run `34224998708`.
+**Evidence.** `translation_stage.py`; batching tests; Product/full-*Opticks* runs documented in `TRANSLATION_QUALITY.md`.
 
 ## Source-owned structure preservation is permitted only for exhaustively identified non-linguistic classes
 
-**Decision.** Pre-MT passthrough is permitted only when the bytes are demonstrably document structure rather than linguistic content, detection is narrow and source-derived, source spans stay immutable, and inline linguistic uses remain outside the rule. Current examples are ASCII table geometry/numeric cells and block section identifiers. Structural labels are different: their semantic heading text is translated by real OPUS rather than passed through.
+**Decision.** Pre-MT passthrough is permitted only when bytes are demonstrably document structure rather than linguistic content, detection is narrow and source-derived, source spans stay immutable, and inline linguistic uses remain outside the rule. Current examples are ASCII table geometry/numeric cells and block section identifiers. Structural labels are different: their semantic heading text is translated by real OPUS rather than passed through.
 
-**Why.** This boundary prevents structural preservation from becoming a disguised target-repair/identity-translation mechanism.
+**Why.** This boundary prevents structural preservation from becoming disguised target repair/identity translation.
 
 **Evidence.** Stage12 table/structural-label/block-section contracts and full-corpus evidence.
+
+## Large-integer grouping is rejected as Product preprocessing
+
+**Decision.** Do not normalize ordinary long integers by inserting thousands separators or rewrite narrow multiplication `x` to `×` merely to improve OPUS numeric preservation.
+
+**Why.** Complete planner `/8` inventory found 12 ordinary ≥7-digit units, four baseline hard failures. The research branch rescues 0/4 failures and regresses some previously strict-successful units.
+
+**Evidence.** Run `34250592035`, artifact `10065848534`, `rocketdict-full-opticks-large-integer-feasibility/1`.
+
+## Compact-formula operator spacing is rejected as Product preprocessing
+
+**Decision.** Do not rely on adding whitespace around arithmetic operators / trailing algebraic `A` in whole-unit model input for the current compact formula class.
+
+**Why.** The complete *Opticks* planner `/8` inventory has one investigated matching unit (`3/8A ... ((61-1/2)/8)A`); spacing does not rescue it even with staged raw n-best.
+
+**Evidence.** Run `34250960739`, artifact `10065980547`, `rocketdict-full-opticks-formula-spacing-feasibility/1`.
 
 ## Structural handling does not license generic n-best or numeric islands
 
 **Decision.** Narrow structural-label n-best is an exception for a source-defined class with exhaustive corpus inventory and strict semantic selection. It must not be generalized to ordinary translation units. Historical `numeric-islands-v1` remains negative unless genuinely new evidence justifies reopening it.
 
-**Why.** Generic high-beam experiments produced semantically wrong hypotheses, while numeric-island experiments created backend/empty failures and risk synthetic repair semantics.
+**Why.** Generic high-beam experiments produce semantically wrong hypotheses; numeric-island experiments created backend/empty failures and risk synthetic repair semantics.
 
 **Evidence.** Full-*Opticks* generic n-best artifacts; historical Stage8/R1 research.
 
