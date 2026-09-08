@@ -1,0 +1,83 @@
+name: RocketDict Full Opticks Punctuation Shadow 8
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/table_stage12.py'
+      - 'rocketdict-product-core/src/rocketdict/structural_labels.py'
+      - 'rocketdict-product-core/src/rocketdict/block_section_identifiers.py'
+      - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_punctuation_shadow.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_punctuation_shadow8.py'
+      - '.github/workflows/rocketdict-full-opticks-punctuation-shadow8.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  punctuation-shadow-8:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/full-opticks-artifact/full-opticks-numeric-stress
+      ROCKETDICT_PUNCTUATION_SHADOW_ROOT: ${{ github.workspace }}/work/punctuation-shadow
+      ROCKETDICT_BASELINE_RUN_ID: '34244876537'
+      ROCKETDICT_BASELINE_ARTIFACT_ID: '10064356708'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product research runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+      - name: Restore immutable planner-v8 full-Opticks evidence
+        run: |
+          mkdir -p work/full-opticks-artifact
+          gh run download "$ROCKETDICT_BASELINE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name rocketdict-full-opticks-product-stage12-audit \
+            --dir work/full-opticks-artifact
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-numeric-stress.json"
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite"
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify pinned OPUS source
+        run: |
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Run eight-token punctuation-aware shadow planner
+        run: |
+          cd rocketdict-workbench/tests
+          python -u real_translation_full_opticks_punctuation_shadow8.py
+      - name: Upload punctuation-shadow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-punctuation-shadow8
+          path: |
+            work/opus-asset-build.json
+            work/punctuation-shadow/full-opticks-punctuation-shadow.json
+          if-no-files-found: warn
+          retention-days: 90
