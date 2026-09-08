@@ -15,7 +15,10 @@ numeric/symbolic cells are never reconstructed after MT: their exact bytes and
 source spans are known before the model call and are rendered unchanged.  No
 special table behavior is applied to subtitle cue segments.
 
-Planner v7 keeps evidence-backed Gutenberg block structural labels byte-exact
+Planner v8 keeps evidence-backed Gutenberg block structural labels and block
+section identifiers byte-exact. Section identifiers are source-owned document
+structure and never become MT requests; inline references remain ordinary prose.
+Planner v8 also retains the v7 behavior that keeps structural labels byte-exact
 and coalesces split-created whitespace-only boundaries from both structural-label
 and ASCII-table partitioning into adjacent ordinary prose, so every ordinary MT
 request remains lexical. Structural label model input still expands only the
@@ -38,6 +41,11 @@ from .database import (
     get_run_items,
 )
 from .runtime import OpusTranslator, load_opus_asset
+from .block_section_identifiers import (
+    BLOCK_SECTION_IDENTIFIER_CONTRACT,
+    parse_block_section_identifier_unit,
+    partition_txt_base_with_block_section_identifiers,
+)
 from .stages import StageExecutionError, _complete, _fail, _start
 from .structural_labels import (
     STRUCTURAL_LABEL_CONTRACT,
@@ -55,7 +63,7 @@ from .table_stage12 import (
     table_plan_metrics,
 )
 
-PLANNER_CONTRACT = "rocketdict-stage12-protected-split/7"
+PLANNER_CONTRACT = "rocketdict-stage12-protected-split/8"
 REQUEST_BATCH_CONTRACT = "rocketdict-stage12-bounded-request-batch/1"
 DEFAULT_REQUEST_BATCH_SIZE = 48
 MAX_REQUEST_BATCH_SIZE = 128
@@ -278,6 +286,7 @@ def segment_translation_units(
         try:
             base = partition_txt_base_with_ascii_tables(content, base)
             base = partition_txt_base_with_block_structural_labels(content, base)
+            base = partition_txt_base_with_block_section_identifiers(content, base)
         except ValueError as exc:
             raise StageExecutionError(f"Stage12 source-structure partition failed: {exc}") from exc
 
@@ -287,6 +296,22 @@ def segment_translation_units(
         row_text = content[start:end]
         tokens = _non_space_tokens_in_span(nlp_tokens, start, end)
         metadata = dict(row.get("metadata") or {})
+
+        if metadata.get("source") == "block_section_identifier":
+            result.append(
+                {
+                    **row,
+                    "metadata": {
+                        **metadata,
+                        "planner_contract": PLANNER_CONTRACT,
+                        "split": False,
+                        "token_count": len(tokens),
+                        "protected_span_count": 1,
+                        "block_section_identifier_atomic": True,
+                    },
+                }
+            )
+            continue
 
         if metadata.get("source") == "structural_label":
             result.append(
@@ -528,6 +553,16 @@ def run_stage12(
             f"Unsupported Stage12 planner contract {requested_planner!r}; expected {PLANNER_CONTRACT!r}"
         )
     effective["planner_contract"] = PLANNER_CONTRACT
+    requested_block_identifier = str(
+        effective.get("block_section_identifier_contract")
+        or BLOCK_SECTION_IDENTIFIER_CONTRACT
+    )
+    if requested_block_identifier != BLOCK_SECTION_IDENTIFIER_CONTRACT:
+        raise StageExecutionError(
+            f"Unsupported Stage12 block section identifier contract {requested_block_identifier!r}; "
+            f"expected {BLOCK_SECTION_IDENTIFIER_CONTRACT!r}"
+        )
+    effective["block_section_identifier_contract"] = BLOCK_SECTION_IDENTIFIER_CONTRACT
     requested_structural = str(
         effective.get("structural_label_contract") or STRUCTURAL_LABEL_CONTRACT
     )
@@ -605,6 +640,7 @@ def run_stage12(
 
         table_plans: dict[int, Any] = {}
         structural_label_plans: dict[int, StructuralLabel] = {}
+        block_section_identifiers: dict[int, str] = {}
         request_texts: list[str] = []
         request_refs: list[tuple[int, int | None]] = []
         request_proxy_counts: list[int] = []
@@ -624,6 +660,22 @@ def run_stage12(
                     request_texts.append(group.source_text)
                     request_refs.append((unit_index, int(group.index)))
                     request_proxy_counts.append(max(1, len(group.source_text.split())))
+            elif metadata.get("source") == "block_section_identifier":
+                try:
+                    identifier = parse_block_section_identifier_unit(str(unit["text"]))
+                except ValueError as exc:
+                    raise StageExecutionError(
+                        f"Stage12 block section identifier parsing failed: {exc}"
+                    ) from exc
+                if (
+                    str(metadata.get("block_section_identifier_contract") or "")
+                    != BLOCK_SECTION_IDENTIFIER_CONTRACT
+                    or str(metadata.get("block_section_identifier") or "") != identifier.identifier
+                ):
+                    raise StageExecutionError(
+                        "Stage12 block section identifier planner/execution metadata drift"
+                    )
+                block_section_identifiers[unit_index] = identifier.identifier
             elif metadata.get("source") == "structural_label":
                 try:
                     label = parse_structural_label_unit(str(unit["text"]))
@@ -713,6 +765,26 @@ def run_stage12(
                         "logical_groups": group_evidence,
                     },
                 }
+            elif metadata.get("source") == "block_section_identifier":
+                identifier = block_section_identifiers.get(sequence)
+                if not identifier:
+                    raise StageExecutionError(
+                        f"Stage12 lacks block section identifier plan for unit {sequence}"
+                    )
+                target = str(unit["text"])
+                payload = {
+                    "planner": metadata,
+                    "hypotheses": [],
+                    "selected_rank": None,
+                    "block_section_identifier": {
+                        "contract": BLOCK_SECTION_IDENTIFIER_CONTRACT,
+                        "identifier": identifier,
+                        "source_owned_structure": True,
+                        "model_request": False,
+                        "target_rewriting": False,
+                        "source_bytes_rewritten": False,
+                    },
+                }
             elif metadata.get("source") == "structural_label":
                 selection = structural_execution["selected"].get(sequence)
                 if not isinstance(selection, dict):
@@ -792,6 +864,8 @@ def run_stage12(
                 if request_texts
                 else 0
             ),
+            "block_section_identifier_contract": BLOCK_SECTION_IDENTIFIER_CONTRACT,
+            "block_section_identifier_unit_count": len(block_section_identifiers),
             "structural_label_contract": STRUCTURAL_LABEL_CONTRACT,
             "structural_label_unit_count": len(structural_label_plans),
             "structural_label_escalated_unit_count": int(structural_execution["escalated_count"]),
