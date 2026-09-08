@@ -1,5 +1,6 @@
 name: RocketDict Full Opticks Numeric Stress
 
+# Prime-v5 verification trigger; workflow behavior is unchanged.
 on:
   push:
     branches: [chatgpt/product-core-forward]
