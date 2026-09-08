@@ -1,0 +1,84 @@
+name: RocketDict Stage12 Block Section Identifier Migration
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'tools/stage12_block_section_identifier_migration.py'
+      - '.github/workflows/rocketdict-stage12-block-section-id-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply assertion-heavy block section identifier migration
+        run: python tools/stage12_block_section_identifier_migration.py
+      - name: Install maintained Product Core, Workbench and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+          python -m pip install -e ./rocketdict-workbench
+          python -m pip install pytest
+      - name: Compile changed maintained modules
+        run: |
+          python -m py_compile rocketdict-product-core/src/rocketdict/block_section_identifiers.py
+          python -m py_compile rocketdict-product-core/src/rocketdict/translation_stage.py
+          python -m py_compile rocketdict-product-core/src/rocketdict/api/registry.py
+          python -m py_compile rocketdict-product-core/tests/test_block_section_identifiers.py
+          python -m py_compile rocketdict-product-core/tests/test_translation_stage_block_section_identifiers.py
+      - name: Run focused block section and Stage12 regressions
+        run: |
+          pytest -q rocketdict-product-core/tests/test_block_section_identifiers.py
+          pytest -q rocketdict-product-core/tests/test_translation_stage_block_section_identifiers.py
+          pytest -q rocketdict-product-core/tests/test_translation_stage_planner.py rocketdict-product-core/tests/test_translation_stage_structural_labels.py rocketdict-product-core/tests/test_table_stage12.py rocketdict-product-core/tests/test_translation_stage_batching.py
+      - name: Run complete dependency-light Product and Workbench suites
+        run: |
+          pytest -q rocketdict-product-core/tests
+          pytest -q rocketdict-workbench/tests --ignore=rocketdict-workbench/tests/test_real_core_integration.py
+      - name: Validate and commit planner v8 block section handling
+        run: |
+          set -euo pipefail
+          find rocketdict-product-core rocketdict-workbench -type d \
+            \( -name '__pycache__' -o -name '*.egg-info' \) -prune -exec rm -rf {} +
+          expected=$(cat <<'EOF'
+          rocketdict-product-core/src/rocketdict/api/registry.py
+          rocketdict-product-core/src/rocketdict/block_section_identifiers.py
+          rocketdict-product-core/src/rocketdict/translation_stage.py
+          rocketdict-product-core/tests/test_block_section_identifiers.py
+          rocketdict-product-core/tests/test_translation_stage_block_section_identifiers.py
+          EOF
+          )
+          observed=$(git status --short | sed -E 's/^.. //' | sort)
+          expected_sorted=$(printf '%s\n' "$expected" | sed 's/^ *//' | sed '/^$/d' | sort)
+          if [ "$observed" != "$expected_sorted" ]; then
+            echo "Unexpected migration diff" >&2
+            echo "Observed:" >&2
+            printf '%s\n' "$observed" >&2
+            echo "Expected:" >&2
+            printf '%s\n' "$expected_sorted" >&2
+            exit 1
+          fi
+          grep -q 'rocketdict-stage12-protected-split/8' rocketdict-product-core/src/rocketdict/translation_stage.py
+          grep -q 'rocketdict-stage12-block-section-identifier/1' rocketdict-product-core/src/rocketdict/block_section_identifiers.py
+          grep -q 'block_section_identifier_unit_count' rocketdict-product-core/src/rocketdict/translation_stage.py
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rocketdict-product-core/src/rocketdict/api/registry.py \
+            rocketdict-product-core/src/rocketdict/block_section_identifiers.py \
+            rocketdict-product-core/src/rocketdict/translation_stage.py \
+            rocketdict-product-core/tests/test_block_section_identifiers.py \
+            rocketdict-product-core/tests/test_translation_stage_block_section_identifiers.py
+          git commit -m 'Preserve block section identifiers in Product Stage12'
+          git push origin HEAD:chatgpt/product-core-forward
