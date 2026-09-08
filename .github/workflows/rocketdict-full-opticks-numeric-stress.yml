@@ -84,7 +84,16 @@ jobs:
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
       - name: Run full Product Stage12 and numeric audit on contiguous Opticks
-        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py &
+          child=$!
+          while kill -0 "$child" 2>/dev/null; do
+            echo "[heartbeat] full Opticks Product Stage12/numeric audit active at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            sleep 30
+          done
+          wait "$child"
       - name: Measure numeric prime notation on the current Product plan
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py
       - name: Escalate unresolved ordinary isolated numeric failures for research
