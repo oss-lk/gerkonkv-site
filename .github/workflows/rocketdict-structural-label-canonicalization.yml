@@ -6,6 +6,7 @@ on:
     paths:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_whole_unit.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_inventory.py'
       - '.github/workflows/rocketdict-structural-label-canonicalization.yml'
   workflow_dispatch:
 
@@ -65,10 +66,13 @@ jobs:
         run: |
           test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-numeric-stress.json"
           test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-nbest-escalation.json"
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/uploads/1e25ec2c54fc6e9f-opticks.txt"
       - name: Probe source-side structural-label canonicalization
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py
       - name: Probe whole-unit rank0 canonicalization
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_whole_unit.py
+      - name: Inventory every supported structural label
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_inventory.py
       - name: Upload canonicalization evidence
         uses: actions/upload-artifact@v4
         with:
@@ -77,5 +81,6 @@ jobs:
             work/opus-asset-build.json
             work/input/full-opticks-numeric-stress/full-opticks-structural-label-canonicalization.json
             work/input/full-opticks-numeric-stress/full-opticks-structural-label-whole-unit.json
+            work/input/full-opticks-numeric-stress/full-opticks-structural-label-inventory.json
           if-no-files-found: error
           retention-days: 90
