@@ -39,3 +39,13 @@ This repository contains unrelated historical website material as well as Rocket
 Update L1 only with the current goal/checkpoint/proven facts/blockers/hot paths/next actions. Move only durable reasoning to L2. Leave raw logs, large evidence, code excerpts and chronology in L3. A future agent should be able to recover the normal case as:
 
 `PROJECT_STATE.md → HEAD diff if needed → docs/memory/INDEX.md → relevant L2 → targeted/unrestricted L3 as evidence demands`.
+
+### Mandatory pre-response synchronization
+
+After **every development iteration** and **before every user-facing result/report**, synchronize all three of these repository memory files to the actual current HEAD, CI/artifact evidence, active blockers and durable conclusions:
+
+1. `PROJECT_STATE.md`
+2. `docs/memory/TRANSLATION_QUALITY.md`
+3. `docs/memory/DECISIONS.md`
+
+This is mandatory even when only one of the files changed conceptually. Replace stale statements rather than appending a diary. If a file has no new durable decision, still verify it against current L3 and update any stale contracts/checkpoints before replying. Do not send the final user-facing development summary first and promise to repair memory later; the memory synchronization is part of completing the iteration.
