@@ -6,10 +6,9 @@
 
 - Repository: `oss-lk/gerkonkv-site`.
 - Active engineering branch: `chatgpt/product-core-forward`; `main` is not the current RocketDict engineering source of truth.
-- Current inspected HEAD: `1f45b9eb66fe30e38eb35b5d6adc659e15f05092` (`Preserve block section identifiers in Product Stage12`).
-- Maintained direct real Stage8→25 and unified user-facing `rocketdict-product-run` source→Stage25 + replay are green on bounded Stage12 execution: Product Core run `34225159869`, artifact `10055422087`.
-- Latest complete actual-Product full contiguous pinned *Opticks* acceptance/audit: run `34224998708`, artifact `10056028661`, source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`. It completed full Product Stage12 plus prime and staged-n-best research successfully under planner `/7` and bounded request batching.
-- Current planner `/8` block-section-ID migration was dependency-light verified by run `34236048593` and then committed by the migration runner. Because that final commit was created by `GITHUB_TOKEN`, independent normal Product Core/full-*Opticks* workflows have not yet verified `/8`.
+- Current inspected engineering HEAD before this memory update: `10ee4ad45e5daf0318bba5103d850d1e8ca2d328` (`Run full Opticks formula-spacing feasibility DOE`). Changes after the planner `/8` Product commit are research-only; maintained Product contracts are unchanged.
+- Latest independent maintained Product Core verification: run `34250903497`, artifact `10065987500`, fully green for dependency-light, direct real Stage8→25, unified `rocketdict-product-run` source→Stage25, and replay.
+- Latest complete actual-Product full contiguous pinned *Opticks* acceptance/audit: run `34244876537`, artifact `10064356708`, digest `sha256:7c77092dc86516983a7917931e9b000e6c2774595562e8854623a9faff4979b4`, source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`. It is the maintained planner `/8` full-corpus baseline.
 
 Per `AGENTS.md`, re-check HEAD and CI before relying on this checkpoint if the branch advances.
 
@@ -22,47 +21,58 @@ The mandatory requirements remain [`rocketdict/PRODUCT_TARGET.md`](rocketdict/PR
 ## Confirmed working
 
 - Official pinned OPUS EN→RU `opus-2020-02-11` runs offline through CTranslate2 Marian with `float32` acceptance compute type.
-- Stage12 current Product planner contract at HEAD is `rocketdict-stage12-protected-split/8`.
-- Stage12 structural-label contract `rocketdict-stage12-block-structural-label-opus/1` is integrated: 108 block `_Exper._/_Obs._/_Qu._` labels are byte-exact source units, real OPUS staged beam6→12 is used only for this source-defined class, and the single inline label remains ordinary prose.
-- Stage12 block section identifier contract is `rocketdict-stage12-block-section-identifier/1`: block IDs such as `1.B.` / `1.F.3.` are preserved byte-exact and never sent to MT; inline references remain ordinary prose.
-- Stage12 primary real-MT execution is bounded by `rocketdict-stage12-bounded-request-batch/1`, default batch size `48`, hard maximum `128`; batching is part of cache/config/output identity and does not change planner spans/model inputs/output order.
-- Stage12 ASCII-table execution remains source-structure-aware; table geometry and alpha-free numeric/symbolic cells are source-owned, while logical text groups use real OPUS.
-- Stage15 maintained numeric/symbol hard gate is `rocketdict-maintained-numeric-integrity/5`; numeric prime notation is fail-closed.
-- Maintained Stage20→25 downstream evidence/identities remain pinned, immutable and replayable; CEFR-J/CMUdict/sense-scoped downstream behavior is proven by real small-corpus smoke.
+- Stage12 maintained Product planner: `rocketdict-stage12-protected-split/8`.
+- Structural-label contract `rocketdict-stage12-block-structural-label-opus/1`: 108 block `_Exper._/_Obs._/_Qu._` labels are byte-exact units with narrow real-OPUS beam6→12 selection; the single inline occurrence remains ordinary prose.
+- Block section identifier contract `rocketdict-stage12-block-section-identifier/1`: 21 full-*Opticks* block IDs are byte-exact source-owned structure, excluded from MT; all 5 inline identifiers remain ordinary MT context. `/8` audit reports 21/21 preserved and zero block-ID model requests.
+- Stage12 real-MT backend requests use `rocketdict-stage12-bounded-request-batch/1`, default batch `48`, hard maximum `128`, with batch provenance in cache/config/output identity.
+- Stage12 ASCII tables remain source-structure-aware; table geometry and alpha-free numeric/symbolic cells are source-owned, while logical text groups use real OPUS.
+- Stage15 hard gate is `rocketdict-maintained-numeric-integrity/5`; numeric prime notation remains fail-closed.
+- Direct and unified real Stage8→25 paths remain green and replay-safe.
 
-## Latest full-Opticks `/7` facts
+## Current full-Opticks `/8` facts
 
-Actual Product Stage12 run `34224998708` completed successfully on all `586543` source characters:
+Actual Product Stage12 run `34244876537` on all `586543` source characters produced:
 
-- Stage8 tokens: `129825`;
-- Stage10 context sentences: `3001`;
-- Stage12 planned/translated units: `3333`;
-- structural-label units: `108`, structural-label numeric failures: `0`;
-- ASCII-table blocks: `6`;
-- numeric-bearing units: `684`;
-- Product numeric hard failures at rank0: `35`;
-- isolated numeric-only failures: `12`;
-- beam6 rescues among isolated failures: `3`;
-- staged beam12/16 leaves five isolated residual units: `744, 2296, 2381, 2750, 2898` under the `/7` plan.
+- Stage12 units: `3347` with byte-exact source coverage;
+- numeric-bearing units: `688`;
+- structural-label numeric-bearing units: `108`, failures `0`;
+- table numeric-bearing units: `6`, table rank0 numeric failures `0`;
+- Product rank0 numeric hard failures: `27`;
+- isolated numeric-only failures: `11`;
+- generic beam6 strict rescues across all failures: `6`, isolated beam6 rescues: `2`;
+- staged generic beam12/16 leaves five isolated residuals: planner-local sequences `744, 2296, 2381, 2750, 2898`.
 
-Generic n-best remains research-only. Sequence IDs are plan-local; use immutable source spans/text when comparing across planner versions.
+Prime audit on the same artifact finds `17` prime-bearing units / `38` prime events and `11` rank0 prime failures. Numeric `/5` catches all of them; none is a false Product pass.
 
-## Current active frontier
+Sequence IDs are planner-version-local. Compare future runs by immutable source span/text and failure class.
 
-Planner `/7` full-corpus evidence exposed a separate document-structure class in Project Gutenberg license section identifiers. The immutable corpus contains block IDs such as `1.B.` and `1.F.3.`; when left inside prose, OPUS can drop or Cyrillicize them (for example `1.E.3.` → `1.Е.3.`). Current HEAD promotes a narrow block-only source-owned preservation contract and planner `/8`.
+## Recent expensive negative research — do not repeat unchanged
 
-Immediate requirement: independently verify planner `/8` through ordinary Product Core real-runtime and a complete actual-Product full-*Opticks* rerun. Only after the fresh `/8` artifact may residual hard failures be reclassified and the next quality mechanism selected.
+All of the following are research-only and **not** Product policy:
 
-Known remaining non-structure classes from `/7` include long-unit numeric content loss, fraction/formula corruption and very large-number corruption. Do not solve them with target-side literal insertion, placeholders, broad n-best fallback, or evaluator weakening.
+- Prime whole-unit Unicode canonicalization: `0/16` strict success. Whole-unit unchanged source beam6→12→16 rescues only `4/11` prime failures. A fragment structural split is mechanically `16/16` but semantically degrades prose in real examples (`53 deg.` → `53 балла`, `hundred Feet` → `сто ног`), so it is rejected. Prime semantic hints (`arcminutes/arcseconds/thirds of arc`) rescue `0/11` failures. Primary run `34249764521`, artifact `10065557329`.
+- Large-integer source formatting (thousands grouping and narrow `x`→`×`): among 12 ordinary ≥7-digit units, four are baseline hard failures and **0/4** are rescued; some previously successful units regress. Run `34250592035`, artifact `10065848534`. Reject as Product preprocessing.
+- Compact-formula operator spacing on the sole matching full-*Opticks* unit (`3/8A ... ((61-1/2)/8)A`) does not rescue the failure, including staged raw n-best. Run `34250960739`, artifact `10065980547`. Reject as Product preprocessing.
+
+## Active frontier
+
+The remaining failures are not one mechanism. Keep these branches separate:
+
+1. **Long-unit content loss** — immutable span `133139:133431` loses source numeric literal `25` while retaining later `30`/`40`; broad n-best does not rescue it. This is the next high-value planner/model investigation because the source unit is long and the target is visibly compressed.
+2. **Prime ambiguity** — 11 current rank0 failures; cheap normalization, semantic hints and generic high-beam are insufficient. Any future solution must preserve whole-sentence semantics and may not use the rejected fragment split.
+3. **Fraction/formula corruption** — immutable span `401232:401532`; operator spacing failed.
+4. **Very large integer corruption** — immutable spans around `417625:417917`, `483234:483458`, `507544:507698`; grouping/`×` preprocessing failed.
+5. Other non-isolated delimiter/illustration/length failures remain separately measurable and must not be hidden by numeric-only work.
+
+No target-side literal insertion, placeholders, corpus-specific target patches, broad n-best fallback, or evaluator weakening.
 
 ## Immediate continuation
 
-1. Trigger and complete independent Product Core dependency-light + direct/unified real Stage8→25 on planner `/8`.
-2. Re-run complete actual-Product pinned *Opticks* under planner `/8`; audit exact block-section-ID preservation and compute the new hard-failure/residual frontier from the artifact.
-3. If `/8` works as intended, remove any one-shot block-section migration harness/workflow and keep only maintained source/tests/workflows.
-4. Investigate the remaining immutable-span classes separately: long-unit content loss, fraction/formula corruption, and extreme integer corruption; promote only evidence-backed source/planner/model mechanisms.
-5. Continue until full heavy translation hard gates are zero, then extend the heavy run through downstream alignment/lexical/sense/card/export acceptance and finally Windows packaging/clean-install validation.
-6. Before every user-facing development result, synchronize this file plus `docs/memory/TRANSLATION_QUALITY.md` and `docs/memory/DECISIONS.md` to actual HEAD/CI per `AGENTS.md`.
+1. Investigate the long-unit content-loss span with source-derived clause/context planning alternatives while preserving complete immutable source coverage; test on the complete class, not a target patch.
+2. If a candidate improves the identified class, run focused regressions, direct/unified real Stage8→25 and complete full-*Opticks* before Product promotion.
+3. Continue prime, formula and extreme-integer research as separate evidence branches; record rejected mechanisms in L2.
+4. Continue until full heavy translation hard gates are zero, then extend the heavy run through downstream alignment/lexical/sense/card/export acceptance and Windows packaging/clean-install validation.
+5. Before every user-facing development result, synchronize this file plus `docs/memory/TRANSLATION_QUALITY.md` and `docs/memory/DECISIONS.md` to actual HEAD/CI per `AGENTS.md`.
 
 ## Hot paths
 
@@ -73,10 +83,10 @@ Known remaining non-structure classes from `/7` include long-unit numeric conten
 - `rocketdict-product-core/src/rocketdict/numeric_integrity.py`
 - `rocketdict-product-core/src/rocketdict/api/registry.py`
 - `rocketdict-product-core/tests/test_translation_stage_*`
-- `rocketdict-product-core/tests/test_block_section_identifiers.py`
 - `rocketdict-workbench/tests/real_translation_full_opticks_*`
 - `.github/workflows/rocketdict-product-core.yml`
 - `.github/workflows/rocketdict-full-opticks-numeric-stress.yml`
+- `.github/workflows/rocketdict-full-opticks-prime-feasibility.yml`
 
 ## L2 routing
 
