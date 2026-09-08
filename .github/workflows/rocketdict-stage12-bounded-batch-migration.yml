@@ -46,6 +46,11 @@ jobs:
       - name: Validate and commit bounded Stage12 execution
         run: |
           set -euo pipefail
+          # Editable installs and pytest generate untracked bytecode/egg metadata.
+          # Remove only those known generated directories before the exact-diff guard;
+          # the migration-created regression file must remain visible to Git.
+          find rocketdict-product-core rocketdict-workbench -type d \
+            \( -name '__pycache__' -o -name '*.egg-info' \) -prune -exec rm -rf {} +
           expected=$(cat <<'EOF'
           .github/workflows/rocketdict-full-opticks-numeric-stress.yml
           rocketdict-product-core/src/rocketdict/api/registry.py
