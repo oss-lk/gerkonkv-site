@@ -44,7 +44,7 @@ def _tokens(content: str) -> list[dict]:
     ]
 
 
-def test_planner_v5_isolates_block_label_even_when_old_context_splits_it_three_ways() -> None:
+def test_planner_v6_isolates_block_label_even_when_old_context_splits_it_three_ways() -> None:
     content = "Lead paragraph.\n\n_Exper._ 11. Following prose."
     label_start = content.index("_Exper._")
     boundary1 = label_start + 4
@@ -77,7 +77,41 @@ def test_planner_v5_isolates_block_label_even_when_old_context_splits_it_three_w
     assert "".join(str(row["text"]) for row in units) == content
 
 
-def test_planner_v5_leaves_inline_supported_label_on_ordinary_text_path() -> None:
+def test_planner_v6_coalesces_label_boundary_whitespace_into_following_prose() -> None:
+    content = "Lead paragraph.\n\n_Exper._ 11.\n\nFollowing prose."
+    label_start = content.index("_Exper._")
+    label_end = label_start + len("_Exper._ 11.")
+    # Reproduce the full-Opticks failure shape: Stage10 ends one sentence after
+    # the label's source-owned blank separator, so isolating the exact label
+    # would otherwise leave a standalone "\n\n" unit.
+    context = [
+        _context(0, 0, label_end + 2, content),
+        _context(1, label_end + 2, len(content), content),
+    ]
+
+    units = segment_translation_units(
+        content,
+        [],
+        context,
+        _tokens(content),
+        selected_format="txt",
+        preferred_tokens=64,
+    )
+
+    labels = [row for row in units if row["metadata"].get("source") == "structural_label"]
+    assert len(labels) == 1
+    assert labels[0]["text"] == "_Exper._ 11."
+    assert labels[0]["start"] == label_start
+    assert labels[0]["end"] == label_end
+    assert not [row for row in units if not str(row["text"]).strip()]
+    following = next(row for row in units if int(row["start"]) == label_end)
+    assert following["text"].startswith("\n\nFollowing prose.")
+    assert following["metadata"]["structural_label_boundary_whitespace_coalesced"] is True
+    assert following["metadata"]["planner_contract"] == PLANNER_CONTRACT
+    assert "".join(str(row["text"]) for row in units) == content
+
+
+def test_planner_v6_leaves_inline_supported_label_on_ordinary_text_path() -> None:
     content = "Inline (_Exper._ 10. _Part_ 2.) remains ordinary prose."
     context = [_context(0, 0, len(content), content)]
     units = segment_translation_units(
@@ -154,8 +188,8 @@ def test_structural_label_execution_fails_closed_without_raw_acceptable_candidat
         )
 
 
-def test_registry_publishes_planner_v5_and_structural_label_contract() -> None:
-    assert PLANNER_CONTRACT == "rocketdict-stage12-protected-split/5"
+def test_registry_publishes_planner_v6_and_structural_label_contract() -> None:
+    assert PLANNER_CONTRACT == "rocketdict-stage12-protected-split/6"
     assert STAGE12_PLANNER_CONTRACT == PLANNER_CONTRACT
     assert STAGE12_STRUCTURAL_LABEL_CONTRACT == STRUCTURAL_LABEL_CONTRACT
     manifest = lab_manifest(probe_runtime=False)

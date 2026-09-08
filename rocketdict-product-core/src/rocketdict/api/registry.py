@@ -8,7 +8,7 @@ from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
-STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/5"
+STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/6"
 STAGE12_STRUCTURAL_LABEL_CONTRACT = "rocketdict-stage12-block-structural-label-opus/1"
 NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/5"
 
