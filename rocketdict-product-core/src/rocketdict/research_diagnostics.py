@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Dependency-free research diagnostics aligned with maintained Product semantics.
 
-These checks are measurement surfaces, not additional Product hard gates.  They
+These checks are measurement surfaces, not additional Product hard gates. They
 must therefore avoid contradicting the maintained hard-gate parser while still
 remaining independently versioned and auditable.
 """
@@ -17,10 +17,11 @@ from .numeric_integrity import (
     is_english_digit_ordinal,
 )
 from .numeric_words import extract_russian_ordinals
+from .prime_notation import compare_numeric_prime_notation
 
 NUMERIC_ORDER_CONTRACT = "rocketdict-maintained-numeric-order/2"
 DELIMITER_CONTRACT = "rocketdict-maintained-delimiter-preservation/1"
-CRITICAL_TOKEN_CONTRACT = "rocketdict-maintained-critical-technical-token/2"
+CRITICAL_TOKEN_CONTRACT = "rocketdict-maintained-critical-technical-token/3"
 OUTPUT_ARTIFACT_CONTRACT = "rocketdict-maintained-output-artifact/2"
 
 _GREEK_SOURCE_RE = re.compile(r"\[Greek:\s*([^\]]*)\]", flags=re.IGNORECASE)
@@ -52,11 +53,11 @@ def compare_numeric_order(source: str, target: str) -> dict[str, Any]:
     """Check that explicit source numeric values survive in source order.
 
     Exact counts/additions are intentionally left to the Product numeric hard
-    gate.  Target events include explicit numeric literals plus conservative
-    Russian ordinal words.  A Russian ordinal word may match only a source
+    gate. Target events include explicit numeric literals plus conservative
+    Russian ordinal words. A Russian ordinal word may match only a source
     literal that was itself an ordinary English digit ordinal (``st/nd/rd/th``),
     mirroring Product numeric-v4 semantics without licensing cardinal/technical
-    identifiers.  Explicit numeric-token ambiguity remains shared with the hard
+    identifiers. Explicit numeric-token ambiguity remains shared with the hard
     gate (grouped thousands, apostrophe decimals, spaced dash separators, etc.).
     """
     source_literals = extract_numeric_literals(source)
@@ -122,8 +123,8 @@ def compare_delimiter_preservation(source: str, target: str) -> dict[str, Any]:
     """Measure exact preservation of source paired-delimiter counts.
 
     A malformed/unbalanced immutable source is *not* a licence to fabricate a
-    closing delimiter.  If the model preserves the same unmatched count, this
-    diagnostic passes and records ``source_balanced=False`` for research.  A
+    closing delimiter. If the model preserves the same unmatched count, this
+    diagnostic passes and records ``source_balanced=False`` for research. A
     balanced source still requires exact left/right counts in the target.
     """
     rows: dict[str, Any] = {}
@@ -185,12 +186,14 @@ def compare_critical_technical_tokens(source: str, target: str) -> dict[str, Any
     """Measure preservation of source-owned technical payloads and identifiers.
 
     This retains the useful frozen-R1 critical-token surface while moving it to
-    a maintained, dependency-free and independently versioned diagnostic.  It
+    a maintained, dependency-free and independently versioned diagnostic. It
     never repairs or injects a token: source and target sequences are compared
     exactly for Greek/illustration payloads, symbolic Gutenberg emphasis, ASCII
-    footnote markers and immutable Gutenberg section identifiers such as
-    ``1.F.4.``.
+    footnote markers, immutable Gutenberg section identifiers such as
+    ``1.F.4.``, and conservative numeric prime-mark notation. Prime notation is
+    research-only and deliberately does not change the Product numeric hard gate.
     """
+    prime = compare_numeric_prime_notation(source, target)
     checks: dict[str, dict[str, Any]] = {
         "greek_payloads": {
             "source": _payloads(_GREEK_SOURCE_RE, source),
@@ -216,6 +219,10 @@ def compare_critical_technical_tokens(source: str, target: str) -> dict[str, Any
             "source": _payloads(_STRUCTURAL_ID_RE, source),
             "target": _payloads(_STRUCTURAL_ID_RE, target),
         },
+        "numeric_prime_notation": {
+            "source": list(prime["source_signature"]),
+            "target": list(prime["target_signature"]),
+        },
     }
     failed = [name for name, row in checks.items() if row["source"] != row["target"]]
     return {
@@ -235,11 +242,12 @@ def compare_output_artifacts(source: str, target: str) -> dict[str, Any]:
 
     Literal HTML/XML entities and the Unicode replacement character are visible
     corruption in plain-text Product output when the immutable source did not
-    contain them.  Research evidence also records quote delimiters across common
-    English/Russian styles.  Style substitution is allowed when the total quote
+    contain them. Research evidence also records quote delimiters across common
+    English/Russian styles. Style substitution is allowed when the total quote
     delimiter cardinality is unchanged; only *introduced* quote delimiters are
-    rejected here.  Apostrophes are intentionally excluded because they carry
-    lexical and historical numeric meaning in the corpus.
+    rejected here. Apostrophes are intentionally excluded because they carry
+    lexical and historical numeric meaning in the corpus; numeric prime-mark
+    semantics are measured separately by the critical-token diagnostic.
 
     This remains a measurement surface: it does not decode, strip, normalize or
     rewrite either source or target.
