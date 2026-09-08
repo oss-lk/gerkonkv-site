@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from real_translation_nbest_feasibility import _verdict  # noqa: E402
 
 SCHEMA = "rocketdict-full-opticks-nbest-escalation/1"
-BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/2"
+BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/3"
 OPTICKS_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
 GENERATION_CELLS = (
     {"beam_size": 12, "num_hypotheses": 12},
@@ -104,6 +104,7 @@ def main() -> int:
         row
         for row in numeric_failures
         if row.get("production_table_composite") is not True
+        and row.get("production_structural_label") is not True
         and row.get("numeric_failure_is_isolated") is True
         and not isinstance(row.get("selected_strict_candidate"), dict)
     ]
@@ -117,7 +118,7 @@ def main() -> int:
             "source_start": int(row["source_start"]),
             "source_end": int(row["source_end"]),
             "source_text": str(row["source_text"]),
-            "rank0_target_text": str(row["rank0_target_text"]),
+            "product_baseline_target_text": str(row["product_target_text"]),
             "beam6_candidate_count": len(row.get("candidates") or []),
             "cells": [],
             "selected": None,

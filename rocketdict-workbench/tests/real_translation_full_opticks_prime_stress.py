@@ -6,8 +6,8 @@ This research-only harness reuses the immutable Stage8/10 database produced by
 ``real_translation_full_opticks_numeric_stress`` and reconstructs the exact
 current Stage12 plan over the complete pinned source. Every planned unit whose
 source contains conservative numeric prime notation is translated with the same
-rank-0 OPUS semantics as Product Stage12, including the maintained composite
-ASCII-table path.
+ordinary/table OPUS semantics as Product Stage12. Structural-label units do not
+contain numeric prime notation and therefore are outside this audit scope.
 
 The goal is to measure a known selector blind spot without changing Product
 hard gates: historical apostrophe decimals remain numeric-v4 territory, while
@@ -45,7 +45,7 @@ from real_translation_full_opticks_numeric_stress import (  # noqa: E402
 from real_translation_nbest_feasibility import _verdict  # noqa: E402
 
 SCHEMA = "rocketdict-full-opticks-prime-stress/1"
-BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/2"
+BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/3"
 
 
 def _canonical_sha(value: Any) -> str:
