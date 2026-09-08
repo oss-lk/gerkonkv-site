@@ -8,6 +8,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_whole_unit.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_inventory.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_structural_label_inventory_escalation.py'
+      - 'rocketdict-workbench/tests/full_opticks_structural_label_planner_inventory.py'
       - '.github/workflows/rocketdict-structural-label-canonicalization.yml'
   workflow_dispatch:
 
@@ -68,6 +69,7 @@ jobs:
           test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-numeric-stress.json"
           test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/full-opticks-nbest-escalation.json"
           test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/uploads/1e25ec2c54fc6e9f-opticks.txt"
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite"
       - name: Probe source-side structural-label canonicalization
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_canonicalization.py
       - name: Probe whole-unit rank0 canonicalization
@@ -76,6 +78,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_inventory.py
       - name: Escalate unresolved inventory requests
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_structural_label_inventory_escalation.py
+      - name: Inventory structural labels against current Stage12 planner
+        run: python -u rocketdict-workbench/tests/full_opticks_structural_label_planner_inventory.py
       - name: Upload canonicalization evidence
         uses: actions/upload-artifact@v4
         with:
@@ -86,5 +90,6 @@ jobs:
             work/input/full-opticks-numeric-stress/full-opticks-structural-label-whole-unit.json
             work/input/full-opticks-numeric-stress/full-opticks-structural-label-inventory.json
             work/input/full-opticks-numeric-stress/full-opticks-structural-label-inventory-escalation.json
+            work/input/full-opticks-numeric-stress/full-opticks-structural-label-planner-inventory.json
           if-no-files-found: error
           retention-days: 90
