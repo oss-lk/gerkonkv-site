@@ -35,13 +35,8 @@ jobs:
             rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py \
             rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py \
             rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
-      - name: Run dependency-light Product and Workbench regressions
-        run: |
-          python -m pytest -q rocketdict-product-core/tests
-          python -m pytest -q \
-            rocketdict-workbench/tests/test_product_profile.py \
-            rocketdict-workbench/tests/test_product_preflight.py \
-            rocketdict-workbench/tests/test_core_compatibility.py
+      - name: Run complete dependency-light Product Core suite
+        run: python -m pytest -q rocketdict-product-core/tests
       - name: Validate and commit full Opticks v3 harness
         env:
           BRANCH: chatgpt/product-core-forward
