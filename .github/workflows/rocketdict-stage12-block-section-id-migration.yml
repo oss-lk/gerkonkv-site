@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/product-core-forward]
     paths:
       - 'tools/stage12_block_section_identifier_migration.py'
+      - 'tools/fix_stage12_block_section_identifier_migration.py'
       - '.github/workflows/rocketdict-stage12-block-section-id-migration.yml'
   workflow_dispatch:
 
@@ -22,6 +23,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Tighten migration request-exclusion anchor
+        run: python tools/fix_stage12_block_section_identifier_migration.py
       - name: Apply assertion-heavy block section identifier migration
         run: python tools/stage12_block_section_identifier_migration.py
       - name: Install maintained Product Core, Workbench and tests
