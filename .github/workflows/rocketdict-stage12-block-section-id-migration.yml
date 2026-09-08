@@ -58,6 +58,10 @@ jobs:
           set -euo pipefail
           find rocketdict-product-core rocketdict-workbench -type d \
             \( -name '__pycache__' -o -name '*.egg-info' \) -prune -exec rm -rf {} +
+          # The first fixer intentionally mutates the one-shot migration helper
+          # in the runner only. Restore that helper before validating the actual
+          # Product/test diff; no Product changes are discarded here.
+          git checkout -- tools/stage12_block_section_identifier_migration.py
           expected=$(cat <<'EOF'
           rocketdict-product-core/src/rocketdict/api/registry.py
           rocketdict-product-core/src/rocketdict/block_section_identifiers.py
