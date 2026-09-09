@@ -152,6 +152,11 @@ def product_parameter_overrides(stage_number: int, implementation_key: str, *, s
             "device": "cpu",
             "compute_type": "float32",
             "run_assemble": True,
+            # Mechanical full-Opticks gates accepted the semicolon resegmentation
+            # rescue, but contiguous semantic review found meaning degradation.
+            # Keep Product Mode on immutable planner-v8 output until a replacement
+            # rescue is proven mechanically and semantically safe.
+            "enable_selective_resegmentation_rescue": False,
         }
         if source_kind == "subtitle":
             # Real product smoke showed a wider multi-sentence MT unit could
