@@ -107,6 +107,25 @@ def _source_tokens(
     ]
 
 
+def _rows_cover_context(
+    rows: list[dict[str, Any]], *, start: int, end: int, source: str
+) -> bool:
+    """Return True only when ordinary primary rows are the whole immutable context."""
+    if not rows or end <= start or len(source) != end - start:
+        return False
+    cursor = start
+    for row in sorted(rows, key=lambda item: int(item["source_start"])):
+        row_start = int(row["source_start"])
+        row_end = int(row["source_end"])
+        row_source = str(row.get("source_text") or "")
+        if row_start != cursor or row_end <= row_start or row_end > end:
+            return False
+        if source[row_start - start : row_end - start] != row_source:
+            return False
+        cursor = row_end
+    return cursor == end
+
+
 def _candidate_rows(
     *,
     context_sequence: int,
@@ -124,7 +143,7 @@ def _candidate_rows(
     candidate_spans = [[int(row["start"]), int(row["end"])] for row in chunks]
     output: list[dict[str, Any]] = []
     for index, (chunk, candidates) in enumerate(zip(chunks, hypotheses, strict=True)):
-        target = str(candidates[0].get("text") or "").strip()
+        target = str(candidates[0].get("text") or "")
         payload = {
             "planner": {
                 "source": "nlp_sentence",
@@ -283,9 +302,6 @@ def run_stage12(
         max_candidate_tokens = 0
         if enabled and generation_supported and selected_format == "txt":
             for sequence, rows in sorted(primary_by_context.items()):
-                trigger = evaluate_primary_context_trigger(rows)
-                if trigger["eligible"] is not True:
-                    continue
                 context = context_by_sequence.get(sequence)
                 if context is None:
                     raise StageExecutionError(
@@ -296,6 +312,11 @@ def run_stage12(
                 source = str(context["source_text"])
                 if content[start:end] != source:
                     raise StageExecutionError("selective rescue context differs from immutable source")
+                if not _rows_cover_context(rows, start=start, end=end, source=source):
+                    continue
+                trigger = evaluate_primary_context_trigger(rows)
+                if trigger["eligible"] is not True:
+                    continue
                 tokens = _source_tokens(nlp_tokens, start, end)
                 spans = primary_stage._balanced_protected_spans(
                     source, absolute_start=start
@@ -367,8 +388,8 @@ def run_stage12(
             if any(not hypotheses for hypotheses in raw):
                 rejected[sequence] = {"reason": "empty_hypothesis_set"}
                 continue
-            targets = [str(hypotheses[0].get("text") or "").strip() for hypotheses in raw]
-            if any(not target for target in targets):
+            targets = [str(hypotheses[0].get("text") or "") for hypotheses in raw]
+            if any(not target.strip() for target in targets):
                 rejected[sequence] = {"reason": "empty_rank0_target"}
                 continue
             candidate_eval_rows = [
