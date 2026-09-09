@@ -13,7 +13,9 @@ versioned selector and is not more alphabetically compressed.
 
 This is not target repair: source bytes are never rewritten, targets are raw
 model output, no placeholders or literal injection exist, and a rejected rescue
-leaves the original failing primary output intact for Stage15 to block.
+leaves the original failing primary output intact for Stage15 to block.  The
+mechanism is research opt-in by default because contiguous semantic review found
+that mechanical gate success alone does not prove translation equivalence.
 """
 
 from collections import defaultdict
@@ -42,7 +44,7 @@ from . import translation_stage as primary_stage
 
 SELECTED_PHASE = "selective-resegmentation-selected-v1"
 PRIMARY_PHASE = "selective-resegmentation-primary-v8"
-DEFAULT_ENABLED = True
+DEFAULT_ENABLED = False
 
 
 def _bool_parameter(value: Any, *, name: str) -> bool:
