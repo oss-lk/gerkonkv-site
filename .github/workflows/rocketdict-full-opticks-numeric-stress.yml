@@ -33,6 +33,7 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/project.py'
       - 'rocketdict-workbench/tests/audit_full_opticks_block_section_identifiers.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_selective_rescue.py'
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py'
@@ -99,6 +100,8 @@ jobs:
             sleep 30
           done
           wait "$child"
+      - name: Audit selected Stage12 rescue lineage and raw targets
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_selective_rescue.py
       - name: Audit Product block section identifiers on immutable Opticks
         run: python -u rocketdict-workbench/tests/audit_full_opticks_block_section_identifiers.py
       - name: Measure numeric prime notation on the current Product plan
@@ -123,6 +126,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
+            work/full-opticks-numeric-stress/full-opticks-selective-rescue-audit.json
             work/full-opticks-numeric-stress/full-opticks-block-section-audit.json
             work/full-opticks-numeric-stress/full-opticks-prime-stress.json
             work/full-opticks-numeric-stress/full-opticks-nbest-escalation.json
