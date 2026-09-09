@@ -13,6 +13,8 @@ on:
       - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
       - 'rocketdict-product-core/src/rocketdict/runtime.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue_stage.py'
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/core.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/product_policy.py'
