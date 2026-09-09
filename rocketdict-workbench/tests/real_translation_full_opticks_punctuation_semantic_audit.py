@@ -44,7 +44,9 @@ EXPECTED_BASELINE_RUN_ID = "34338655735"
 EXPECTED_BASELINE_ARTIFACT_ID = "10099448450"
 BACKTRACK_TOKENS = 6
 MAJOR = frozenset({";", ":", ".", "!", "?"})
-ORDINARY_MT_SOURCES = frozenset({"nlp_sentence", "nlp_sentence_fragment"})
+ORDINARY_MT_SOURCES = frozenset(
+    {"nlp_sentence", "nlp_sentence_fragment", "nlp_sentence_group"}
+)
 BATCH_SIZE = 48
 _ASCII_WORD = re.compile(r"\b[A-Za-z]{3,}\b")
 _CYRILLIC = re.compile(r"[А-Яа-яЁё]")
