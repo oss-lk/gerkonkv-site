@@ -38,6 +38,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue.py'
       - '.github/workflows/rocketdict-full-opticks-numeric-stress.yml'
   workflow_dispatch:
 
@@ -100,7 +101,7 @@ jobs:
             sleep 30
           done
           wait "$child"
-      - name: Audit selected Stage12 rescue lineage and raw targets
+      - name: Audit fail-closed selected Stage12 lineage
         run: python -u rocketdict-workbench/tests/audit_full_opticks_selective_rescue.py
       - name: Audit Product block section identifiers on immutable Opticks
         run: python -u rocketdict-workbench/tests/audit_full_opticks_block_section_identifiers.py
@@ -108,6 +109,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py
       - name: Escalate unresolved ordinary isolated numeric failures for research
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
+      - name: Execute and audit opt-in selective resegmentation rescue
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -127,6 +130,7 @@ jobs:
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
             work/full-opticks-numeric-stress/full-opticks-selective-rescue-audit.json
+            work/full-opticks-numeric-stress/full-opticks-selective-rescue-optin.json
             work/full-opticks-numeric-stress/full-opticks-block-section-audit.json
             work/full-opticks-numeric-stress/full-opticks-prime-stress.json
             work/full-opticks-numeric-stress/full-opticks-nbest-escalation.json
