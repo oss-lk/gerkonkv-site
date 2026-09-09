@@ -83,7 +83,7 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                     "structural-label-aware",
                     "block-section-id-aware",
                     "bounded-batch",
-                    "selective-resegmentation-rescue",
+                    "selective-resegmentation-rescue-research-only",
                 ],
                 "required_inputs": ["context_run_id"],
                 "controls": [
@@ -99,7 +99,7 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                     _control("plan_preferred_unit_tokens", 64),
                     _control("beam_size", 6),
                     _control("num_hypotheses", 1),
-                    _control("enable_selective_resegmentation_rescue", True),
+                    _control("enable_selective_resegmentation_rescue", False),
                     _control("selective_resegmentation_rescue_contract", RESCUE_CONTRACT),
                     _control("selective_resegmentation_selector_contract", SELECTOR_CONTRACT),
                 ],
