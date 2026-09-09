@@ -6,6 +6,7 @@ from typing import Any
 
 from rocketdict.evidence import cefrj_status, cmudict_status
 from rocketdict.runtime import NLP_MODELS, nlp_status, opus_status
+from rocketdict.translation_rescue import RESCUE_CONTRACT, SELECTOR_CONTRACT
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
 STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/8"
@@ -73,7 +74,17 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                 "label": "OPUS EN-RU CTranslate2 Marian",
                 "production_eligible": True,
                 "testing_only": False,
-                "tags": ["real-mt", "offline", "opus", "ctranslate2", "structure-aware-planner", "structural-label-aware", "block-section-id-aware", "bounded-batch"],
+                "tags": [
+                    "real-mt",
+                    "offline",
+                    "opus",
+                    "ctranslate2",
+                    "structure-aware-planner",
+                    "structural-label-aware",
+                    "block-section-id-aware",
+                    "bounded-batch",
+                    "selective-resegmentation-rescue",
+                ],
                 "required_inputs": ["context_run_id"],
                 "controls": [
                     _control("allow_download", False),
@@ -88,6 +99,9 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                     _control("plan_preferred_unit_tokens", 64),
                     _control("beam_size", 6),
                     _control("num_hypotheses", 1),
+                    _control("enable_selective_resegmentation_rescue", True),
+                    _control("selective_resegmentation_rescue_contract", RESCUE_CONTRACT),
+                    _control("selective_resegmentation_selector_contract", SELECTOR_CONTRACT),
                 ],
             }
         ],
