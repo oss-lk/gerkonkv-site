@@ -3,19 +3,19 @@ from __future__ import annotations
 """Research-only semantic review surface for punctuation-aware Stage12 cuts.
 
 The numeric punctuation-shadow experiments intentionally translate only
-numeric-bearing units.  That is sufficient to detect numeric regressions but
+numeric-bearing units. That is sufficient to detect numeric regressions but
 not sufficient to promote a planner change: moving a boundary can change the
 translation of ordinary prose that contains no digits at all.
 
 This audit reconstructs the current planner-v8 Product plan from the latest
-fail-closed full-Opticks Product artifact, applies the smallest candidate
-punctuation backtrack window that can reach the known long-unit semicolon,
-finds every source region whose partition changed, and regenerates *all* shadow
-units in those regions with the same pinned real OPUS float32 rank-0 runtime.
-It exports complete source, baseline Product target and shadow target text for
-manual semantic inspection, together with unchanged mechanical diagnostics.
+fail-closed full-Opticks Product artifact, applies a configurable punctuation
+backtrack window, finds every source region whose partition changed, and
+regenerates *all* shadow linguistic units in those regions with the same pinned
+real OPUS float32 rank-0 runtime. It exports complete source, baseline Product
+target and shadow target text for manual semantic inspection, together with
+unchanged mechanical diagnostics.
 
-No Product database rows are written.  Source and target text are never
+No Product database rows are written. Source and target text are never
 rewritten, placeholders and literal injection are forbidden, and a green
 mechanical verdict is explicitly not a promotion decision.
 """
@@ -44,6 +44,7 @@ EXPECTED_BASELINE_RUN_ID = "34338655735"
 EXPECTED_BASELINE_ARTIFACT_ID = "10099448450"
 BACKTRACK_TOKENS = 6
 MAJOR = frozenset({";", ":", ".", "!", "?"})
+ORDINARY_MT_SOURCES = frozenset({"nlp_sentence", "nlp_sentence_fragment"})
 BATCH_SIZE = 48
 _ASCII_WORD = re.compile(r"\b[A-Za-z]{3,}\b")
 _CYRILLIC = re.compile(r"[А-Яа-яЁё]")
@@ -247,11 +248,14 @@ def main() -> int:
         source_length=len(content),
     )
     if not regions:
-        raise RuntimeError("six-token punctuation shadow unexpectedly changes no boundaries")
+        raise RuntimeError(
+            f"{BACKTRACK_TOKENS}-token punctuation shadow unexpectedly changes no boundaries"
+        )
 
     affected_shadow: list[dict[str, Any]] = []
     affected_index: dict[tuple[int, int], int] = {}
     region_inputs: list[dict[str, Any]] = []
+    observed_linguistic_sources: set[str] = set()
     for region_index, (start, end) in enumerate(regions):
         product_rows = [
             row
@@ -270,11 +274,13 @@ def main() -> int:
             raise RuntimeError(f"shadow region {region_index} does not cover source")
         for unit in shadow_rows:
             metadata = dict(unit.get("metadata") or {})
-            if metadata.get("source") != "nlp_sentence":
+            source_kind = str(metadata.get("source") or "")
+            if source_kind not in ORDINARY_MT_SOURCES:
                 raise RuntimeError(
-                    "punctuation shadow changed a non-ordinary Stage12 source class: "
-                    f"{metadata.get('source')!r} at {unit['start']}:{unit['end']}"
+                    "punctuation shadow changed a source-owned or unknown Stage12 class: "
+                    f"{source_kind!r} at {unit['start']}:{unit['end']}"
                 )
+            observed_linguistic_sources.add(source_kind)
             key = (int(unit["start"]), int(unit["end"]))
             if key not in affected_index:
                 affected_index[key] = len(affected_shadow)
@@ -395,7 +401,10 @@ def main() -> int:
 
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "complete semantic-review surface for every six-token punctuation-shadow partition change",
+        "purpose": (
+            "complete semantic-review surface for every "
+            f"{BACKTRACK_TOKENS}-token punctuation-shadow partition change"
+        ),
         "promotion_allowed": False,
         "manual_semantic_review_required": True,
         "source_rewriting": False,
@@ -414,6 +423,8 @@ def main() -> int:
             "major_punctuation": sorted(MAJOR),
             "fallback": "maintained_planner_v8_split_choice",
         },
+        "allowed_linguistic_source_classes": sorted(ORDINARY_MT_SOURCES),
+        "observed_linguistic_source_classes": sorted(observed_linguistic_sources),
         "generation": {"beam_size": 6, "num_hypotheses": 1},
         "max_decoding_length": max_decoding_length,
         "baseline_unit_count": len(baseline_units),
