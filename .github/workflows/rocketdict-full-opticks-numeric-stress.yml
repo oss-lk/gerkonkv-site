@@ -19,6 +19,8 @@ on:
       - 'rocketdict-product-core/src/rocketdict/table_logical_structure.py'
       - 'rocketdict-product-core/src/rocketdict/table_stage12.py'
       - 'rocketdict-product-core/src/rocketdict/table_structure.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue_stage.py'
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-product-core/tests/test_block_section_identifiers.py'
       - 'rocketdict-product-core/tests/test_table_logical_structure.py'
