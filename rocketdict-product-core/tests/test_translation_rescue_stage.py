@@ -1,6 +1,37 @@
 from __future__ import annotations
 
-from rocketdict.translation_rescue_stage import _candidate_rows, _rows_cover_context
+from rocketdict.translation_rescue import RESCUE_CONTRACT, SELECTOR_CONTRACT
+from rocketdict.translation_rescue_stage import (
+    SELECTED_PHASE,
+    _candidate_rows,
+    _primary_parameters,
+    _rows_cover_context,
+)
+
+
+def test_primary_parameters_strip_rescue_selection_from_primary_identity() -> None:
+    primary = {
+        "planner_contract": "rocketdict-stage12-protected-split/8",
+        "beam_size": 6,
+        "num_hypotheses": 1,
+        "request_batch_size": 48,
+    }
+    enabled = {
+        **primary,
+        "enable_selective_resegmentation_rescue": True,
+        "selective_resegmentation_rescue_contract": RESCUE_CONTRACT,
+        "selective_resegmentation_selector_contract": SELECTOR_CONTRACT,
+        "selective_resegmentation_phase": SELECTED_PHASE,
+    }
+    disabled = {
+        **enabled,
+        "enable_selective_resegmentation_rescue": False,
+    }
+
+    assert _primary_parameters(enabled) == primary
+    assert _primary_parameters(disabled) == primary
+    assert enabled["enable_selective_resegmentation_rescue"] is True
+    assert enabled["selective_resegmentation_phase"] == SELECTED_PHASE
 
 
 def test_rows_cover_context_requires_exact_contiguous_whole_context() -> None:

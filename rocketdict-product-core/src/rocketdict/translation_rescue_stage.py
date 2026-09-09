@@ -43,8 +43,15 @@ from . import translation_stage as primary_stage
 
 
 SELECTED_PHASE = "selective-resegmentation-selected-v1"
-PRIMARY_PHASE = "selective-resegmentation-primary-v8"
 DEFAULT_ENABLED = False
+_RESCUE_ONLY_PARAMETER_KEYS = frozenset(
+    {
+        "enable_selective_resegmentation_rescue",
+        "selective_resegmentation_rescue_contract",
+        "selective_resegmentation_selector_contract",
+        "selective_resegmentation_phase",
+    }
+)
 
 
 def _bool_parameter(value: Any, *, name: str) -> bool:
@@ -56,11 +63,12 @@ def _bool_parameter(value: Any, *, name: str) -> bool:
 
 
 def _primary_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
-    primary = dict(parameters)
-    primary["selective_resegmentation_rescue_contract"] = RESCUE_CONTRACT
-    primary["selective_resegmentation_selector_contract"] = SELECTOR_CONTRACT
-    primary["selective_resegmentation_phase"] = PRIMARY_PHASE
-    return primary
+    """Return only parameters that can affect the immutable primary Stage12 run."""
+    return {
+        key: value
+        for key, value in parameters.items()
+        if key not in _RESCUE_ONLY_PARAMETER_KEYS
+    }
 
 
 def _context_sequence(row: dict[str, Any]) -> int | None:
@@ -233,15 +241,12 @@ def run_stage12(
     effective["selective_resegmentation_selector_contract"] = SELECTOR_CONTRACT
     effective["selective_resegmentation_phase"] = SELECTED_PHASE
 
-    # Primary Product translation remains an immutable planner-v8 Stage12 run.
+    # Primary Product translation remains the cache-reusable immutable planner-v8
+    # Stage12 run. Selection/rescue controls belong only to the wrapper run.
     primary_output = primary_stage.run_stage12(
         database,
         context_run_id=int(context_run_id),
-        parameters=_primary_parameters({
-            key: value
-            for key, value in effective.items()
-            if key != "selective_resegmentation_phase"
-        }),
+        parameters=_primary_parameters(effective),
         implementation=implementation,
     )
     primary_run_id = int(primary_output["translation_run_id"])
