@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/product-core-forward]
     paths:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_full_failures.py'
       - '.github/workflows/rocketdict-full-opticks-alternative-mt-feasibility.yml'
   workflow_dispatch:
 
@@ -110,8 +111,8 @@ jobs:
           PY
           test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors"
           echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
-      - name: Run alternative MT differential on immutable failure spans
-        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_feasibility.py
+      - name: Run TC-big over all 27 Product hard failures and context 669
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_full_failures.py
       - name: Re-verify immutable replay database
         run: echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
       - name: Record runtime identities and resources
@@ -123,11 +124,11 @@ jobs:
           df -h > work/alternative-mt-runtime-evidence/disk.txt || true
           free -h > work/alternative-mt-runtime-evidence/memory.txt || true
           sha256sum "$ROCKETDICT_ALT_MT_MODEL_DIR"/* > work/alternative-mt-runtime-evidence/model-files.sha256 || true
-      - name: Upload alternative MT evidence
+      - name: Upload full TC-big failure inventory evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-full-opticks-alternative-mt-feasibility
+          name: rocketdict-full-opticks-alternative-mt-full-failures
           path: |
             work/baseline/full-opticks-numeric-stress/full-opticks-alternative-mt-feasibility.json
             work/alternative-mt-runtime-evidence/**
