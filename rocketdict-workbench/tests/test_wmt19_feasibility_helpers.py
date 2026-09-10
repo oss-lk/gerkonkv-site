@@ -57,3 +57,12 @@ def test_conflicting_runtime_special_token_ids_fail_closed() -> None:
         MODULE.resolve_special_token_id(
             "eos_token_id", tokenizer=tokenizer, model=model
         )
+
+
+def test_generation_ceiling_is_fail_closed_even_when_backend_forces_final_eos() -> None:
+    assert MODULE.generation_ceiling_hit(511, max_length=512) is False
+    assert MODULE.generation_ceiling_hit(512, max_length=512) is True
+    assert MODULE.generation_ceiling_hit(513, max_length=512) is True
+
+    with pytest.raises(ValueError, match="positive"):
+        MODULE.generation_ceiling_hit(1, max_length=0)
