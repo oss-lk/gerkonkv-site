@@ -39,6 +39,7 @@ on:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_prime_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue_nbest.py'
       - '.github/workflows/rocketdict-full-opticks-numeric-stress.yml'
   workflow_dispatch:
 
@@ -111,6 +112,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_nbest_escalation.py
       - name: Execute and audit opt-in selective resegmentation rescue
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue.py
+      - name: Probe staged raw n-best inside selective rescue contexts
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue_nbest.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -131,6 +134,7 @@ jobs:
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
             work/full-opticks-numeric-stress/full-opticks-selective-rescue-audit.json
             work/full-opticks-numeric-stress/full-opticks-selective-rescue-optin.json
+            work/full-opticks-numeric-stress/full-opticks-selective-rescue-nbest-feasibility.json
             work/full-opticks-numeric-stress/full-opticks-block-section-audit.json
             work/full-opticks-numeric-stress/full-opticks-prime-stress.json
             work/full-opticks-numeric-stress/full-opticks-nbest-escalation.json
