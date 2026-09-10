@@ -1,0 +1,135 @@
+name: RocketDict Full Opticks Alternative MT Feasibility
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_feasibility.py'
+      - '.github/workflows/rocketdict-full-opticks-alternative-mt-feasibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  alternative-mt-feasibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASELINE_RUN_ID: '34441822239'
+      BASELINE_ARTIFACT_NAME: rocketdict-full-opticks-product-stage12-audit
+      BASELINE_JSON_SHA256: 3d899605172decdadbab55eedf9fb161c5dd599a921679bea47fd98adbf2efb4
+      OPTIN_JSON_SHA256: e5b46bbf8e6db4b1e755f2c4bb6b9d382b83074c5dcf2a6528fd600cfee9fa87
+      BASELINE_DB_SHA256: eff56dab177baa161b6e8126a9ff75ecdc341c19deff5866fec201c6bf232687
+      ALT_MODEL_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      ALT_MODEL_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      ALT_MODEL_SAFETENSORS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      ROCKETDICT_ALT_MT_MODEL_DIR: ${{ github.workspace }}/work/alt-mt-model
+      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/baseline/full-opticks-numeric-stress
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained evaluator and pinned alternative-MT runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python -m pip install \
+            'transformers==4.56.2' \
+            'huggingface_hub==0.34.4' \
+            'safetensors==0.6.2' \
+            'sentencepiece==0.2.1' \
+            'sacremoses==0.1.1'
+      - name: Download immutable full Opticks baseline artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT_NAME }}
+          path: work/baseline
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+      - name: Verify replay baseline bytes and contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$ROCKETDICT_NUMERIC_STRESS_ROOT"
+          echo "$BASELINE_JSON_SHA256  $root/full-opticks-numeric-stress.json" | sha256sum -c -
+          echo "$OPTIN_JSON_SHA256  $root/full-opticks-selective-rescue-optin.json" | sha256sum -c -
+          echo "$BASELINE_DB_SHA256  $root/project/data/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_NUMERIC_STRESS_ROOT'])
+          baseline = json.loads((root / 'full-opticks-numeric-stress.json').read_text(encoding='utf-8'))
+          optin = json.loads((root / 'full-opticks-selective-rescue-optin.json').read_text(encoding='utf-8'))
+          assert baseline['schema'] == 'rocketdict-full-opticks-numeric-stress/3'
+          assert baseline['source_sha256'] == '1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217'
+          assert baseline['source_char_count'] == 586543
+          assert baseline['stage12_planner_contract'] == 'rocketdict-stage12-protected-split/8'
+          assert baseline['product_numeric_failure_count'] == 27
+          assert optin['schema'] == 'rocketdict-full-opticks-selective-rescue-optin/1'
+          assert optin['promotion_allowed'] is False
+          assert optin['primary_identity_reused'] is True
+          assert optin['baseline_hard_numeric_failure_count'] == 27
+          assert optin['enabled_hard_numeric_failure_count'] == 26
+          assert optin['accepted_context_sequences'] == [669]
+          PY
+      - name: Restore pinned alternative model cache
+        uses: actions/cache@v4
+        with:
+          path: work/alt-mt-model
+          key: rocketdict-alt-mt-tc-big-en-zle-708be1d-e68caa9
+      - name: Obtain exact alternative MT snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['ALT_MODEL_REPO'],
+              revision=os.environ['ALT_MODEL_REVISION'],
+              local_dir=os.environ['ROCKETDICT_ALT_MT_MODEL_DIR'],
+              allow_patterns=[
+                  'README.md',
+                  'config.json',
+                  'generation_config.json',
+                  'model.safetensors',
+                  'source.spm',
+                  'special_tokens_map.json',
+                  'target.spm',
+                  'tokenizer_config.json',
+                  'vocab.json',
+              ],
+          )
+          PY
+          test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors"
+          echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
+      - name: Run alternative MT differential on immutable failure spans
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_feasibility.py
+      - name: Re-verify immutable replay database
+        run: echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
+      - name: Record runtime identities and resources
+        if: always()
+        run: |
+          mkdir -p work/alternative-mt-runtime-evidence
+          python -VV > work/alternative-mt-runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/alternative-mt-runtime-evidence/pip-freeze.txt || true
+          df -h > work/alternative-mt-runtime-evidence/disk.txt || true
+          free -h > work/alternative-mt-runtime-evidence/memory.txt || true
+          sha256sum "$ROCKETDICT_ALT_MT_MODEL_DIR"/* > work/alternative-mt-runtime-evidence/model-files.sha256 || true
+      - name: Upload alternative MT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-alternative-mt-feasibility
+          path: |
+            work/baseline/full-opticks-numeric-stress/full-opticks-alternative-mt-feasibility.json
+            work/alternative-mt-runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
