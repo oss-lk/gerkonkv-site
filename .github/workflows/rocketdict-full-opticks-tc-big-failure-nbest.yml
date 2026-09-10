@@ -1,0 +1,167 @@
+name: RocketDict Full Opticks TC-big Failure N-best
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_failure_nbest.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-failure-nbest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  tc-big-failure-nbest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BASELINE_RUN_ID: '34441822239'
+      BASELINE_ARTIFACT_NAME: rocketdict-full-opticks-product-stage12-audit
+      BASELINE_JSON_SHA256: 3d899605172decdadbab55eedf9fb161c5dd599a921679bea47fd98adbf2efb4
+      BASELINE_DB_SHA256: eff56dab177baa161b6e8126a9ff75ecdc341c19deff5866fec201c6bf232687
+      ALT_MODEL_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      ALT_MODEL_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      ALT_MODEL_SAFETENSORS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      ROCKETDICT_ALT_MT_MODEL_DIR: ${{ github.workspace }}/work/alt-mt-model
+      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/baseline/full-opticks-numeric-stress
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained evaluator and pinned TC-big runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python -m pip install \
+            'transformers==4.56.2' \
+            'huggingface_hub==0.34.4' \
+            'safetensors==0.6.2' \
+            'sentencepiece==0.2.1' \
+            'sacremoses==0.1.1'
+      - name: Download immutable full Opticks baseline artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT_NAME }}
+          path: work/baseline
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+      - name: Verify immutable replay baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$ROCKETDICT_NUMERIC_STRESS_ROOT"
+          echo "$BASELINE_JSON_SHA256  $root/full-opticks-numeric-stress.json" | sha256sum -c -
+          echo "$BASELINE_DB_SHA256  $root/project/data/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_NUMERIC_STRESS_ROOT'])
+          baseline = json.loads((root / 'full-opticks-numeric-stress.json').read_text(encoding='utf-8'))
+          assert baseline['schema'] == 'rocketdict-full-opticks-numeric-stress/3'
+          assert baseline['source_sha256'] == '1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217'
+          assert baseline['source_char_count'] == 586543
+          assert baseline['stage12_planner_contract'] == 'rocketdict-stage12-protected-split/8'
+          assert baseline['numeric_bearing_unit_count'] == 688
+          assert baseline['product_numeric_failure_count'] == 27
+          PY
+      - name: Restore exact pinned TC-big cache
+        uses: actions/cache@v4
+        with:
+          path: work/alt-mt-model
+          key: rocketdict-alt-mt-tc-big-en-zle-708be1d-e68caa9
+      - name: Obtain exact TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            README.md
+            config.json
+            generation_config.json
+            model.safetensors
+            source.spm
+            special_tokens_map.json
+            target.spm
+            tokenizer_config.json
+            vocab.json
+          )
+          cache_ok=1
+          for relative in "${required[@]}"; do
+            if [ ! -s "$ROCKETDICT_ALT_MT_MODEL_DIR/$relative" ]; then
+              cache_ok=0
+              break
+            fi
+          done
+          if [ "$cache_ok" = 1 ] && echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c - >/dev/null; then
+            echo "Using exact cached TC-big snapshot; no Hub API request required."
+          else
+            rm -rf "$ROCKETDICT_ALT_MT_MODEL_DIR"
+            python - <<'PY'
+          import os
+          import time
+          from huggingface_hub import snapshot_download
+
+          kwargs = dict(
+              repo_id=os.environ['ALT_MODEL_REPO'],
+              revision=os.environ['ALT_MODEL_REVISION'],
+              local_dir=os.environ['ROCKETDICT_ALT_MT_MODEL_DIR'],
+              allow_patterns=[
+                  'README.md',
+                  'config.json',
+                  'generation_config.json',
+                  'model.safetensors',
+                  'source.spm',
+                  'special_tokens_map.json',
+                  'target.spm',
+                  'tokenizer_config.json',
+                  'vocab.json',
+              ],
+          )
+          for attempt in range(5):
+              try:
+                  snapshot_download(**kwargs)
+                  break
+              except Exception:
+                  if attempt == 4:
+                      raise
+                  time.sleep(15 * (attempt + 1))
+          PY
+          fi
+          for relative in "${required[@]}"; do
+            test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/$relative"
+          done
+          echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
+      - name: Run TC-big beam-6 over all OPUS hard numeric failures
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_tc_big_failure_nbest.py
+      - name: Re-verify immutable replay database
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite"
+          echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
+      - name: Record runtime identities and resources
+        if: always()
+        run: |
+          mkdir -p work/tc-big-failure-nbest-runtime-evidence
+          python -VV > work/tc-big-failure-nbest-runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/tc-big-failure-nbest-runtime-evidence/pip-freeze.txt || true
+          df -h > work/tc-big-failure-nbest-runtime-evidence/disk.txt || true
+          free -h > work/tc-big-failure-nbest-runtime-evidence/memory.txt || true
+          sha256sum "$ROCKETDICT_ALT_MT_MODEL_DIR"/* > work/tc-big-failure-nbest-runtime-evidence/model-files.sha256 || true
+      - name: Upload TC-big failure n-best evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-failure-nbest
+          path: |
+            work/baseline/full-opticks-numeric-stress/full-opticks-tc-big-failure-nbest.json
+            work/tc-big-failure-nbest-runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
