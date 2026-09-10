@@ -5,9 +5,10 @@ from __future__ import annotations
 This is an independent-model control for the focused TC-big experiment.  It
 reuses the exact immutable Product baseline/context inventory but uses the
 Apache-2.0 facebook/wmt19-en-ru FSMT checkpoint.  The model card explicitly
-warns that repeated sub-phrases can lead to content truncation, so parent-context
-output is diagnostic only; no result is eligible for automatic Product
-promotion.
+warns that repeated sub-phrases can lead to content truncation, so decoder
+non-termination is retained as explicit fail-closed evidence for that case
+instead of aborting the rest of the immutable inventory.  No result is eligible
+for automatic Product promotion.
 """
 
 import hashlib
@@ -30,7 +31,7 @@ if SPEC is None or SPEC.loader is None:
 BASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BASE)
 
-SCHEMA = "rocketdict-full-opticks-wmt19-feasibility/1"
+SCHEMA = "rocketdict-full-opticks-wmt19-feasibility/2"
 MODEL_REPO = "facebook/wmt19-en-ru"
 MODEL_REVISION = "834cdada94e68977b9d6c1224ca43a37390936ef"
 MODEL_LICENSE = "apache-2.0"
@@ -126,11 +127,8 @@ def _translate_case(
         ids = [int(value) for value in tensor.tolist()]
         significant = [value for value in ids if pad_id is None or value != int(pad_id)]
         terminated = bool(eos_id is not None and significant and significant[-1] == int(eos_id))
-        if not terminated:
-            raise RuntimeError(
-                f"WMT19 hypothesis {case['case_id']} rank {rank} lacks EOS; possible decoder truncation"
-            )
         target = tokenizer.decode(ids, skip_special_tokens=True).strip()
+        verdict = evaluate_rescue_pair(source, target)
         hypotheses.append(
             {
                 "rank": rank,
@@ -141,10 +139,18 @@ def _translate_case(
                 ),
                 "target_text": target,
                 "output_token_count": len(significant),
-                "terminated_with_eos": True,
-                "mechanical_verdict": evaluate_rescue_pair(source, target),
+                "terminated_with_eos": terminated,
+                "decoder_truncated": not terminated,
+                "mechanical_verdict": verdict,
+                "strictly_eligible_with_decoder_termination": bool(
+                    terminated and verdict.get("strictly_eligible") is True
+                ),
             }
         )
+    strict_count = sum(
+        1 for row in hypotheses if row["strictly_eligible_with_decoder_termination"] is True
+    )
+    truncated_count = sum(1 for row in hypotheses if row["decoder_truncated"] is True)
     result = dict(case)
     result.update(
         {
@@ -159,11 +165,9 @@ def _translate_case(
                 "do_sample": False,
             },
             "hypotheses": hypotheses,
-            "strict_mechanical_hypothesis_count": sum(
-                1
-                for row in hypotheses
-                if (row.get("mechanical_verdict") or {}).get("strictly_eligible") is True
-            ),
+            "strict_mechanical_hypothesis_count": strict_count,
+            "decoder_truncated_hypothesis_count": truncated_count,
+            "all_hypotheses_decoder_terminated": truncated_count == 0,
         }
     )
     return result
@@ -226,12 +230,18 @@ def main() -> int:
     if database_sha_after != database_sha_before:
         raise RuntimeError("WMT19 feasibility DOE mutated Product database")
 
+    truncated_cases = [
+        str(row["case_id"])
+        for row in results
+        if int(row.get("decoder_truncated_hypothesis_count") or 0) > 0
+    ]
     payload: dict[str, Any] = {
         "schema": SCHEMA,
         "purpose": "independent Apache-2.0 EN-RU model control on immutable focused Opticks failures",
         "promotion_allowed": False,
         "semantic_review_required": True,
         "automatic_semantic_selector": False,
+        "decoder_truncation_is_fail_closed": True,
         "product_baseline_changed": False,
         "source_rewriting": False,
         "target_rewriting": False,
@@ -253,6 +263,8 @@ def main() -> int:
             "transformers_class": "FSMTForConditionalGeneration",
         },
         "case_count": len(results),
+        "decoder_truncated_case_count": len(truncated_cases),
+        "decoder_truncated_cases": truncated_cases,
         "cases": results,
     }
     payload["evidence_sha256"] = BASE._canonical_sha(payload)
@@ -263,6 +275,7 @@ def main() -> int:
             {
                 "schema": SCHEMA,
                 "case_count": len(results),
+                "decoder_truncated_cases": truncated_cases,
                 "strict_mechanical_counts": {
                     row["case_id"]: row["strict_mechanical_hypothesis_count"]
                     for row in results
