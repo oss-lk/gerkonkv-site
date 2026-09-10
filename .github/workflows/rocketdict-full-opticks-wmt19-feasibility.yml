@@ -93,7 +93,12 @@ jobs:
       - name: Run WMT19 differential on immutable focused failure spans
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_wmt19_feasibility.py
       - name: Re-verify immutable replay database
-        run: echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite"
+          echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
       - name: Record runtime identities and resources
         if: always()
         run: |
