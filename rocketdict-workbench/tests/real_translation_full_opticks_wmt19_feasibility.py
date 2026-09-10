@@ -6,8 +6,10 @@ This is an independent-model control for the focused TC-big experiment. It
 reuses the exact immutable Product baseline/context inventory but uses the
 Apache-2.0 ``facebook/wmt19-en-ru`` FSMT checkpoint. The model card warns that
 repeated sub-phrases can lead to content truncation, so decoder non-termination
-and an actual max-length hit are retained as separate fail-closed evidence.
-No result is eligible for automatic Product promotion.
+and hitting the configured generation ceiling are retained as separate
+fail-closed evidence. A forced EOS at the last permitted token does not turn a
+ceiling-limited generation into acceptable evidence. No result is eligible for
+automatic Product promotion.
 """
 
 import hashlib
@@ -30,7 +32,7 @@ if SPEC is None or SPEC.loader is None:
 BASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BASE)
 
-SCHEMA = "rocketdict-full-opticks-wmt19-feasibility/3"
+SCHEMA = "rocketdict-full-opticks-wmt19-feasibility/4"
 MODEL_REPO = "facebook/wmt19-en-ru"
 MODEL_REVISION = "834cdada94e68977b9d6c1224ca43a37390936ef"
 MODEL_LICENSE = "apache-2.0"
@@ -97,18 +99,14 @@ def _single_special_token_id(value: Any, *, name: str, source: str) -> int | Non
 
 
 def resolve_special_token_id(name: str, *, tokenizer: Any, model: Any) -> int:
-    """Resolve one FSMT special token from every authoritative runtime surface.
-
-    ``FSMTTokenizer`` may not expose ``eos_token_id`` even though generation is
-    configured with ``model.config.eos_token_id``.  Treating tokenizer ``None``
-    as proof of non-termination misclassifies valid short generations as
-    truncated.  We therefore collect every published non-null value and require
-    them to agree before using it for evidence.
-    """
+    """Resolve one FSMT special token from every authoritative runtime surface."""
 
     sources = (
         ("tokenizer", getattr(tokenizer, name, None)),
-        ("generation_config", getattr(getattr(model, "generation_config", None), name, None)),
+        (
+            "generation_config",
+            getattr(getattr(model, "generation_config", None), name, None),
+        ),
         ("model_config", getattr(getattr(model, "config", None), name, None)),
     )
     resolved: list[tuple[str, int]] = []
@@ -120,8 +118,25 @@ def resolve_special_token_id(name: str, *, tokenizer: Any, model: Any) -> int:
         raise RuntimeError(f"WMT19 runtime publishes no {name}")
     distinct = {value for _source, value in resolved}
     if len(distinct) != 1:
-        raise RuntimeError(f"WMT19 {name} disagreement across runtime surfaces: {resolved!r}")
+        raise RuntimeError(
+            f"WMT19 {name} disagreement across runtime surfaces: {resolved!r}"
+        )
     return resolved[0][1]
+
+
+def generation_ceiling_hit(token_count: int, *, max_length: int) -> bool:
+    """Return whether generation consumed the complete configured token budget.
+
+    Some generation backends force an EOS into the final allowed position.  That
+    is still ceiling-limited evidence: we cannot distinguish a naturally
+    completed hypothesis from output that was forced closed only because the
+    budget ended.  Product-quality research therefore fails closed whenever the
+    significant sequence length reaches ``max_length``.
+    """
+
+    if max_length < 1:
+        raise ValueError("max_length must be positive")
+    return int(token_count) >= int(max_length)
 
 
 def _translate_case(
@@ -173,8 +188,8 @@ def _translate_case(
         ids = [int(value) for value in tensor.tolist()]
         significant = [value for value in ids if value != pad_id]
         terminated = bool(significant and significant[-1] == eos_id)
-        length_limit_hit = bool(
-            not terminated and len(significant) >= MAX_DECODING_LENGTH
+        length_limit_hit = generation_ceiling_hit(
+            len(significant), max_length=MAX_DECODING_LENGTH
         )
         target = tokenizer.decode(ids, skip_special_tokens=True).strip()
         verdict = evaluate_rescue_pair(source, target)
@@ -193,7 +208,9 @@ def _translate_case(
                 "decoder_length_limit_hit": length_limit_hit,
                 "mechanical_verdict": verdict,
                 "strictly_eligible_with_decoder_termination": bool(
-                    terminated and verdict.get("strictly_eligible") is True
+                    terminated
+                    and not length_limit_hit
+                    and verdict.get("strictly_eligible") is True
                 ),
             }
         )
