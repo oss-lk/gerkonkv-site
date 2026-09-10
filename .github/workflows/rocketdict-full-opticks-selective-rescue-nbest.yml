@@ -1,0 +1,120 @@
+name: RocketDict Full Opticks Selective Rescue N-Best Replay
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue_nbest.py'
+      - '.github/workflows/rocketdict-full-opticks-selective-rescue-nbest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  selective-rescue-nbest-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BASELINE_RUN_ID: '34388659238'
+      BASELINE_ARTIFACT_NAME: rocketdict-full-opticks-product-stage12-audit
+      BASELINE_JSON_SHA256: b42d9e54384afbc8f9132dad1956171a5bd836e27c58d6b3be852fb4e65f8fb3
+      OPTIN_JSON_SHA256: e5b46bbf8e6db4b1e755f2c4bb6b9d382b83074c5dcf2a6528fd600cfee9fa87
+      BASELINE_DB_SHA256: afbe21f5207c715079ef7819ec0af98e058b85c37050b5523d76b0ca1db7cedf
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/baseline/full-opticks-numeric-stress
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained research runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+      - name: Download immutable full Opticks baseline artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT_NAME }}
+          path: work/baseline
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+      - name: Verify replay baseline bytes and contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$ROCKETDICT_NUMERIC_STRESS_ROOT"
+          echo "$BASELINE_JSON_SHA256  $root/full-opticks-numeric-stress.json" | sha256sum -c -
+          echo "$OPTIN_JSON_SHA256  $root/full-opticks-selective-rescue-optin.json" | sha256sum -c -
+          echo "$BASELINE_DB_SHA256  $root/project/data/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_NUMERIC_STRESS_ROOT'])
+          baseline = json.loads((root / 'full-opticks-numeric-stress.json').read_text(encoding='utf-8'))
+          optin = json.loads((root / 'full-opticks-selective-rescue-optin.json').read_text(encoding='utf-8'))
+          assert baseline['schema'] == 'rocketdict-full-opticks-numeric-stress/3'
+          assert baseline['evidence_sha256'] == 'f7d4d7b9c1c54f49dd39c520dee3d22d4eec14a9301880af47c04328fc2df698'
+          assert baseline['source_sha256'] == '1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217'
+          assert baseline['stage12_planner_contract'] == 'rocketdict-stage12-protected-split/8'
+          assert baseline['product_numeric_failure_count'] == 27
+          assert optin['schema'] == 'rocketdict-full-opticks-selective-rescue-optin/1'
+          assert optin['evidence_sha256'] == '35843a6b8a94e81e0c397499d400e5dde71ff1ae51060e0d37113e448eba6510'
+          assert optin['promotion_allowed'] is False
+          assert optin['primary_identity_reused'] is True
+          assert optin['baseline_hard_numeric_failure_count'] == 27
+          assert optin['enabled_hard_numeric_failure_count'] == 26
+          assert optin['accepted_context_sequences'] == [669]
+          PY
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify pinned OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Probe staged raw n-best inside selective rescue contexts
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_selective_rescue_nbest.py
+      - name: Re-verify immutable replay database
+        run: echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
+      - name: Record runtime identities and resources
+        if: always()
+        run: |
+          mkdir -p work/replay-runtime-evidence
+          python -VV > work/replay-runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/replay-runtime-evidence/pip-freeze.txt || true
+          df -h > work/replay-runtime-evidence/disk.txt || true
+          free -h > work/replay-runtime-evidence/memory.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/replay-runtime-evidence/opus.sha256 || true
+      - name: Upload selective rescue n-best replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-selective-rescue-nbest-replay
+          path: |
+            work/opus-asset-build.json
+            work/baseline/full-opticks-numeric-stress/full-opticks-selective-rescue-nbest-feasibility.json
+            work/replay-runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
