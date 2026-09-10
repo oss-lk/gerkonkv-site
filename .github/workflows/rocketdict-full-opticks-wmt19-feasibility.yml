@@ -69,10 +69,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
+          required=(
+            README.md
+            config.json
+            generation_config.json
+            merges.txt
+            model.safetensors
+            tokenizer_config.json
+            vocab-src.json
+            vocab-tgt.json
+          )
+          cache_ok=1
+          for relative in "${required[@]}"; do
+            if [ ! -s "$ROCKETDICT_WMT19_MODEL_DIR/$relative" ]; then
+              cache_ok=0
+              break
+            fi
+          done
+          if [ "$cache_ok" = 1 ] && echo "$WMT19_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_WMT19_MODEL_DIR/model.safetensors" | sha256sum -c - >/dev/null; then
+            echo "Using exact cached WMT19 snapshot; no Hub API request required."
+          else
+            rm -rf "$ROCKETDICT_WMT19_MODEL_DIR"
+            python - <<'PY'
           import os
+          import time
           from huggingface_hub import snapshot_download
-          snapshot_download(
+
+          kwargs = dict(
               repo_id=os.environ['WMT19_MODEL_REPO'],
               revision=os.environ['WMT19_MODEL_REVISION'],
               local_dir=os.environ['ROCKETDICT_WMT19_MODEL_DIR'],
@@ -87,8 +110,19 @@ jobs:
                   'vocab-tgt.json',
               ],
           )
+          for attempt in range(5):
+              try:
+                  snapshot_download(**kwargs)
+                  break
+              except Exception:
+                  if attempt == 4:
+                      raise
+                  time.sleep(15 * (attempt + 1))
           PY
-          test -s "$ROCKETDICT_WMT19_MODEL_DIR/model.safetensors"
+          fi
+          for relative in "${required[@]}"; do
+            test -s "$ROCKETDICT_WMT19_MODEL_DIR/$relative"
+          done
           echo "$WMT19_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_WMT19_MODEL_DIR/model.safetensors" | sha256sum -c -
       - name: Run WMT19 differential on immutable focused failure spans
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_wmt19_feasibility.py

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 """Research-only WMT19 EN->RU differential on immutable Opticks failure spans.
 
-This is an independent-model control for the focused TC-big experiment.  It
+This is an independent-model control for the focused TC-big experiment. It
 reuses the exact immutable Product baseline/context inventory but uses the
-Apache-2.0 facebook/wmt19-en-ru FSMT checkpoint.  The model card explicitly
-warns that repeated sub-phrases can lead to content truncation, so decoder
-non-termination is retained as explicit fail-closed evidence for that case
-instead of aborting the rest of the immutable inventory.  No result is eligible
-for automatic Product promotion.
+Apache-2.0 ``facebook/wmt19-en-ru`` FSMT checkpoint. The model card warns that
+repeated sub-phrases can lead to content truncation, so decoder non-termination
+and an actual max-length hit are retained as separate fail-closed evidence.
+No result is eligible for automatic Product promotion.
 """
 
 import hashlib
@@ -31,7 +30,7 @@ if SPEC is None or SPEC.loader is None:
 BASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BASE)
 
-SCHEMA = "rocketdict-full-opticks-wmt19-feasibility/2"
+SCHEMA = "rocketdict-full-opticks-wmt19-feasibility/3"
 MODEL_REPO = "facebook/wmt19-en-ru"
 MODEL_REVISION = "834cdada94e68977b9d6c1224ca43a37390936ef"
 MODEL_LICENSE = "apache-2.0"
@@ -80,6 +79,51 @@ def _model_identity(model_dir: Path) -> dict[str, Any]:
     }
 
 
+def _single_special_token_id(value: Any, *, name: str, source: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        if len(value) != 1:
+            raise RuntimeError(
+                f"WMT19 {name} from {source} must be scalar/singleton, got {value!r}"
+            )
+        value = value[0]
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(
+            f"WMT19 {name} from {source} is not an integer token id: {value!r}"
+        ) from exc
+
+
+def resolve_special_token_id(name: str, *, tokenizer: Any, model: Any) -> int:
+    """Resolve one FSMT special token from every authoritative runtime surface.
+
+    ``FSMTTokenizer`` may not expose ``eos_token_id`` even though generation is
+    configured with ``model.config.eos_token_id``.  Treating tokenizer ``None``
+    as proof of non-termination misclassifies valid short generations as
+    truncated.  We therefore collect every published non-null value and require
+    them to agree before using it for evidence.
+    """
+
+    sources = (
+        ("tokenizer", getattr(tokenizer, name, None)),
+        ("generation_config", getattr(getattr(model, "generation_config", None), name, None)),
+        ("model_config", getattr(getattr(model, "config", None), name, None)),
+    )
+    resolved: list[tuple[str, int]] = []
+    for source, value in sources:
+        token_id = _single_special_token_id(value, name=name, source=source)
+        if token_id is not None:
+            resolved.append((source, token_id))
+    if not resolved:
+        raise RuntimeError(f"WMT19 runtime publishes no {name}")
+    distinct = {value for _source, value in resolved}
+    if len(distinct) != 1:
+        raise RuntimeError(f"WMT19 {name} disagreement across runtime surfaces: {resolved!r}")
+    return resolved[0][1]
+
+
 def _translate_case(
     *, case: dict[str, Any], tokenizer: Any, model: Any, torch: Any
 ) -> dict[str, Any]:
@@ -103,6 +147,9 @@ def _translate_case(
         )
     unk_id = tokenizer.unk_token_id
     unk_count = int((input_ids == int(unk_id)).sum().item()) if unk_id is not None else 0
+    eos_id = resolve_special_token_id("eos_token_id", tokenizer=tokenizer, model=model)
+    pad_id = resolve_special_token_id("pad_token_id", tokenizer=tokenizer, model=model)
+
     with torch.inference_mode():
         generated = model.generate(
             **encoded,
@@ -120,13 +167,15 @@ def _translate_case(
     sequence_scores = getattr(generated, "sequences_scores", None)
     if sequence_scores is not None:
         sequence_scores = sequence_scores.detach().cpu().tolist()
-    eos_id = tokenizer.eos_token_id
-    pad_id = tokenizer.pad_token_id
+
     hypotheses: list[dict[str, Any]] = []
     for rank, tensor in enumerate(sequences):
         ids = [int(value) for value in tensor.tolist()]
-        significant = [value for value in ids if pad_id is None or value != int(pad_id)]
-        terminated = bool(eos_id is not None and significant and significant[-1] == int(eos_id))
+        significant = [value for value in ids if value != pad_id]
+        terminated = bool(significant and significant[-1] == eos_id)
+        length_limit_hit = bool(
+            not terminated and len(significant) >= MAX_DECODING_LENGTH
+        )
         target = tokenizer.decode(ids, skip_special_tokens=True).strip()
         verdict = evaluate_rescue_pair(source, target)
         hypotheses.append(
@@ -140,17 +189,24 @@ def _translate_case(
                 "target_text": target,
                 "output_token_count": len(significant),
                 "terminated_with_eos": terminated,
-                "decoder_truncated": not terminated,
+                "decoder_nonterminated": not terminated,
+                "decoder_length_limit_hit": length_limit_hit,
                 "mechanical_verdict": verdict,
                 "strictly_eligible_with_decoder_termination": bool(
                     terminated and verdict.get("strictly_eligible") is True
                 ),
             }
         )
+
     strict_count = sum(
         1 for row in hypotheses if row["strictly_eligible_with_decoder_termination"] is True
     )
-    truncated_count = sum(1 for row in hypotheses if row["decoder_truncated"] is True)
+    nonterminated_count = sum(
+        1 for row in hypotheses if row["decoder_nonterminated"] is True
+    )
+    length_limit_count = sum(
+        1 for row in hypotheses if row["decoder_length_limit_hit"] is True
+    )
     result = dict(case)
     result.update(
         {
@@ -158,6 +214,8 @@ def _translate_case(
             "input_unknown_token_count": unk_count,
             "model_max_position_embeddings": max_positions,
             "input_truncated": False,
+            "resolved_eos_token_id": eos_id,
+            "resolved_pad_token_id": pad_id,
             "generation": {
                 "beam_size": BEAM_SIZE,
                 "num_hypotheses": NUM_HYPOTHESES,
@@ -166,8 +224,9 @@ def _translate_case(
             },
             "hypotheses": hypotheses,
             "strict_mechanical_hypothesis_count": strict_count,
-            "decoder_truncated_hypothesis_count": truncated_count,
-            "all_hypotheses_decoder_terminated": truncated_count == 0,
+            "decoder_nonterminated_hypothesis_count": nonterminated_count,
+            "decoder_length_limit_hypothesis_count": length_limit_count,
+            "all_hypotheses_decoder_terminated": nonterminated_count == 0,
         }
     )
     return result
@@ -180,7 +239,9 @@ def main() -> int:
             "work/baseline/full-opticks-numeric-stress",
         )
     ).resolve()
-    model_dir = Path(os.environ.get("ROCKETDICT_WMT19_MODEL_DIR", "work/wmt19-model")).resolve()
+    model_dir = Path(
+        os.environ.get("ROCKETDICT_WMT19_MODEL_DIR", "work/wmt19-model")
+    ).resolve()
     baseline_path = root / "full-opticks-numeric-stress.json"
     optin_path = root / "full-opticks-selective-rescue-optin.json"
     database = root / "project" / "data" / "rocketdict.sqlite"
@@ -222,6 +283,8 @@ def main() -> int:
     if str(model.config.model_type) != "fsmt":
         raise RuntimeError(f"unexpected WMT19 model type: {model.config.model_type!r}")
 
+    eos_id = resolve_special_token_id("eos_token_id", tokenizer=tokenizer, model=model)
+    pad_id = resolve_special_token_id("pad_token_id", tokenizer=tokenizer, model=model)
     results = [
         _translate_case(case=case, tokenizer=tokenizer, model=model, torch=torch)
         for case in cases
@@ -230,10 +293,15 @@ def main() -> int:
     if database_sha_after != database_sha_before:
         raise RuntimeError("WMT19 feasibility DOE mutated Product database")
 
-    truncated_cases = [
+    nonterminated_cases = [
         str(row["case_id"])
         for row in results
-        if int(row.get("decoder_truncated_hypothesis_count") or 0) > 0
+        if int(row.get("decoder_nonterminated_hypothesis_count") or 0) > 0
+    ]
+    length_limit_cases = [
+        str(row["case_id"])
+        for row in results
+        if int(row.get("decoder_length_limit_hypothesis_count") or 0) > 0
     ]
     payload: dict[str, Any] = {
         "schema": SCHEMA,
@@ -241,7 +309,8 @@ def main() -> int:
         "promotion_allowed": False,
         "semantic_review_required": True,
         "automatic_semantic_selector": False,
-        "decoder_truncation_is_fail_closed": True,
+        "decoder_nontermination_is_fail_closed": True,
+        "decoder_length_limit_is_fail_closed": True,
         "product_baseline_changed": False,
         "source_rewriting": False,
         "target_rewriting": False,
@@ -261,21 +330,29 @@ def main() -> int:
             "torch_compute_dtype": "float32",
             "device": "cpu",
             "transformers_class": "FSMTForConditionalGeneration",
+            "resolved_eos_token_id": eos_id,
+            "resolved_pad_token_id": pad_id,
         },
         "case_count": len(results),
-        "decoder_truncated_case_count": len(truncated_cases),
-        "decoder_truncated_cases": truncated_cases,
+        "decoder_nonterminated_case_count": len(nonterminated_cases),
+        "decoder_nonterminated_cases": nonterminated_cases,
+        "decoder_length_limit_case_count": len(length_limit_cases),
+        "decoder_length_limit_cases": length_limit_cases,
         "cases": results,
     }
     payload["evidence_sha256"] = BASE._canonical_sha(payload)
     output = root / "full-opticks-wmt19-feasibility.json"
-    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(
         json.dumps(
             {
                 "schema": SCHEMA,
                 "case_count": len(results),
-                "decoder_truncated_cases": truncated_cases,
+                "decoder_nonterminated_cases": nonterminated_cases,
+                "decoder_length_limit_cases": length_limit_cases,
                 "strict_mechanical_counts": {
                     row["case_id"]: row["strict_mechanical_hypothesis_count"]
                     for row in results
