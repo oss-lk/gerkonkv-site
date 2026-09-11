@@ -1,0 +1,123 @@
+name: RocketDict Full Opticks Stage10 v2 Planner Impact
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/context_sentence_boundaries.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/table_structure.py'
+      - 'rocketdict-product-core/src/rocketdict/table_stage12.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_stage10_v2_planner_impact.py'
+      - '.github/workflows/rocketdict-full-opticks-stage10-v2-planner-impact.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  planner-impact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUN16_RUN_ID: '34645769684'
+      RUN16_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-angular-dms-composed-product-rescue
+      RUN16_DB_SHA256: 573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11
+      ROCKETDICT_STAGE10_V2_PLANNER_IMPACT_ROOT: ${{ github.workspace }}/work/full-opticks-stage10-v2-planner-impact
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install maintained Product Core
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+
+      - name: Download immutable persisted run-16 database
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN16_ARTIFACT_NAME }}
+          path: work/run16
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN16_RUN_ID }}
+
+      - name: Verify and stage exact run-16 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_db=work/run16/tc-big-angular-dms-composed-product-rescue/rocketdict.sqlite
+          test -s "$source_db"
+          echo "$RUN16_DB_SHA256  $source_db" | sha256sum -c -
+          mkdir -p "$ROCKETDICT_STAGE10_V2_PLANNER_IMPACT_ROOT"
+          cp "$source_db" "$ROCKETDICT_STAGE10_V2_PLANNER_IMPACT_ROOT/rocketdict.sqlite"
+          echo "$RUN16_DB_SHA256  $ROCKETDICT_STAGE10_V2_PLANNER_IMPACT_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Compare exact Stage12 planning geometry under Stage10 v1 and v2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/real_translation_full_opticks_stage10_v2_planner_impact.py \
+            | tee "$ROCKETDICT_STAGE10_V2_PLANNER_IMPACT_ROOT/planner-impact-summary.json"
+
+      - name: Verify audit invariants and print classifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_STAGE10_V2_PLANNER_IMPACT_ROOT'])
+          evidence = json.loads((root/'full-opticks-stage10-v2-planner-impact.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-stage10-v2-planner-impact/1':
+              raise SystemExit('schema drift')
+          if evidence['stage10_v2_raw_merge_count'] != 38:
+              raise SystemExit(f"raw merge-count drift: {evidence['stage10_v2_raw_merge_count']!r}")
+          if evidence['known_whence_boundary']['source_offset'] != 522572:
+              raise SystemExit('known whence identity drift')
+          if evidence['mt_backend_invoked'] is not False:
+              raise SystemExit('planner-only audit unexpectedly invoked MT')
+          if evidence['source_bytes_rewritten'] is not False or evidence['target_rewriting'] is not False or evidence['evaluator_weakened'] is not False:
+              raise SystemExit('unsafe audit flag')
+          print(json.dumps({
+              'summary': evidence['summary'],
+              'ascii_table_offsets': evidence['ascii_table_offsets'],
+              'v1_stage12_plan_boundary_offsets': evidence['v1_stage12_plan_boundary_offsets'],
+              'run16_final_translation_boundary_offsets': evidence['run16_final_translation_boundary_offsets'],
+              'stage12_plan_boundaries_removed_by_v2': evidence['stage12_plan_boundaries_removed_by_v2'],
+              'classifications': [
+                  {
+                      'offset': row['source_offset'],
+                      'gap': row['gap_repr'],
+                      'line': row['physical_line']['line_number_one_based'],
+                      'line_text': row['physical_line']['line_text'],
+                      'inside_ascii_table': row['inside_detected_ascii_table'],
+                      'v1_plan_boundary': row['v1_stage12_plan_boundary'],
+                      'v2_plan_boundary': row['v2_stage12_plan_boundary'],
+                      'run16_boundary': row['run16_final_translation_boundary'],
+                      'removed_by_v2': row['stage12_plan_boundary_removed_by_v2'],
+                      'v1_neighbors': row['v1_plan_neighbors'],
+                      'v2_neighbors': row['v2_plan_neighbors'],
+                  }
+                  for row in evidence['classifications']
+              ],
+              'evidence_sha256': evidence['evidence_sha256'],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload Stage10 v2 planner-impact evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-stage10-v2-planner-impact
+          path: |
+            work/full-opticks-stage10-v2-planner-impact/full-opticks-stage10-v2-planner-impact.json
+            work/full-opticks-stage10-v2-planner-impact/planner-impact-summary.json
+            work/full-opticks-stage10-v2-planner-impact/rocketdict.sqlite
+          if-no-files-found: warn
+          retention-days: 90
