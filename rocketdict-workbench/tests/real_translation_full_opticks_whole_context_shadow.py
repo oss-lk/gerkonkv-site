@@ -6,8 +6,14 @@ The maintained Product rescue intentionally fires only when an isolated missing
 numeric literal already proves that planner-v8 lost content.  That trigger is
 safe but incomplete: a split long sentence can lose ordinary prose without
 losing a number.  This shadow therefore translates *every* ordinary split
-Stage10 sentence up to the already-proven 160-token ceiling as one unchanged
-rank-0 OPUS request and exports the comparison for semantic review.
+Stage10 sentence up to the Product rescue ceiling as one unchanged rank-0 OPUS
+request and exports the comparison for semantic review.
+
+The ceiling is evaluated with the exact Product planner token contract: Stage8
+NLP tokens fully contained by the Stage10 source span, excluding ``is_space``
+tokens.  Stage10's stored ``token_count`` is intentionally not used for this
+bound because it includes whitespace tokens and would silently exclude Product-
+eligible contexts near the limit.
 
 Nothing in this file is a Product selector.  Positive alphabetic recovery,
 mechanical cleanliness, similarity and the existing numeric trigger are review
@@ -42,10 +48,11 @@ from real_translation_full_opticks_whole_context_rescue import (  # noqa: E402
     _translate_batches,
 )
 
-SCHEMA = "rocketdict-full-opticks-whole-context-shadow/1"
+SCHEMA = "rocketdict-full-opticks-whole-context-shadow/2"
 BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/3"
 KNOWN_LONG_CONTENT_LOSS_SEQUENCE = 669
 TOP_REVIEW_LIMIT = 100
+TOKEN_COUNT_CONTRACT = "stage8-contained-non-space-nlp-tokens/1"
 
 
 def _canonical_sha(value: Any) -> str:
@@ -71,6 +78,18 @@ def _review_priority(row: dict[str, Any]) -> tuple[float, int, float, int]:
         -float(row["target_similarity_to_primary"]),
         -int(row["context_sequence"]),
     )
+
+
+def _non_space_tokens_in_span(
+    nlp_tokens: list[dict[str, Any]], start: int, end: int
+) -> list[dict[str, Any]]:
+    return [
+        token
+        for token in nlp_tokens
+        if int(token["source_start"]) >= start
+        and int(token["source_end"]) <= end
+        and not bool((token.get("payload") or {}).get("flags", {}).get("is_space"))
+    ]
 
 
 def main() -> int:
@@ -103,6 +122,7 @@ def main() -> int:
 
     selected_run_id = int((baseline.get("stage12") or {})["translation_run_id"])
     context_run_id = int((baseline.get("stage10") or {})["context_run_id"])
+    nlp_run_id = int((baseline.get("stage8") or {})["nlp_run_id"])
     document_version_id = int(baseline["document_version_id"])
 
     database_sha_before = _sha_file(database)
@@ -118,6 +138,7 @@ def main() -> int:
             raise RuntimeError("Whole-context shadow primary planner contract drift")
         primary_rows = get_run_items(connection, primary_run_id, kind="translation_segment")
         context_items = get_run_items(connection, context_run_id, kind="context_sentence")
+        nlp_tokens = get_run_items(connection, nlp_run_id, kind="nlp_token")
         document = get_document(connection, document_version_id)
 
     content = str(document["content_text"])
@@ -137,6 +158,7 @@ def main() -> int:
 
     shadow_inputs: list[dict[str, Any]] = []
     skipped_over_cap: list[int] = []
+    stage10_whitespace_delta_context_count = 0
     for sequence, rows in sorted(primary_by_context.items()):
         if len(rows) < 2:
             continue
@@ -150,9 +172,24 @@ def main() -> int:
             raise RuntimeError("Stage10 context differs from immutable source bytes")
         if not _rows_cover_context(rows, start=start, end=end, source=source):
             continue
-        token_count = int(((context.get("payload") or {}).get("token_count")) or 0)
+
+        tokens = _non_space_tokens_in_span(nlp_tokens, start, end)
+        token_count = len(tokens)
         if token_count <= 0:
-            raise RuntimeError(f"Stage10 context {sequence} lacks NLP token count")
+            raise RuntimeError(f"Stage10 context {sequence} has no non-space NLP tokens")
+        primary_planner_token_count = sum(
+            int(((row.get("payload") or {}).get("planner") or {}).get("token_count") or 0)
+            for row in rows
+        )
+        if primary_planner_token_count != token_count:
+            raise RuntimeError(
+                "Whole-context token contract differs from primary planner accounting: "
+                f"context {sequence}: {primary_planner_token_count} != {token_count}"
+            )
+        stage10_token_count = int(((context.get("payload") or {}).get("token_count")) or 0)
+        if stage10_token_count != token_count:
+            stage10_whitespace_delta_context_count += 1
+
         if token_count > MAX_WHOLE_CONTEXT_NLP_TOKENS:
             skipped_over_cap.append(sequence)
             continue
@@ -163,6 +200,7 @@ def main() -> int:
                 "source_end": end,
                 "source_text": source,
                 "nlp_token_count": token_count,
+                "stage10_token_count_including_space": stage10_token_count,
                 "primary_rows": rows,
                 "numeric_trigger": evaluate_primary_context_trigger(rows),
             }
@@ -206,6 +244,9 @@ def main() -> int:
                 "source_start": int(attempt["source_start"]),
                 "source_end": int(attempt["source_end"]),
                 "nlp_token_count": int(attempt["nlp_token_count"]),
+                "stage10_token_count_including_space": int(
+                    attempt["stage10_token_count_including_space"]
+                ),
                 "source_text": str(attempt["source_text"]),
                 "primary_rows": [
                     {
@@ -266,11 +307,13 @@ def main() -> int:
         "primary_translation_run_id": primary_run_id,
         "primary_translation_output_sha256": str(primary_run.get("output_sha256") or ""),
         "primary_planner_contract": PLANNER_CONTRACT,
+        "token_count_contract": TOKEN_COUNT_CONTRACT,
         "maximum_whole_context_nlp_tokens": MAX_WHOLE_CONTEXT_NLP_TOKENS,
         "generation": {"beam_size": 6, "num_hypotheses": 1},
         "split_context_count_within_cap": len(shadow_inputs),
         "split_context_count_over_cap": len(skipped_over_cap),
         "split_context_sequences_over_cap": skipped_over_cap,
+        "stage10_whitespace_delta_context_count": stage10_whitespace_delta_context_count,
         "mechanically_accepted_context_count": len(accepted),
         "positive_alpha_gain_context_count": len(positive_gain),
         "numeric_triggered_context_count": sum(
@@ -306,7 +349,10 @@ def main() -> int:
         json.dumps(
             {
                 "schema": SCHEMA,
+                "token_count_contract": TOKEN_COUNT_CONTRACT,
                 "split_context_count_within_cap": len(shadow_inputs),
+                "split_context_count_over_cap": len(skipped_over_cap),
+                "stage10_whitespace_delta_context_count": stage10_whitespace_delta_context_count,
                 "mechanically_accepted_context_count": len(accepted),
                 "positive_alpha_gain_context_count": len(positive_gain),
                 "numeric_triggered_context_count": payload["numeric_triggered_context_count"],
