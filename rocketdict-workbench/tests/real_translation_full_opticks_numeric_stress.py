@@ -267,9 +267,9 @@ def main() -> int:
         raise RuntimeError("Full Opticks Product Stage12 planner contract drift")
     if stage12.get("structural_label_contract") != STRUCTURAL_LABEL_CONTRACT:
         raise RuntimeError("Full Opticks Product Stage12 structural-label contract drift")
-    if int(stage12.get("structural_label_unit_count") or -1) != 108:
+    if int(stage12.get("structural_label_unit_count") or -1) != 162:
         raise RuntimeError(
-            "Pinned Opticks Product Stage12 must isolate exactly 108 supported block structural labels"
+            "Pinned Opticks Product Stage12 must isolate exactly 162 supported block structural labels"
         )
     if int(stage12.get("structural_label_escalated_unit_count") or -1) != 3:
         raise RuntimeError(
@@ -316,6 +316,23 @@ def main() -> int:
         raise RuntimeError("Full Opticks Product Stage12 does not cover the immutable source exactly")
     if len(units) != int(stage12.get("segment_count") or -1):
         raise RuntimeError("Full Opticks Product Stage12 output segment count drift")
+
+    structural_kinds = Counter(
+        str((unit.get("metadata") or {}).get("structural_label_kind") or "")
+        for unit in units
+        if (unit.get("metadata") or {}).get("source") == "structural_label"
+    )
+    numbered_structural_count = sum(
+        count for kind, count in structural_kinds.items() if kind and not kind.startswith("legacy_")
+    )
+    legacy_structural_count = sum(
+        count for kind, count in structural_kinds.items() if kind.startswith("legacy_")
+    )
+    if numbered_structural_count != 108 or legacy_structural_count != 54:
+        raise RuntimeError(
+            "Pinned Opticks structural-label family inventory drift: "
+            f"numbered={numbered_structural_count}, legacy={legacy_structural_count}"
+        )
 
     numeric_units = [
         (index, unit)
@@ -486,7 +503,7 @@ def main() -> int:
         row for row in numeric_failures if row["production_structural_label"]
     ]
     if len(structural_label_numeric_units) != 108:
-        raise RuntimeError("Full Opticks numeric audit did not observe all 108 Product structural-label units")
+        raise RuntimeError("Full Opticks numeric audit did not observe all 108 Arabic-numbered Product structural-label units")
     if structural_label_numeric_failures:
         raise RuntimeError("Product structural-label selector emitted a numeric-integrity failure")
     asset = translator.asset
@@ -513,6 +530,10 @@ def main() -> int:
         },
         "stage12_planner_contract": PLANNER_CONTRACT,
         "structural_label_contract": STRUCTURAL_LABEL_CONTRACT,
+        "structural_label_family_counts": {
+            "arabic_numbered": numbered_structural_count,
+            "legacy_roman": legacy_structural_count,
+        },
         "table_stage12_contract": TABLE_STAGE12_CONTRACT,
         "stage12_parameters": params12,
         "stage12": {
@@ -578,6 +599,7 @@ def main() -> int:
                 "numeric_bearing_unit_count": len(numeric_units),
                 "table_numeric_bearing_unit_count": len(table_numeric_units),
                 "product_numeric_failure_count": len(numeric_failures),
+                "structural_label_family_counts": payload["structural_label_family_counts"],
                 "structural_label_numeric_bearing_unit_count": len(structural_label_numeric_units),
                 "structural_label_numeric_failure_count": len(structural_label_numeric_failures),
                 "table_rank0_numeric_failure_count": len(table_numeric_failures),
