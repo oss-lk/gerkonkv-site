@@ -41,7 +41,7 @@ Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of miss
 - `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains default OFF/not public-wired. Context `2725` remains the semantic-loss counterexample proving generic mechanical cleanliness is insufficient.
 - `rocketdict-stage12-illustration-label-rescue/1` remains a narrow default-OFF/not-public-wired wrapper. Persisted run `9` is **24 numeric / 30 punctuation / 0 length, 52 unique**.
 - `rocketdict-maintained-emphasis-markup-preservation/1` remains a separate research veto rather than a retroactive Product hard gate.
-- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` is implemented as a separate default-OFF/not-public-wired wrapper. Its current evidence is feasibility only until dedicated unit/runtime/persisted heavy proofs pass.
+- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` is implemented as a separate default-OFF/not-public-wired wrapper. Its unit invariants are green; persisted heavy proof is still required before public exposure or persisted-quality claims.
 
 ## Punctuation residuals remain defect-family-specific
 
@@ -94,7 +94,9 @@ Candidate acceptance requires a raw TC-big hypothesis, maintained strict-clean v
 
 **Evidence.** Workflow `34627371508` triggers on seven run-9 contexts and accepts five (`3`, `1726`, `1737`, `2066`, `2605`), giving a read-only counterfactual **24/30/0,52 → 24/25/0,47**. The remaining two trigger cases fail closed.
 
-**Non-promotion rule.** This authorizes implementation as default OFF only. It does not authorize public wiring or Product-default promotion until dedicated tests, exact offline runtime proof and persisted full-*Opticks* evidence pass.
+**Implementation proof.** Commit `aa776b57...` adds dedicated wrapper tests; Product Core workflow `34629151558` is fully green. Tests explicitly prove disabled exact delegation without TC-big runtime probing, trigger/row-alignment requirements, source-relative completeness bounds, emphasis and delimiter-debt vetoes, fail-closed Stage10/Stage12 cut-through geometry, raw selected-hypothesis provenance, untouched-row copying and byte-exact source reconstruction.
+
+**Non-promotion rule.** These results authorize only continued persisted full-corpus validation. They do not authorize public wiring or Product-default promotion. The counterfactual **24/25/0,47** remains non-persisted until the real wrapper creates and validates a Stage12 run above exact run `9`.
 
 ## MetricX is a research ranking signal only
 
