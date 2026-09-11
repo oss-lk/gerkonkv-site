@@ -38,9 +38,9 @@ No internal rescue becomes Product default merely because one corpus-specific he
 
 ## Run 16 is the current best persisted research residual basis
 
-**Decision.** Stage12 run `16` supersedes run `14`/`15` as the current best persisted research basis: **20 numeric / 18 punctuation / 0 length, 37 unique**.
+**Decision.** Stage12 run `16` is the current best persisted research basis: **20 numeric / 18 punctuation / 0 length, 37 unique**.
 
-**Evidence.** Composed workflow `34645769684`, artifact `10282227627`, exact base run `14`, angular intermediate run `15`, final run `16`, final output SHA `6580654826710367569682fdd44805163d8f23a1ec3ede1c0d74c62b16ec06e`, persisted SQLite SHA `2f7fb592777a9ca18c86ff393954f9032dbe48e4b10d626a322596d5ed56a862`, evidence SHA `34598d7a05df08d01c610c83e9db8e2433e7537e31c9196fdc80eacc5b3f839`. It composes **22/18/0,39 → 21/18/0,38 → 20/18/0,37**, preserves byte-exact source coverage and SQLite integrity, and passes 14/14 narrow wrapper unit regressions.
+**Evidence.** Composed workflow `34645769684`, artifact `10282227627` (ZIP SHA-256 `92b2ad3fa98af1d12c27eeb4ee749071d5152464b34c4ac1f3bf40ed7cc02e14`), exact base run `14`, angular intermediate run `15`, final run `16`, final output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, persisted SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`, evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`. It composes **22/18/0,39 → 21/18/0,38 → 20/18/0,37**, preserves byte-exact source coverage and SQLite integrity, and passes 14/14 narrow wrapper unit regressions.
 
 The DMS layer changes exactly source start `110881` to raw TC-big rank2 `Откуда этот угол 2 град. 0'. 7''.` and preserves all other 3343 rows exactly relative to the angular intermediate. All no-rewrite/no-injection safety invariants are true and promotion/default/public flags remain false.
 
@@ -52,13 +52,17 @@ The run-14 failure `Whence this Angle is 2 deg. 0'. 7''. ` → `Откуда у�
 
 **Decision.** The persisted composed run16 proves technical non-regression for this narrow wrapper but still does not authorize Product-default promotion. The longer neighboring `Chord` sentence remains excluded because symbol preservation cannot prove its technical semantics.
 
-## Upstream sentence segmentation must be investigated before a Whence-specific translation patch
+## Repair false NLP sentence boundaries upstream, not with a Whence-specific MT patch
 
-**Decision.** Do not promote a phrase-specific rescue for `And whence is it | but from ... ?` yet. L3 shows that the immutable source contains no terminal punctuation at this boundary, while Stage8 marks `it` as sentence end and lowercase `but` as sentence start and Stage10 carries that split forward. The punctuation residual is therefore rooted upstream of MT.
+**Decision.** The `And whence is it | but from ... ?` residual is rooted upstream: Stage8 records a spaCy sentence split although immutable source has no terminal punctuation; current Stage10 groups directly by that `sentence_index`, so Stage12 receives two translation units.
 
-Read-only workflow `34644023517` already proves that translating the exact contiguous pair yields six strict + semantic TC-big hypotheses, but the preferred next step is to investigate the sentence/context construction layer for a generic fail-closed repair.
+Read-only workflow `34644023517` proves the exact contiguous pair is translatable, but a phrase-specific `Whence` rescue is not the preferred solution.
 
-A simple Stage10 census of `no terminal punctuation + lowercase continuation` produces only five candidate boundaries: four plausible prose continuations and one suspicious math/roman structural case. This is small enough for exhaustive metadata/source review before implementing a general rule. Any upstream repair must explicitly exclude structural/math boundaries, preserve byte-exact source ownership and be rerun through maintained Stage10→Stage12 evidence. If no safe generic rule exists, fail closed and return to a narrower boundary strategy.
+A complete run-16 Stage10 census of `left side has no terminal sentence punctuation + right side begins lowercase` finds exactly five boundaries. Full source/token inspection confirms **all five are real false spaCy sentence splits**, including `_ B | any where...`, which belongs to one sentence `Line C _prt_ B any where between the Ends...`.
+
+**Decision.** Implement the correction in Stage10 as a generic fail-closed context coalescer while preserving raw Stage8 spaCy evidence. Merge only adjacent contiguous parser sentences when the immutable source gives no sentence-terminal punctuation at the boundary, the continuation begins with lowercase lexical text, and the gap does not cross a paragraph break. Persist original spaCy sentence indices and merge provenance. Because Stage10 cache identity includes the implementation name, changed behavior requires an implementation/schema contract bump; otherwise an old cached run may silently retain the bad boundary behavior.
+
+After unit/diagnostic validation, rerun complete *Opticks* Stage10→translation evidence and compare against run16. If broader regressions appear, fail closed rather than weakening the rule or patching targets.
 
 ## Punctuation and numeric residuals remain defect-family-specific
 
