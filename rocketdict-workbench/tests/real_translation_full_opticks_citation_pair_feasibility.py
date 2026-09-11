@@ -40,14 +40,14 @@ EXPECTED_CASES = (
         "sequence_number": 157,
         "source_text": "IV. ",
         "previous_sequence_number": 156,
-        "previous_source_suffix": "_Lectures of Light and Colours_, Sect. ",
+        "previous_source_suffix": "Part I. Sect. ",
     },
     {
         "case": "sect-ii",
         "sequence_number": 864,
         "source_text": "II. ",
         "previous_sequence_number": 863,
-        "previous_source_suffix": "_Lectures of Light and Colours_, Part I. Sect. ",
+        "previous_source_suffix": "Part I. Sect. ",
     },
 )
 
