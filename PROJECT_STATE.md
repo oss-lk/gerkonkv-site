@@ -6,12 +6,12 @@
 
 - Repository: `oss-lk/gerkonkv-site`
 - Engineering branch: `chatgpt/product-core-forward`
-- L3/L2 checkpoint incorporated by this refresh: `02e3c8a945c7984a4dca62a68fd17d2ef226866a`
+- L3/L2 checkpoint incorporated by this refresh: `aa776b57b1470a559ad4baf7555781e9b2852909`
 - Maintained Product Core + Workbench remain the forward implementation.
 - Authoritative Product target: `rocketdict/PRODUCT_TARGET.md`; final approved heavy evidence requires zero unresolved hard translation failures.
 - Current persisted full-*Opticks* Product residual basis is Stage12 run `9`: **24 numeric/symbol / 30 punctuation / 0 length**, **52 unique failures**.
 - Default Product behavior has not been broadened. Length/citation rescues remain public opt-in/default-OFF; numeric-hard, illustration, and TC-big delimiter rescues are separate default-OFF wrappers and are not public-wired.
-- Current research frontier is a narrow, failure-triggered, row-boundary-aware second-MT rescue for target-only delimiter hallucinations, followed by persisted full-corpus validation. No TC-big result is yet Product-promoted.
+- Current research frontier is persisted full-corpus validation of the narrow, failure-triggered, row-boundary-aware TC-big target-only-delimiter rescue. No TC-big result is yet Product-promoted.
 
 ## Recovery protocol
 
@@ -98,7 +98,9 @@ This is feasibility evidence only. A persisted Product run has not yet been crea
 - `rocketdict-assets build-tc-big-en-ru` provisions the pinned optional asset; `alt-mt` / `alt-mt-build` remain separate optional dependency profiles and are not part of the baseline `production` extra.
 - `translation_tc_big_delimiter_rescue_stage.py` implements the narrow default-OFF wrapper above the current illustration→numeric→length→citation composition.
 - Public `product.stage12.run` is still wired to the prior wrapper; the TC-big layer is intentionally not public yet.
-- Product Core workflow `34628239731` at commit `02e3c8a...` is fully green: dependency-light and real Stage8→25 runtime jobs both pass. This proves the new files do not regress the maintained default path; the TC-big wrapper itself still needs dedicated unit + persisted heavy validation.
+- Product Core workflow `34628239731` at implementation commit `02e3c8a...` is fully green: dependency-light and real Stage8→25 runtime jobs both pass.
+- Dedicated wrapper invariants were added at commit `aa776b57...`; Product Core workflow `34629151558` is fully green. Tests prove disabled exact delegation without probing TC-big, three-part trigger requirements, source-relative alpha bounds, emphasis/delimiter vetoes, non-row-aligned fail-closed behavior, raw selected-hypothesis provenance, untouched-row copying, and byte-exact source coverage in the persisted stage path.
+- The remaining proof before treating **24/25/0,47** as persisted progress is the real optional-asset full-*Opticks* Stage12 audit over exact run `9`.
 
 ## Durable negative evidence still binding
 
@@ -112,8 +114,8 @@ This is feasibility evidence only. A persisted Product run has not yet been crea
 
 ## Active next actions
 
-1. Add dedicated unit tests for `translation_tc_big_delimiter_rescue_stage.py`: disabled delegation, trigger geometry, non-row-aligned fail-closed behavior, selector bounds, raw-candidate provenance and untouched-row invariance.
-2. Add a real optional TC-big asset/runtime smoke that proves builder → byte-verified loader → CT2 MarianTokenizer inference without Torch at inference.
-3. Run a persisted full-*Opticks* Stage12 audit above exact run `9`; expected feasibility cohort is the five delimiter contexts and expected gate counterfactual is **24/25/0, 47 unique**, but treat the actual persisted result as authoritative.
-4. Verify byte-exact source coverage, untouched run-9 rows, raw selected hypotheses, SQLite integrity, no rewrite/injection flags and exact asset/model identities.
-5. Keep the wrapper default OFF/not public-wired until those proofs pass. Even after persisted success, do not make it Product default without broader semantic evidence and release-cost/license validation.
+1. Build/run a persisted full-*Opticks* Stage12 audit above exact run `9` with the provisioned pinned TC-big CT2 asset. The feasibility expectation is five accepted delimiter contexts and **24/25/0, 47 unique**, but actual persisted output is authoritative.
+2. Verify byte-exact source coverage, untouched run-9 rows, raw selected hypotheses, SQLite integrity, no rewrite/injection flags and exact asset/model identities.
+3. Manually inspect the persisted selected targets, especially if CTranslate2 rank ordering differs from Transformers feasibility evidence; do not relax the selector to force expected counts.
+4. Keep the wrapper default OFF/not public-wired until the heavy proof passes. Even after persisted success, do not make it Product default without broader semantic evidence and release-cost/license validation.
+5. Rebuild the residual inventory from the persisted TC-big result and choose the next defect family from L3 evidence rather than generic fallback.
