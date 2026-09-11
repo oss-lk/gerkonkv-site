@@ -1,131 +1,113 @@
 # RocketDict maintained translation quality — L2
 
-This file stores durable conclusions from the **maintained Product** translation-quality work. It is not a changelog and it does not replace [`../../rocketdict/PRODUCT_TARGET.md`](../../rocketdict/PRODUCT_TARGET.md). Raw experiment JSON/SQLite, CI logs, source, tests and Git history remain L3 and outrank this summary if they disagree.
+This file stores durable conclusions from the **maintained Product** translation-quality work. It is not a changelog and does not replace [`../../rocketdict/PRODUCT_TARGET.md`](../../rocketdict/PRODUCT_TARGET.md). Source, tests, immutable CI artifacts and Git history are L3 authority and outrank this summary if they disagree.
 
 ## Current maintained contracts
 
-- Production MT baseline: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian, acceptance compute type `float32`.
+- Production MT: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian, acceptance compute type `float32`.
 - Stage12 maintained Product planner: `rocketdict-stage12-protected-split/8`.
-- Structural-label contract: `rocketdict-stage12-block-structural-label-opus/1`; 108 block `_Exper._/_Obs._/_Qu._` labels are byte-exact source units, while the single supported inline occurrence remains ordinary prose. Label model input expands only the documented abbreviation; target is selected from raw real-OPUS hypotheses with narrow semantic/numeric acceptance.
-- Block section identifier contract: `rocketdict-stage12-block-section-identifier/1`; block IDs such as `1.B.` / `1.F.3.` are source-owned structure preserved byte-exact and excluded from MT; inline references remain ordinary prose.
-- ASCII-table execution remains explicit source-side parsing/logical grouping; source-owned geometry and alpha-free numeric/symbolic cells are preserved while logical text groups use real OPUS.
-- Stage12 real-MT backend execution: `rocketdict-stage12-bounded-request-batch/1`, default batch `48`, hard maximum `128`; batching is order-preserving and part of cache/config/output provenance without changing planner units/model inputs.
-- Stage15 hard evaluator: `rocketdict-maintained-numeric-integrity/5`; numeric prime/unit notation is fail-closed.
-- Research diagnostics remain measurement surfaces unless explicitly promoted. Broad raw n-best selection is not Product fallback policy.
-- Planner/evaluator/execution semantics that affect output, hard-gate meaning or cache interpretation are versioned.
+- Structural-label contract: `rocketdict-stage12-block-structural-label-opus/2`.
+  - 108 block `_Exper._/_Obs._/_Qu._` labels are isolated byte-exactly and translated only through strict raw-OPUS heading candidates.
+  - 54 complete pinned-*Opticks* legacy Roman headings (`DEFIN.`, `AX.`, `PROP.`, `_PROP._ ... PROB./THEOR.`) are now the same source-owned structural family, with their own strict raw-OPUS forms.
+  - Inline linguistic references remain ordinary prose; a bare `IV.`/`II.` created by sentence segmentation is **not** sufficient evidence of a structural heading.
+- Block section identifier contract: `rocketdict-stage12-block-section-identifier/1`; block IDs such as `1.B.` / `1.F.3.` are source-owned structure excluded from MT, while inline references remain ordinary prose.
+- ASCII-table geometry and alpha-free structural cells remain source-owned; logical text groups use real OPUS.
+- Stage12 backend execution contract: `rocketdict-stage12-bounded-request-batch/1`, default batch `48`, maximum `128`; backend batching must not change planner units/model inputs/order.
+- Maintained numeric hard gate: `rocketdict-maintained-numeric-integrity/5`; prime/unit notation is fail-closed.
+- Research diagnostics are evidence surfaces, not Product selectors unless separately promoted.
 
-## Proven Product baseline
+## Current full contiguous Opticks baseline
 
-The maintained direct real Stage8→25 path and unified user-facing `rocketdict-product-run` source→Stage25 path, including replay of the immutable Stage25 export, remain green under planner `/8`. The latest independent verification after the current research-only additions is Product Core run `34250903497`, artifact `10065987500`, with both dependency-light and real-runtime jobs green.
+Acceptance source: complete pinned Project Gutenberg *Opticks*, SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, `586543` immutable source characters.
 
-The old orchestration blocker is retired. Current work is full-corpus translation-quality hardening.
+The completed `/2` heavy baseline is CI run `34575909618`, artifact `10190059238`. The parallel whole-context shadow is run `34575909649`, artifact `10190367866`.
 
-## Full contiguous Opticks planner `/8` acceptance baseline
+Current persisted Stage12 facts:
 
-Primary acceptance source: complete pinned Project Gutenberg *Opticks*, SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`.
+- selected Stage12 segments: `3353`;
+- structural-label units: `162 = 108 arabic-numbered + 54 legacy-Roman`;
+- structural-label model requests: `165`; escalated structural-label units: `3`;
+- table blocks: `6`; logical table groups: `116`;
+- total model requests: `3445`;
+- complete byte-exact source coverage; real MT enabled.
 
-Run `34244876537`, artifact `10064356708`, digest `sha256:7c77092dc86516983a7917931e9b000e6c2774595562e8854623a9faff4979b4`, completed **actual maintained Product Stage12** plus block-section, prime and generic staged-n-best audits on all `586543` source characters.
+Current complete maintained hard-gate inventory over the selected Stage12 rows:
 
-Facts:
+- numeric failures: `27`;
+- punctuation failures: `34`;
+- length-ratio failures: `5`;
+- unique segments failing at least one hard gate: `61`;
+- split-context failures: `10` numeric, `14` punctuation, `3` length; `25` unique failing split segments in `23` Stage10 contexts.
 
-- Stage12 planner `/8` units: `3347`, byte-exact full-source coverage;
-- numeric-bearing units: `688`;
-- structural-label numeric-bearing units: `108`, structural-label numeric failures `0`;
-- table numeric-bearing units: `6`, table rank0 numeric failures `0`;
-- Product rank0 numeric hard failures: `27`;
-- isolated numeric-only failures: `11`;
-- generic beam6 strict rescues across the research inventory: `6`; isolated beam6 rescues: `2`;
-- staged beam12/16 generic research leaves five isolated residuals at planner-local sequences `744, 2296, 2381, 2750, 2898`.
+The structural-label `/2` change removed exactly the intended legacy-heading length-loss class: the previous `/1` baseline had `24` length failures, of which `19` belonged to the newly isolated 54 legacy headings. The `/2` baseline has exactly `5`; numeric remains `27` and punctuation remains `34`. This is evidence of class-specific improvement without gate-count regression.
 
-Sequence IDs are planner-version-local. Compare future runs by immutable source span/text and failure class.
+`rocketdict-workbench/tests/audit_full_opticks_hard_gates.py` is contract-relative (`rocketdict-full-opticks-hard-gate-inventory/2`) and independently recomputes the current persisted gate inventory. Heavy workflows now persist this JSON instead of relying only on numeric summaries.
 
-## Block Gutenberg section identifiers are now a closed maintained class
+## Whole-context content-loss research
 
-The immutable corpus contains 26 narrow `digit.letter.[digit.]` identifier occurrences: 21 block-level and 5 inline references. Under planner `/7`, only 12/21 block IDs were preserved exactly; the rest could be omitted or Cyrillicized by MT.
+The corpus-wide shadow `rocketdict-full-opticks-whole-context-shadow/2` evaluates unchanged Stage10 contexts against the immutable planner `/8` split baseline. It does not rewrite source/target and does not authorize Product selection.
 
-Planner `/8` promotes `rocketdict-stage12-block-section-identifier/1`: only block IDs are source-owned byte-exact units excluded from MT; all inline references remain ordinary linguistic context.
+Current `/2` shadow facts:
 
-The `/8` full-corpus audit reports:
+- split contexts within the mechanically proven 160-NLP-token cap: `451`;
+- over cap: `20`;
+- mechanically accepted by the existing strict selector: `234`;
+- accepted with positive alphabetic-content gain: `213`;
+- numeric-triggered contexts under the currently exposed opt-in Product path: `2`.
 
-- 21/21 block identifiers preserved exactly;
-- 0 block identifier failures;
-- 0 model requests for block identifiers;
-- all 5 inline identifiers remain in ordinary MT units.
+Generic alpha gain is **not** an acceptance rule. A stronger research cohort is now defined by an independently existing Product defect: only split contexts that already contain a maintained hard-gate failure are considered. On the current immutable evidence:
 
-This class is therefore considered closed unless new corpus evidence contradicts the detector boundary.
+- `25` hard-failing split segments form `23` contexts;
+- `22` contexts are within the 160-token shadow cap; `1` (`2730`) is over cap;
+- the unchanged strict selector mechanically accepts `8` hard-failing contexts: `550, 669, 919, 1024, 1393, 2238, 2462, 2726`.
 
-## Prime notation remains a hard-gate invariant and an unresolved model/planning class
+Manual semantic inspection found no obvious regression in these eight and clear recovered content/boundaries in the most severe examples, but that is not enough for Product promotion. `audit_full_opticks_whole_context_hard_failures.py` persists this cohort, and `real_translation_full_opticks_whole_context_metricx_qe_audit.py` is the next independent reference-free QE comparison of primary split vs raw whole-context targets. MetricX scores remain research ranking evidence only; no score threshold is an acceptance rule.
 
-Planner `/8` prime audit still finds `17` prime-bearing units / `38` source prime events. Rank0 OPUS corrupts prime semantics in `11` units. Numeric `/5` catches all of them (`prime_only_failure_count = 0`; no Product numeric failure passes prime semantics).
+The currently exposed whole-context Product implementation remains **research opt-in** and still uses only the narrow isolated-missing-numeric trigger. Full-corpus evidence accepts known context `669`, rejects `2132`, preserves immutable primary lineage, and removes exactly one known numeric failure. Default Product behavior remains unchanged.
 
-The following full-corpus research branches are **negative evidence and must not be repeated unchanged**:
+## Bare Roman fragments are a sentence-boundary problem, not structural labels
 
-1. **Unicode prime canonicalization of whole model input** — `0/16` strict success, even with beam6 n-best. It substantially worsens the baseline.
-2. **Unchanged whole-unit raw n-best beam6→12→16** — rescues only `4/11` baseline prime failures; seven remain unresolved. This does not justify broad n-best Product fallback.
-3. **Structural prime-fragment preservation** — mechanically reaches `16/16` strict success, but manual target review shows unacceptable semantic degradation because splitting removes essential local context. Real examples include `53 deg.` rendered as `53 балла` and `hundred Feet` rendered as `сто ног`. Therefore this branch is rejected despite green mechanical gates.
-4. **Whole-unit semantic hints** (`arcminutes`, `arcseconds`, historical `thirds of arc`) — rescues `0/11` baseline prime failures and leaves only one strict success out of 16 ordinary prime units.
+Two of the five current length failures are tiny rows `IV. ` and `II. ` translated as `IV. ПОЯСНИТЕЛЬНЫЕ ЗАМЕЧАНИЯ` / `II. ПОЯСНИТЕЛЬНЫЕ ЗАМЕЧАНИЯ` (ratio `12`). L3 source inspection shows they come from inline references such as `Sect. IV.` / `Sect. II.` inside footnotes after spaCy sentence segmentation.
 
-Primary evidence: run `34249764521`, artifact `10065557329`; prior whole-unit staged n-best evidence also exists in run `34248620999`, artifact `10065076540`.
+Do **not** broaden the structural-label detector to bare Roman numerals. That would misclassify linguistic inline references as document structure. Future work should investigate Stage8/Stage10 abbreviation/sentence-boundary context preservation or another source-derived context mechanism.
 
-Any future prime mechanism must preserve whole-sentence semantics and cannot reuse the rejected fragment decomposition merely because it satisfies numeric `/5`.
+## Punctuation residual is heterogeneous
 
-## Large integers: grouping and multiplication-glyph preprocessing are rejected
+The current 34 punctuation failures are not one repair class. Observed families include:
 
-A dedicated planner `/8` corpus inventory found 12 ordinary Stage12 units containing ≥7-digit integers; four are baseline hard failures. Research-only source-side formatting grouped long integers into thousands and, in the narrow multiplication context, changed ASCII `x` to `×` before real OPUS generation. Raw targets were evaluated against the unchanged source.
+- lost square-bracket footnote markers (`[G]`, `[H]`, `[J]`, `[K]`, `[M]`, etc.);
+- illustration/bracket payload mismatches;
+- lost or added round parentheses, including real omitted parenthetical content and model hallucinations;
+- `?` count changes and a few combined delimiter failures.
 
-Result: **0/4 baseline hard failures were rescued**, and some previously successful units lost strict eligibility. Therefore thousands grouping / `x→×` is not Product preprocessing.
+A universal punctuation fixer is therefore unsafe. Source-owned footnote/illustration structure, split-context omissions and model hallucinations must be investigated separately.
 
-Evidence: run `34250592035`, artifact `10065848534`, `rocketdict-full-opticks-large-integer-feasibility/1`.
+## MetricX is research evidence, not a selector contract
 
-The unresolved large-number examples include immutable spans containing `310000000`, `490,000,000,000`, and the `10^12/10^18`-scale literals near source span `507544:507698`. Treat these as a distinct model/technical-notation class.
+Pinned MetricX-24 QE (`google/metricx-24-hybrid-large-v2p6-bfloat16`, revision `febb720e29a059df2e8af3ffd71dcdc9e0a24910`) previously scored the immutable 27-failure TC-big cohort: 189 candidates across 27 cases; 13 cases had mechanically strict TC-big candidates, and MetricX preferred a strict TC-big candidate over failing OPUS in all 13. This shows QE can be informative, not that it is sufficient for Product selection.
 
-## Compact formula operator spacing is rejected
+The new whole-context MetricX audit intentionally scores only the eight strict candidates from the already-hard-failing context cohort and compares each raw whole-context target with the unchanged concatenated primary target. It must remain threshold-free and require semantic review.
 
-The complete planner `/8` corpus contains exactly one ordinary unit matching the investigated compact algebraic class: the span containing `3/8A`, `75/8A`, and `((61-1/2)/8)A` (`401232:401532`, planner-local sequence `2296`).
+## Durable negative evidence
 
-Research-only whole-unit model-input spacing around arithmetic operators and `A` preserved the full linguistic context and used raw OPUS output only. It did **not** rescue the unit, including staged raw n-best. Therefore operator spacing is not Product preprocessing.
+Do not repeat unchanged without genuinely new evidence:
 
-Evidence: run `34250960739`, artifact `10065980547`, `rocketdict-full-opticks-formula-spacing-feasibility/1`.
+- prime-fragment structural decomposition: mechanically strong but semantically unacceptable (`53 deg.` → `53 балла`, `hundred Feet` → `сто ног`); whole-unit prime normalization/hints and broad staged n-best also do not solve the class;
+- long-integer thousands grouping / `x→×`: rescued `0/4` baseline failures and regressed some successful cases;
+- compact-formula operator spacing for the `3/8A ... ((61-1/2)/8)A` class: no rescue even with staged raw n-best;
+- broad n-best fallback and historical numeric-island/target-repair approaches remain rejected.
 
-## Long-unit content loss is the next planner/model investigation
+Prime notation, formula/fraction corruption and very-large-integer corruption remain separate unresolved model/notation families.
 
-Immutable span `133139:133431` contains source numeric sequence `25, 30, 40`. Product rank0 target drops the earlier clause and literal `25`, retaining only later `30/40` content; staged generic n-best does not rescue the unit. This is visibly broader semantic compression, not a numeric-token-only substitution error.
+## Promotion rules
 
-Because the source unit is relatively long and the missing number belongs to an omitted clause, the next useful research branch should test **source-derived clause/context planning alternatives** while preserving byte-exact source coverage. Any candidate must be evaluated for semantic completeness, not just numeric pass rate.
-
-## Structural labels remain a closed narrow OPUS class
-
-Earlier planner versions fragmented supported `_Exper._/_Obs._/_Qu._` labels. Exhaustive real-OPUS inventory proved acceptable raw candidates for 106/109 at beam6 and 109/109 after beam12, while planner `/7+` isolates the 108 true block labels and leaves the single inline occurrence ordinary.
-
-This narrow source-defined staged-n-best exception does **not** license generic n-best fallback.
-
-## Bounded execution remains quality-neutral infrastructure
-
-`rocketdict-stage12-bounded-request-batch/1` was introduced after two hosted-runner `exit 143` failures from a monolithic ~3.3k-request CTranslate2 batch. It preserves planner units/model inputs/order while bounding backend requests. Full-*Opticks* actual Product Stage12 completes under the bounded contract and direct/unified real Product smoke remains green.
-
-Do not conflate backend batch boundaries with source/planner boundaries.
-
-## Current residual families
-
-Do not collapse the remaining failures into one fallback:
-
-- long-unit semantic/content loss;
-- prime/unit ambiguity;
-- fraction/formula corruption;
-- very large integer corruption;
-- non-isolated delimiter/illustration/length failures measured by other diagnostics.
-
-Target-side literal insertion, placeholders, corpus-specific target patches, evaluator weakening, generic structural islands and broad n-best fallback remain rejected.
-
-## Promotion rules for translation-quality changes
-
-1. Never make a hard gate green by weakening an evaluator when evidence shows real source/target loss.
-2. Separate evaluator, planner, source-selection, document-structure, execution-resource and model defects before changing Product behavior.
-3. Prefer source/planner fixes when the defect is created before MT; use raw-model candidate selection only when evidence proves a semantically valid candidate already exists.
-4. Source-owned structural bytes may be preserved pre-MT only when exhaustive evidence shows they are document structure rather than linguistic content; inline linguistic references must remain outside such rules.
-5. No post-hoc literal injection, placeholders presented as final MT, fabricated closing structure or corpus-specific target patch lists.
+1. Quality is a release invariant; never weaken evaluators to make a real loss green.
+2. Identify planner, evaluator, source-selection, document-structure, resource or model defects before changing Product behavior.
+3. Prefer source/planner fixes for pre-MT defects; select raw-model candidates only when evidence shows a semantically valid candidate exists.
+4. Source-owned bytes may bypass MT only for exhaustively identified non-linguistic structure; inline linguistic references stay ordinary.
+5. No post-hoc literal insertion, final placeholders, fabricated closing structure or corpus-specific target patch lists.
 6. A promoted mechanism must preserve source identity, be versioned/replayable and have contiguous-corpus evidence.
-7. Mechanical integrity pass is necessary but not sufficient; inspect target semantics.
-8. Product promotion must retain zero empty/backend failures and must not regress direct/unified real Stage8→25.
-9. Narrow n-best escalation requires a source-defined class and explicit semantic selector; broad fallback remains rejected.
-10. Record expensive negative experiments here so future iterations do not repeat them without genuinely new evidence.
+7. Mechanical integrity is necessary but not sufficient; semantic review/QE evidence must not be collapsed into a single automatic threshold without validation.
+8. Product promotion must preserve zero empty/backend failures and direct/unified real Stage8→25 behavior.
+9. Narrow n-best or rescue escalation requires a source-defined trigger and explicit evidence; broad fallback remains rejected.
+10. Expensive negative results belong here so future iterations do not repeat them blindly.
