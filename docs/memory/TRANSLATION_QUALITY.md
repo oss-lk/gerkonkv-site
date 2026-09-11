@@ -136,7 +136,7 @@ Manual review of the accepted substantive cases found the TC-big candidate remov
 
 `translation_tc_big_delimiter_rescue_stage.py` implements the feasibility rule as a separate wrapper above the current illustration→numeric→length→citation composition. It is `DEFAULT_ENABLED=False` and is not yet wired into public `product.stage12.run`.
 
-Product Core CI `34628239731` at commit `02e3c8a...` is fully green for dependency-light tests and the real maintained Stage8→25 smoke. That proves no regression of the default path; dedicated wrapper unit tests and a persisted TC-big heavy audit are still required.
+Product Core CI `34628239731` at implementation commit `02e3c8a...` is fully green for dependency-light tests and the real maintained Stage8→25 smoke. Dedicated wrapper tests at commit `aa776b57...` are also fully green in workflow `34629151558`; they prove disabled exact delegation without TC-big runtime probing, the three-part trigger, source-relative ratio/emphasis/delimiter vetoes, non-row-aligned fail-closed geometry, raw-hypothesis provenance, untouched-row copying and byte-exact source reconstruction. Persisted full-*Opticks* validation over exact run `9` remains the next promotion prerequisite.
 
 ## Promotion rules
 
@@ -149,5 +149,5 @@ Product Core CI `34628239731` at commit `02e3c8a...` is fully green for dependen
 7. MetricX/QE may rank research candidates but is not itself an acceptance threshold.
 8. Alternative-MT completeness rules must be source-relative; do not use corrupt baseline verbosity as a universal quality floor.
 9. Any Product TC-big role requires deterministic selection, persisted full-corpus regression, byte-exact untouched-row/source checks, offline asset/runtime identities, license attribution and release-size/performance assessment.
-10. The TC-big delimiter wrapper remains default OFF/not public-wired until dedicated unit and persisted heavy evidence pass. Persisted success still does not by itself authorize Product-default promotion.
+10. The TC-big delimiter wrapper remains default OFF/not public-wired until persisted heavy evidence passes. Persisted success still does not by itself authorize Product-default promotion.
 11. Final approved heavy evidence still requires zero unresolved hard failures.
