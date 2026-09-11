@@ -28,7 +28,7 @@ Raw OPUS hypotheses are legitimate research candidates. Post-hoc insertion of mi
 
 **Decision.** Pre-MT structural treatment is allowed only when the class is exhaustively identifiable from immutable source structure, spans remain byte-exact, inline linguistic uses remain outside the rule, and any translated structural lexical content still comes from real raw MT candidates rather than identity/patch output.
 
-This principle currently covers the established block structural labels and motivates research on standalone Gutenberg illustration labels and block-start footnote markers. It does **not** authorize arbitrary bracket or punctuation preservation.
+This principle covers established block structural labels and the current standalone illustration-label research/product wrapper. It does **not** authorize arbitrary bracket or punctuation preservation.
 
 ## Bare Roman fragments are not headings
 
@@ -38,61 +38,70 @@ This principle currently covers the established block structural labels and moti
 
 **Decision.** Use `rocketdict-stage12-citation-boundary-pair-rescue/1`, not a broad context merge and not a heading rule. Trigger: contiguous ordinary previous row ending `Sect.` + uppercase Roman fragment already failing length. Candidate: exact raw rank-0 OPUS pair output. Acceptance: Product hard clean, repaired length, no new strict-debt category. Default OFF.
 
-**Why.** Broad citation/group coalescing lost unrelated numeric content and a footnote marker.
-
 ## Length-failure whole-context rescue remains opt-in
 
-**Decision.** `rocketdict-stage12-length-failure-whole-context-rescue/1` remains default OFF. It improves the canonical corpus but mechanical gain alone is insufficient Product-default evidence.
-
-## Combined length + citation closes current length class but is not auto-promoted
-
-**Decision.** Public Stage12 may compose the two opt-in mechanisms, both OFF by default. Full-*Opticks* run `34597648856` reaches **29 numeric / 34 punctuation / 0 length**, 59 unique failures with byte-exact source coverage and raw applied targets.
+**Decision.** `rocketdict-stage12-length-failure-whole-context-rescue/1` remains default OFF. Mechanical full-corpus gain alone is insufficient Product-default evidence.
 
 ## Generic whole-context strictness is not semantic proof
 
 **Decision.** Do not promote generic whole-context fallback merely because the strict mechanical selector accepts it.
 
-**Why.** Context `2725` removes an invented `=` yet silently drops source phrase `_per deliquium_`. This direct counterexample invalidates old strict cleanliness as sufficient semantic evidence.
+**Why.** Context `2725` removes an invented `=` yet silently drops source phrase `_per deliquium_`. Existing strict cleanliness therefore cannot substitute for semantic-preservation evidence.
 
 ## Ordinary Gutenberg underscore emphasis is a separate preservation signal
 
-**Decision.** Preserve historical `critical_technical_tokens/3` semantics and use `rocketdict-maintained-emphasis-markup-preservation/1` as a separate research diagnostic/veto rather than retroactively widening the old contract.
+**Decision.** Keep `rocketdict-maintained-emphasis-markup-preservation/1` as a separate research diagnostic/veto rather than retroactively changing historical strict contracts.
 
-## Numeric-hard split-context whole-context rescue is narrow and default-OFF
+## Numeric-hard split-context whole-context rescue remains narrow/default-OFF
 
-**Decision.** `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains a separate opt-in wrapper above citation+length composition and is **not yet wired into public `product.stage12.run`**.
+**Decision.** `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains a separate opt-in wrapper, not yet public-wired. Trigger and acceptance remain source/context defined; emphasis preservation is mandatory for its raw candidate.
 
-Trigger: current split Stage10 context; at least one selected row already fails numeric-integrity `/5`; exact unchanged whole Stage10 source fits the existing 160-NLP-token cap; pinned OPUS beam=6/rank0. Acceptance requires existing strict whole-context selector plus emphasis-preservation pass. No source/target rewrite, placeholders or literal injection.
-
-**Evidence.** Run `34601313026`, artifact `10264132732`, accepts contexts `550,669,1024,2238`; rejects `1460,2132,2176,2190,2634,2725`; **29/34/0 → 25/33/0**, unique **59→55**. Product Core CI `34601005247` is green. Public exposure remains a separate decision from default promotion.
+**Evidence.** Full-*Opticks* run `34601313026` creates Stage12 run `8`: **29/34/0 → 25/33/0**, unique **59→55**, accepting contexts `550,669,1024,2238` and vetoing context `2725` for emphasis loss.
 
 ## Punctuation residuals must be split by defect family
 
-**Decision.** Do not introduce a universal punctuation repair/selector. Residuals mix source-owned markers, illustration payloads, parentheticals, question punctuation and other delimiter/context failures.
+**Decision.** Do not introduce a universal punctuation repair/selector. Residuals mix source-owned markers, illustration payloads, footnote-reference fragments, parentheticals, question punctuation and other delimiter/context failures.
 
-## Illustration labels: v1 mechanical success is rejected
+## Illustration rescue may use a source-specific deterministic raw n-best selector
 
-**Decision.** Do not promote the first standalone `[Illustration: ...]` structural split merely because it gave a mechanical counterfactual **24 numeric / 30 punctuation / 0 length, 52 unique**.
+**Decision.** `rocketdict-stage12-illustration-label-rescue/1` is accepted as a **default-OFF, not-public-wired Product wrapper** for the closed hard-failing standalone illustration-label family.
 
-**Why.** Exact suffix `_Illustration._` produced malformed raw OPUS `*Иллюстрация._`, a semantic/markup defect not caught by the current hard gates. This is durable evidence that the label family needs an explicit semantic structural-word selector.
+Trigger requirements:
+- row begins with standalone `[Illustration: ...]` plus blank-line separator;
+- row already has a maintained hard failure;
+- source structure is preserved byte-exactly;
+- ordinary suffix uses exact source and rank0 OPUS;
+- exact immutable `_Illustration._` may use canonical model input `Illustration.` with deterministic beam6/n6 and the first raw candidate satisfying hard/strict + structural target-form checks.
 
-## Illustration labels: rank-0 canonical `Illustration.` is fail-closed
+No target rewrite, placeholder, literal injection or arbitrary bracket generalization is allowed.
 
-**Decision.** Research v2 may canonicalize model input for exact immutable `_Illustration._` to `Illustration.` while preserving source bytes, but must reject rank-0 `Пример.` because it is the wrong structural sense.
+**Evidence.** Research v3 workflow `34609890716`, artifact `10267328730`, accepts exact source starts `72401,90105,203786` at raw ranks `3,3,0` and reaches **24/30/0, 52 unique**. Product Core CI `34610493157` is green. Persisted audit workflow `34610787826`, artifact `10268850347`, creates run `9`, output SHA `c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be`, DB SHA `9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad`, with byte-exact source coverage and exact raw applied targets.
 
-**Evidence.** Workflow `34603765083`, artifact `10265862004`, contract `rocketdict-full-opticks-illustration-label-feasibility/2`: source starts `72401` and `90105` are rejected; only ordinary suffix case `203786` is accepted. Counterfactual **24/32/0**, 54 unique. Database remains read-only and source coverage byte-exact.
+**Default decision.** Evidence supports the wrapper as opt-in only. It does not yet support automatic/default Product promotion.
 
-## Illustration structural-word research may use deterministic raw n-best, not target repair
+## Run 9 is the current residual basis
 
-**Decision.** The next admissible research step is a v3 structural-word selector over canonical model input `Illustration.` using deterministic raw OPUS n-best, while immutable `_Illustration._` source bytes remain unchanged.
+**Decision.** After persisted illustration composition, residual research must use Stage12 run `9` identities/source spans, not run-8 sequence positions. Current gates are **24 numeric / 30 punctuation / 0 length, 52 unique**.
 
-The selector may accept only an unmodified raw hypothesis that independently passes maintained hard/strict checks and an explicit structural target-shape contract (`Иллюстрация.`/approved equivalent, no markup artifacts). It may not rewrite `Пример.` into a desired term and may not inject markup/literals.
+## Block-start footnote marker-only split is rejected as Product policy
 
-**Evidence.** DOE workflow `34603700499`, artifact `10265013225`, evaluated 144 raw hypotheses and found 25 admissible structural-word candidates. The selected deterministic candidate is beam `6`, `num_hypotheses=6`, rank `3`, exact raw target `Иллюстрация.`. This authorizes **research v3 only**; full three-case/full-corpus counterfactual evidence is required before any Product wrapper.
+**Decision.** Do not productize marker-only `[G]/[H]/[J]/[K]/[M]` body retranslation despite the mechanical counterfactual **24/30/0,52 unique → 24/25/0,47 unique**.
 
-## Block-start footnote markers are a separate source-owned research class
+**Why.** The first-row bodies are sentence fragments of larger bibliographic footnote paragraphs. L3 semantic inspection catches `_How to do this, is shewn in our_` → `Как это сделать, сшито в нашем...` and `_See our_` → `Посмотри на нас.`. Mechanical punctuation repair therefore masks translation-quality defects.
 
-**Decision.** `[A] ` … `[M] ` at definition-block start may be researched as source-owned marker bytes with only the linguistic body sent to MT. Inline markers such as `understand,[G] that` are out of scope. Existing baseline feasibility must be revalidated against current run `8` before Productization.
+**Evidence.** Workflow `34611175668`, artifact `10268975960`, evidence SHA `14ecc93fe080a218dd9c62de35c7e6dff534867849e6c42cd677b905ef8d76fa`.
+
+## Whole-footnote-context research must separate semantic and storage boundaries
+
+**Decision.** The next admissible footnote experiment is complete linguistic footnote-body translation with the marker and separators kept as source-owned bytes, deterministic raw n-best, strict Product checks and emphasis preservation.
+
+Do not equate the first `\n\n` paragraph boundary with the end of the current Stage12 row group. In run `9`, `[H]` and `[M]` have current final rows that extend three bytes beyond the semantic paragraph end because they own additional blank-line bytes. A replacement harness must therefore model separately:
+1. marker bytes;
+2. linguistic body bytes;
+3. paragraph separator/trailing whitespace bytes;
+4. the enclosing set of current rows replaced for exact source coverage.
+
+**Evidence.** Initial workflow `34611517906` failed before MT evaluation on a fail-closed fixture assertion (`H` semantic end `151652` vs expected row-coverage end `151655`). This is a harness defect, not negative model evidence.
 
 ## Prime and formula negative evidence remains binding
 
@@ -104,7 +113,7 @@ The selector may accept only an unmodified raw hypothesis that independently pas
 
 ## Acceptance order remains smoke → full corpus → distributable Product
 
-**Decision.** User-facing real source→Stage25/replay must be green before full-corpus acceptance; full public-domain quality evidence must be stable before Windows distribution becomes the release frontier. The authoritative `PRODUCT_TARGET.md` requires unresolved hard translation failures to reach zero before approved final heavy evidence.
+**Decision.** User-facing real source→Stage25/replay must be green before full-corpus acceptance; full public-domain quality evidence must be stable before Windows distribution becomes the release frontier. `PRODUCT_TARGET.md` still requires unresolved hard translation failures to reach zero before approved final heavy evidence.
 
 ## Project memory uses progressive disclosure and mandatory synchronization
 
