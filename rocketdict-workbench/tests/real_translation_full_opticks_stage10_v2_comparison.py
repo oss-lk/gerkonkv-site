@@ -37,7 +37,47 @@ SOURCE_TEXT_SHA256 = "436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f40
 SOURCE_CHAR_COUNT = 586543
 BASE_SEGMENTS = 3344
 BASE_COUNTS = {"numeric_symbol": 20, "punctuation": 18, "length": 0, "unique": 37}
-EXPECTED_COALESCED_BOUNDARIES = 5
+EXPECTED_COALESCED_BOUNDARIES = 38
+EXPECTED_BOUNDARY_OFFSETS = (
+    655,
+    10277,
+    18355,
+    23464,
+    50306,
+    54796,
+    63563,
+    64046,
+    64118,
+    89748,
+    92716,
+    106061,
+    112001,
+    132089,
+    137981,
+    146358,
+    155895,
+    166588,
+    168067,
+    180246,
+    189201,
+    203830,
+    220080,
+    223062,
+    228046,
+    247799,
+    266720,
+    301082,
+    349036,
+    355851,
+    412197,
+    434836,
+    455648,
+    507039,
+    522572,
+    545343,
+    548282,
+    556573,
+)
 WHENCE_FIRST_START = 522555
 WHENCE_BOUNDARY_OFFSET = 522572
 REQUIRED_RESCUE_FLAGS = (
@@ -268,7 +308,7 @@ def main() -> int:
         - int(stored_v2_output.get("sentence_count") or -1)
         != EXPECTED_COALESCED_BOUNDARIES
     ):
-        raise RuntimeError("Stage10 v2 sentence-count delta does not equal the five removed boundaries")
+        raise RuntimeError("Stage10 v2 sentence-count delta does not equal the exact full-corpus merge census")
     _coverage(v2_context_rows, content, label="Stage10 v2")
 
     boundary_decisions: list[dict[str, Any]] = []
@@ -284,6 +324,10 @@ def main() -> int:
             boundary_decisions.append(normalized)
     boundary_decisions.sort(key=lambda row: int(row["source_offset"]))
     boundary_offsets = [int(row["source_offset"]) for row in boundary_decisions]
+    if boundary_offsets != list(EXPECTED_BOUNDARY_OFFSETS):
+        raise RuntimeError(
+            f"Stage10 v2 exact boundary-offset census drift: {boundary_offsets!r}"
+        )
     if len(boundary_decisions) != EXPECTED_COALESCED_BOUNDARIES:
         raise RuntimeError(f"persisted Stage10 merge-decision drift: {len(boundary_decisions)}")
     if len(set(boundary_offsets)) != EXPECTED_COALESCED_BOUNDARIES:

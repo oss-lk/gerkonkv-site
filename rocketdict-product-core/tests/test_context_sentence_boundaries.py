@@ -116,3 +116,64 @@ def test_multiple_false_splits_can_coalesce_as_one_context_group() -> None:
     groups = coalesce_spacy_sentence_groups(grouped, content)
     assert [group["sentence_indices"] for group in groups] == [[0, 1, 2], [3]]
     assert len(groups[0]["coalesced_boundaries"]) == 2
+
+
+
+def test_figure_reference_lowercase_markup_continuation_is_coalesced() -> None:
+    content = "Suppose that RS [in _Fig._ 1.] represents the ray."
+    rs = content.index("RS")
+    reference = content.index("[in")
+    decision = evaluate_spacy_sentence_boundary(
+        content, 0, [_token(content, "RS", rs, token_index=0)],
+        1, [_token(content, "[in _Fig._ 1.]", reference, token_index=1)],
+    )
+    assert decision["merge"] is True
+    assert decision["lowercase_continuation"] is True
+    assert decision["source_offset"] == reference
+
+
+def test_split_inside_gutenberg_emphasis_is_coalesced() -> None:
+    content = "Variable _q_ is on the axis."
+    underscore = content.index("_q_")
+    q_start = underscore + 1
+    decision = evaluate_spacy_sentence_boundary(
+        content, 7, [_token(content, "_", underscore, token_index=7)],
+        8, [_token(content, "q_", q_start, token_index=8)],
+    )
+    assert decision["merge"] is True
+    assert decision["lowercase_continuation"] is True
+
+
+def test_split_inside_gutenberg_greek_markup_is_coalesced() -> None:
+    content = "Line _A[Greek:a]_ in the figure."
+    left_start = content.index("[Greek:")
+    right_start = content.index("a]")
+    decision = evaluate_spacy_sentence_boundary(
+        content, 2, [_token(content, "[Greek:", left_start, token_index=2)],
+        3, [_token(content, "a]", right_start, token_index=3)],
+    )
+    assert decision["merge"] is True
+    assert decision["source_offset"] == right_start
+
+
+def test_lowercase_conjunction_continuation_is_coalesced() -> None:
+    content = "The ratio is fixed; and these sines remain proportional."
+    left_start = content.index("and")
+    right_start = content.index("these")
+    decision = evaluate_spacy_sentence_boundary(
+        content, 11, [_token(content, "and", left_start, token_index=11)],
+        12, [_token(content, "these", right_start, token_index=12)],
+    )
+    assert decision["merge"] is True
+
+
+def test_markup_with_uppercase_first_lexical_character_stays_separate() -> None:
+    content = "Heading [Next] section"
+    right_start = content.index("[Next]")
+    decision = evaluate_spacy_sentence_boundary(
+        content, 0, [_token(content, "Heading", 0, token_index=0)],
+        1, [_token(content, "[Next]", right_start, token_index=1)],
+    )
+    assert decision["merge"] is False
+    assert decision["lowercase_continuation"] is False
+    assert decision["reason"] == "continuation_not_lowercase"
