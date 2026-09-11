@@ -33,6 +33,7 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/project.py'
       - 'rocketdict-workbench/tests/audit_full_opticks_block_section_identifiers.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_hard_gates.py'
       - 'rocketdict-workbench/tests/audit_full_opticks_selective_rescue.py'
       - 'rocketdict-workbench/tests/real_translation_nbest_feasibility.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
@@ -102,6 +103,8 @@ jobs:
             sleep 30
           done
           wait "$child"
+      - name: Inventory all maintained Product hard-gate failures
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_hard_gates.py
       - name: Audit fail-closed selected Stage12 lineage
         run: python -u rocketdict-workbench/tests/audit_full_opticks_selective_rescue.py
       - name: Audit Product block section identifiers on immutable Opticks
@@ -132,6 +135,7 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
+            work/full-opticks-numeric-stress/full-opticks-hard-gate-inventory.json
             work/full-opticks-numeric-stress/full-opticks-selective-rescue-audit.json
             work/full-opticks-numeric-stress/full-opticks-selective-rescue-optin.json
             work/full-opticks-numeric-stress/full-opticks-selective-rescue-nbest-feasibility.json
