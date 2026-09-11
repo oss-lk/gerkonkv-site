@@ -76,9 +76,37 @@ All are isolated byte-exact; only documented English abbreviations/headings may 
 
 **Decision.** Do not add a rule that treats standalone `II.`, `IV.` etc. as source-owned structure merely because Stage8/Stage10 sentence segmentation produced a tiny Stage12 row.
 
-**Why.** Current residual examples are inline footnote references such as `Sect. IV.` / `Sect. II.`, not block headings. Treating them as structure would turn a context-boundary defect into false document classification.
+**Why.** The residual examples are inline references such as `Sect. IV.` / `Sect. II.`, not block headings. Treating them as structure would turn a context-boundary defect into false document classification.
 
-**Next valid direction.** Investigate abbreviation/sentence-boundary context preservation or another source-derived context mechanism. Reuse the existing protected-boundary coalescing design where the source provides a narrow defensible span.
+**Evidence.** Immutable baseline rows around the two residual length failures; pair feasibility run `34597127952`, artifact `10261744281`.
+
+## Roman-after-Sect citation rescue is narrow, pair-level and opt-in
+
+**Decision.** The valid Product experiment for the `Sect. IV.` / `Sect. II.` boundary defect is `rocketdict-stage12-citation-boundary-pair-rescue/1`, not a broad context merge and not a heading rule.
+
+The trigger requires an uppercase Roman-fragment row immediately after a contiguous ordinary row ending in `Sect.`, excludes source-owned structural/table classes, and requires the Roman row to already fail the maintained length gate. The candidate is raw rank-0 OPUS over the exact previous+current pair.
+
+Acceptance requires Product hard-clean output, repaired length, and **no new strict-debt category** relative to the primary pair. Existing debt may be inherited but not worsened. No source rewrite, target rewrite, placeholders or literal injection are allowed. The mechanism is disabled by default.
+
+**Why.** Pair feasibility gave mechanically promising results for both known cases while preserving an inherited footnote-marker debt in the `Sect. IV.` case. Earlier broad citation/group coalescing is rejected because a larger candidate lost unrelated numeric content and a footnote marker.
+
+**Evidence.** `translation_citation_rescue_stage.py`; `test_translation_citation_rescue_stage.py`; feasibility run `34597127952`; Product Core CI `34597453583` / `34597532302`; combined audit `34597648856`.
+
+## Length-failure whole-context rescue remains opt-in despite full-corpus gain
+
+**Decision.** `rocketdict-stage12-length-failure-whole-context-rescue/1` remains disabled by default even though the full-*Opticks* audit accepts contexts `577`, `629`, `919` and reduces the maintained gates from `30/34/5` to `29/34/2`.
+
+**Why.** The mechanism is narrow and mechanically sound, but Product default promotion still requires semantic confidence beyond aggregate gate improvement.
+
+**Evidence.** Full audit run `34596212688`; public-wrapper rerun `34597532192`.
+
+## Combined length + citation rescue closes current length failures but is not auto-promoted
+
+**Decision.** The public Stage12 wrapper may compose the two opt-in mechanisms, but both remain OFF by default. The combined full-*Opticks* evidence is a research/Product audit, not a promotion authorization.
+
+**Why.** Run `34597648856` reaches `29` numeric / `34` punctuation / `0` length with `59` unique failures, preserves byte-exact source coverage and raw rank-0 applied targets, and passes SQLite integrity checks. This is strong mechanical evidence, but the artifact itself keeps `promotion_allowed=false` and `automatic_product_default_allowed=false`.
+
+**Evidence.** `real_translation_full_opticks_combined_length_citation_product_rescue.py`; workflow `.github/workflows/rocketdict-full-opticks-combined-length-citation-product-rescue.yml`; artifact `10263095872`.
 
 ## Source-owned block section identifiers are a closed maintained class
 
@@ -92,21 +120,19 @@ All are isolated byte-exact; only documented English abbreviations/headings may 
 
 **Why.** This bounds resource usage without changing translation semantics.
 
-## Whole-context rescue remains research-only; hard-failure triggering is the next evidence boundary
+## Broad whole-context rescue remains research-only
 
-**Decision.** Do not promote generic whole-context translation from corpus-wide alpha gain or mechanical cleanliness. The existing Product-exposed whole-context path remains opt-in and narrowly numeric-triggered.
+**Decision.** Do not promote generic whole-context translation from corpus-wide alpha gain or mechanical cleanliness. The pre-existing Product-exposed whole-context path remains opt-in and narrowly triggered.
 
-For further research, restrict attention to split contexts that already contain a maintained Product hard-gate failure. With the complete numeric/symbol gate this yields `24` contexts; `23` are within the 160-NLP-token cap and the existing strict selector accepts nine (`550, 669, 919, 1024, 1393, 2238, 2462, 2725, 2726`). Context `2730` remains over cap.
+Canonical hard-failure research found nine mechanically strict whole-context candidates (`550, 669, 919, 1024, 1393, 2238, 2462, 2725, 2726`), but the newer length/citation composition changes some selected rows. Future work must therefore rebuild the residual cohort by **immutable source span/context identity on the composed output**, not blindly reuse old sequence/context numbers.
 
-**Why.** This trigger is causally tied to an already-proven Product defect and is much safer than selecting among 234 mechanically clean whole-context candidates or 213 positive-alpha candidates corpus-wide. The newly surfaced context `2725` is especially informative: the primary split target invents `=`, while unchanged raw whole-context rank0 removes it and restores a coherent complete question. Even so, all nine cases require independent semantic/QE evidence before any Product policy change.
-
-**Evidence.** `audit_full_opticks_hard_gates.py`; `audit_full_opticks_whole_context_hard_failures.py`; whole-context run `34575909649`, artifact `10190367866`; direct immutable-artifact recomputation. Replacement `/3` CI evidence is pending.
+**Why.** A trigger must stay causally tied to an independently proven Product defect. Generic alpha gain is not an acceptance rule, and mechanical strictness is not semantic proof.
 
 ## MetricX is an independent research ranker, not an acceptance threshold
 
 **Decision.** MetricX-24 reference-free QE may compare immutable raw candidates, but neither a score nor “MetricX prefers candidate” is sufficient for Product selection. Scores must be version-pinned, preserved as evidence, and paired with mechanical gates plus semantic review.
 
-**Why.** Previous TC-big evidence shows MetricX can rank useful strict hypotheses, but learned QE is not a proof of faithfulness. The new whole-context MetricX audit is intentionally limited to the nine already-hard-failing strict candidates. Its workflow consumes only a successful whole-context cohort artifact and remains non-promoting.
+**Why.** Learned QE is useful ranking evidence, not proof of faithfulness.
 
 ## Punctuation residuals must be split by defect family
 
@@ -138,8 +164,12 @@ For further research, restrict attention to split contexts that already contain 
 
 **Why.** Packaging an unproven quality path would freeze known translation defects into the distributable Product.
 
-## Project memory uses progressive disclosure and mandatory synchronization
+## Project memory uses progressive disclosure, mandatory synchronization and next-request recovery
 
 **Decision.** Recovery is L1 `PROJECT_STATE.md` → HEAD diff → L2 `docs/memory/INDEX.md`/relevant durable docs → unrestricted L3 as evidence requires. Before a user-facing development result after a substantial iteration, synchronize L1/L2 with actual HEAD/CI/evidence.
+
+If that synchronization cannot be completed inside an iteration because the tool/context/request ends, the debt must be cleared at the **start of the very next development request before new engineering work**. Read current L1 and HEAD, reconstruct actual state from L3, update stale L1/affected mandatory L2, commit the repair, then continue. A one-word `продолжай` does not waive this requirement.
+
+**Why.** L1 is useful only as a cheap current-state map. Allowing a known-stale L1 to survive another iteration defeats progressive disclosure and forces future agents to rediscover state from L3 unnecessarily.
 
 **Evidence.** `AGENTS.md`.
