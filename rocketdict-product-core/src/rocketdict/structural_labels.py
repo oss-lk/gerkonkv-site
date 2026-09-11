@@ -2,25 +2,32 @@ from __future__ import annotations
 
 """Source-owned structural labels for maintained Stage12 EN→RU execution.
 
-The contract is deliberately narrow and evidence-backed.  It recognizes only
-numbered Gutenberg-style block labels whose abbreviations were validated on the
-complete pinned Opticks corpus: ``_Exper._``, ``_Obs._`` and ``_Qu._``.
+The contract is deliberately narrow and evidence-backed.  It recognizes the
+numbered Gutenberg block labels validated on the complete pinned Opticks corpus:
+``_Exper._``, ``_Obs._`` and ``_Qu._`` plus legacy definition/axiom/proposition
+headings such as ``DEFIN. II.``, ``AX. IV.`` and
+``_PROP._ VII. THEOR. VI.``.
 
 The immutable source bytes are never rewritten.  A label carries a separate,
-recorded model input in which only the abbreviation is expanded to its literal
-English full form (Experiment / Observation / Query).  Target candidates must
-remain raw OPUS hypotheses and are accepted only when they preserve the source
-number and have the exact validated Russian heading form ending in a period.
-No target-side insertion or repair is performed here.
+recorded model input in which only documented English abbreviations are expanded.
+Target candidates remain raw OPUS hypotheses and are accepted only when they
+preserve the source identifier identity and have an exact full-corpus-validated
+Russian heading form.  No target-side insertion or repair is performed here.
 """
 
 from dataclasses import dataclass
 import re
 from typing import Any, Sequence
 
+from .legacy_block_headings import (
+    LEGACY_BLOCK_HEADING_CONTRACT,
+    detect_legacy_block_headings,
+    evaluate_legacy_block_heading_hypotheses,
+    parse_legacy_block_heading_unit,
+)
 from .numeric_integrity import compare_numeric_integrity
 
-STRUCTURAL_LABEL_CONTRACT = "rocketdict-stage12-block-structural-label-opus/1"
+STRUCTURAL_LABEL_CONTRACT = "rocketdict-stage12-block-structural-label-opus/2"
 STRUCTURAL_LABEL_GENERATION_CELLS: tuple[tuple[int, int], ...] = (
     (6, 6),
     (12, 12),
@@ -41,6 +48,7 @@ _LABEL_RE = re.compile(
     r"_(?P<kind>Exper|Obs|Qu)\._\s+(?P<number>\d+)\.",
     flags=re.IGNORECASE,
 )
+_LEGACY_KIND_PREFIX = "legacy_"
 
 
 @dataclass(frozen=True)
@@ -64,13 +72,25 @@ def _is_block_start(text: str, offset: int) -> bool:
     return bool(re.search(r"(?:\r?\n)[ \t]*(?:\r?\n)[ \t]*\Z", prefix))
 
 
+def _legacy_as_structural(heading: Any) -> StructuralLabel:
+    return StructuralLabel(
+        source_start=int(heading.source_start),
+        source_end=int(heading.source_end),
+        source_text=str(heading.source_text),
+        kind=f"{_LEGACY_KIND_PREFIX}{heading.family}",
+        number="|".join(str(value) for value in heading.roman_identifiers),
+        canonical_model_input=str(heading.canonical_model_input),
+        block_level=bool(heading.block_level),
+    )
+
+
 def detect_structural_labels(
     text: str,
     *,
     absolute_start: int = 0,
     block_only: bool = False,
 ) -> list[StructuralLabel]:
-    """Return exact source spans for supported structural labels.
+    """Return exact source spans for every supported structural label.
 
     ``block_only`` must be evaluated on a source slice whose beginning has the
     same paragraph-boundary meaning as the immutable source.  The maintained
@@ -95,29 +115,42 @@ def detect_structural_labels(
                 block_level=block_level,
             )
         )
-    return labels
+
+    labels.extend(
+        _legacy_as_structural(heading)
+        for heading in detect_legacy_block_headings(
+            text,
+            absolute_start=absolute_start,
+            block_only=block_only,
+        )
+    )
+    return sorted(labels, key=lambda row: (row.source_start, row.source_end))
 
 
 def parse_structural_label_unit(source_text: str) -> StructuralLabel:
-    """Parse one isolated label unit, allowing source-owned surrounding whitespace."""
+    """Parse one isolated supported label with source-owned surrounding whitespace."""
     stripped = source_text.strip()
-    matches = list(_LABEL_RE.finditer(stripped))
-    if len(matches) != 1:
-        raise ValueError("structural-label unit must contain exactly one supported label")
-    match = matches[0]
-    if match.start() != 0 or match.end() != len(stripped):
-        raise ValueError("structural-label unit contains non-whitespace content outside the label")
-    kind = str(match.group("kind")).lower()
-    number = str(match.group("number"))
-    return StructuralLabel(
-        source_start=0,
-        source_end=len(source_text),
-        source_text=match.group(0),
-        kind=kind,
-        number=number,
-        canonical_model_input=f"{SOURCE_EXPANSIONS[kind]} {number}.",
-        block_level=True,
-    )
+    match = _LABEL_RE.fullmatch(stripped)
+    if match is not None:
+        kind = str(match.group("kind")).lower()
+        number = str(match.group("number"))
+        return StructuralLabel(
+            source_start=0,
+            source_end=len(source_text),
+            source_text=match.group(0),
+            kind=kind,
+            number=number,
+            canonical_model_input=f"{SOURCE_EXPANSIONS[kind]} {number}.",
+            block_level=True,
+        )
+
+    try:
+        legacy = parse_legacy_block_heading_unit(source_text)
+    except ValueError as exc:
+        raise ValueError(
+            "structural-label unit must contain exactly one supported label"
+        ) from exc
+    return _legacy_as_structural(legacy)
 
 
 def _strict_target_form(label: StructuralLabel, target: str) -> bool:
@@ -136,6 +169,22 @@ def evaluate_structural_label_hypotheses(
     hypotheses: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
     """Evaluate raw model hypotheses without changing target text."""
+    if label.kind.startswith(_LEGACY_KIND_PREFIX):
+        legacy = parse_legacy_block_heading_unit(label.source_text)
+        evaluation = evaluate_legacy_block_heading_hypotheses(legacy, hypotheses)
+        return {
+            "contract": STRUCTURAL_LABEL_CONTRACT,
+            "source_text": label.source_text,
+            "kind": label.kind,
+            "number": label.number,
+            "canonical_model_input": label.canonical_model_input,
+            "legacy_block_heading_contract": LEGACY_BLOCK_HEADING_CONTRACT,
+            "legacy_family": legacy.family,
+            "roman_identifiers": list(legacy.roman_identifiers),
+            "selected": evaluation["selected"],
+            "candidates": evaluation["candidates"],
+        }
+
     candidates: list[dict[str, Any]] = []
     selected: dict[str, Any] | None = None
     for model_index, hypothesis in enumerate(hypotheses):
@@ -169,7 +218,6 @@ def evaluate_structural_label_hypotheses(
         "selected": selected,
         "candidates": candidates,
     }
-
 
 
 def _coalesce_split_boundary_whitespace(
@@ -311,9 +359,9 @@ def partition_txt_base_with_block_structural_labels(
     """Make supported block labels standalone byte-exact Stage12 base units.
 
     Detection runs on the complete immutable TXT source, not on already split
-    context fragments. This is required because full-Opticks evidence proved
-    that planner /4 cut 48/109 supported labels across Stage12 boundaries.
-    Inline labels remain ordinary prose.
+    context fragments.  This is required because sentence segmentation can cut
+    both abbreviated numeric labels and legacy Roman block headings across
+    multiple Stage12 units.  Inline labels remain ordinary prose.
     """
     if not base:
         return []
