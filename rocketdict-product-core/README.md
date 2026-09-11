@@ -12,6 +12,16 @@ The maintained core owns the Product execution/storage path through Stage25:
 
 The Workbench `rocketdict-product-run` drives the same public maintained API from source through Stage25 and resumes from immutable identities.
 
+### Stage10 source-boundary policy
+
+The default Stage10 implementation is `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, with boundary policy `rocketdict-stage10-lowercase-continuation-coalescer/1`.
+
+Stage8 parser sentences remain immutable evidence. Stage10 v2 may coalesce only consecutive raw parser sentences when immutable source geometry proves that the gap is whitespace-only, contains no paragraph break, the left source has no terminal `.?!` after closing punctuation, and the first lexical character on the right is lowercase. Each removed boundary records its source offset/reason and the original spaCy sentence indices. V1 remains explicitly selectable for compatibility.
+
+This is an upstream ownership repair, not translation-side surgery: Stage10 never rewrites source bytes or patches a target. The current complete-*Opticks* census contains exactly five boundaries satisfying the v2 predicate; all five were manually source/token reviewed as false parser splits. Dedicated Stage10 regressions passed 12/12 before integration. Terminal-head complete-corpus translation evidence is still required before attributing any hard-gate improvement to this change.
+
+### Stage12 translation and research layers
+
 Stage12 uses `rocketdict-stage12-protected-split/8`. The real OPUS primary translation is immutable and cache-reusable. Rescue mechanisms are separate selection layers; they never rewrite the primary model result in place.
 
 The public Stage12 operation currently exposes only the existing narrow default-OFF research surfaces:
@@ -26,7 +36,11 @@ Additional evidence-backed wrappers are implemented internally but remain **defa
 - `rocketdict-stage12-illustration-label-rescue/1`;
 - `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1`;
 - `rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1`;
-- `rocketdict-stage12-tc-big-figure-reference-lead-rescue/1`.
+- `rocketdict-stage12-tc-big-figure-reference-lead-rescue/1`;
+- `rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1`;
+- `rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1`;
+- `rocketdict-stage12-tc-big-angular-minute-prime-rescue/1`;
+- `rocketdict-stage12-tc-big-short-angular-dms-rescue/1`.
 
 No rescue path may perform source rewriting, target surgery, placeholders, post-translation literal injection, corpus-specific target patches or evaluator weakening.
 
@@ -34,20 +48,25 @@ Stage15 remains fail-closed for numeric/symbol, punctuation and length integrity
 
 ## Current full-Opticks evidence
 
-Large-corpus acceptance uses the complete pinned Project Gutenberg *Opticks* source, SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, rather than a truncated sample.
+Large-corpus acceptance uses the complete pinned Project Gutenberg *Opticks* source, SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized-text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters, rather than a truncated sample.
 
-The persisted progression is:
+The persisted research progression is:
 
 - run `4`: **30 numeric / 34 punctuation / 5 length**, 64 unique failures;
 - run `7`: **29/34/0**, 59 unique;
 - run `8`: **25/33/0**, 55 unique;
 - run `9`: **24/30/0**, 52 unique;
 - run `10`: **24/25/0**, 47 unique;
-- run `11`: **24/20/0**, 42 unique.
+- run `11`: **24/20/0**, 42 unique;
+- run `12`: **23/19/0**, 41 unique;
+- run `13`: **23/18/0**, 40 unique;
+- run `14`: **22/18/0**, 39 unique;
+- run `15`: **21/18/0**, 38 unique;
+- run `16`: **20/18/0**, 37 unique.
 
-Run `11` is the current persisted research residual basis. It composes the default-OFF TC-big footnote-reference layer above the already-persisted delimiter layer. Workflow `34638137163` independently verifies byte-exact source coverage, exact untouched rows, raw selected hypotheses, hard-gate recount, SQLite integrity and exact optional-asset provenance.
+Run `16` is the current best persisted research residual basis until Stage10-v2 full-corpus evidence supersedes it. It composes the default-OFF TC-big target-delimiter, footnote-reference, figure-reference, semicolon→question, target-only-equals, angular-minute and short-DMS layers. Workflow `34645769684`, artifact `10282227627`, output SHA-256 `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, SQLite SHA-256 `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11` and audit-evidence SHA-256 `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d` identify the persisted evidence.
 
-These persisted improvements do **not** change Product defaults. Final approved heavy evidence still requires zero unresolved hard failures.
+These persisted improvements do **not** change Product defaults. Final approved heavy evidence still requires zero unresolved hard failures, and Stage10 v2 must be re-evaluated on the complete corpus before any new count is claimed.
 
 ## External production assets
 
@@ -87,11 +106,13 @@ Inference uses local Hugging Face `MarianTokenizer` semantics plus CTranslate2 f
 
 TC-big is not a generic fallback. A second model may be invoked only by an existing hard failure plus a source-defined, boundary-safe trigger.
 
-The persisted target-delimiter wrapper considers only exact Stage10 contexts whose aggregate current target adds `()[]{}` delimiters beyond immutable source counts. A candidate must be a raw TC-big hypothesis, pass all maintained strict checks, preserve Gutenberg emphasis, remove the added delimiter debt and stay within target/source alphabetic ratio `0.75..1.50`.
+The target-delimiter wrapper considers only exact Stage10 contexts whose aggregate current target adds `()[]{}` delimiters beyond immutable source counts. A candidate must be a raw TC-big hypothesis, pass all maintained strict checks, preserve Gutenberg emphasis, remove the added delimiter debt and stay within target/source alphabetic ratio `0.75..1.50`.
 
-The persisted footnote-reference wrapper considers only an exact single current row/Stage10 source lead matching `[A-Z] _..._` whose exact ASCII marker is lost. A raw candidate must restore the marker, preserve emphasis, pass strict checks and stay within source-relative alpha `0.70..2.00`.
+The footnote-reference wrapper considers only an exact single current row/Stage10 source lead matching `[A-Z] _..._` whose exact ASCII marker is lost. A raw candidate must restore the marker, preserve emphasis, pass strict checks and stay within source-relative alpha `0.70..2.00`.
 
-The figure-reference wrapper currently under full-corpus validation is similarly source-defined: an exact current row/Stage10 context must start `[in _Fig._ N.]`, already hard-fail, and lose that leading source-owned reference. A raw TC-big candidate must preserve a leading bracketed reference containing the same `N` and emphasized translated label, preserve overall emphasis, pass strict checks and stay within source-relative alpha `0.75..1.50`. It remains default OFF/not public-wired until persisted evidence is green.
+The figure-reference wrapper is similarly source-defined: an exact current row/Stage10 context must start `[in _Fig._ N.]`, already hard-fail, and lose that leading source-owned reference. A raw TC-big candidate must preserve a leading bracketed reference containing the same `N` and emphasized translated label, preserve overall emphasis, pass strict checks and stay within source-relative alpha `0.75..1.50`.
+
+The later semicolon→question, equals-addition and angular wrappers follow the same fail-closed geometry: a source-defined defect class must already hard-fail; only unmodified raw TC-big hypotheses are eligible; strict maintained checks plus family-specific source invariants must pass. The short-DMS wrapper additionally requires one short (≤12 alphabetic words) source statement containing `Angle` and exactly one `D deg. M'. S''` expression, excluding longer technical sentences where mechanical cleanliness was shown insufficient.
 
 Exact replacement geometry is mandatory. If a source context cuts through a current translation row, the rescue skips fail-closed rather than slicing a target string.
 
