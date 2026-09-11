@@ -13,6 +13,20 @@ dependencies = []
 subtitle = ["pysubs2>=1.7,<2"]
 nlp = ["spacy>=3.8,<4"]
 mt = ["ctranslate2>=4.8,<5", "sentencepiece>=0.2,<0.3"]
+alt-mt = [
+  "ctranslate2>=4.8,<5",
+  "sentencepiece>=0.2,<0.3",
+  "transformers==4.56.2",
+  "sacremoses>=0.1,<0.2",
+]
+alt-mt-build = [
+  "ctranslate2>=4.8,<5",
+  "sentencepiece>=0.2,<0.3",
+  "transformers==4.56.2",
+  "sacremoses>=0.1,<0.2",
+  "safetensors>=0.6,<0.7",
+  "torch>=2.8,<2.9",
+]
 pronunciation = ["cmudict>=1,<2"]
 production = [
   "pysubs2>=1.7,<2",
