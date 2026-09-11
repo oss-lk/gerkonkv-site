@@ -2,21 +2,20 @@ from __future__ import annotations
 
 """Read-only full-Opticks inventory for all maintained Product hard gates.
 
-The historical full-Opticks stress harness was deliberately centered on numeric
-integrity. Product release acceptance, however, requires numeric/symbol,
-punctuation and length-ratio gates to be clean at the same time. This audit
-reads the persisted selected Stage12 baseline, evaluates every translation row
-with the current maintained gate implementations and records which failures
-belong to planner-split Stage10 contexts.
+The historical full-Opticks numeric-stress harness deliberately evaluates only
+units whose *source* contains ``extract_numeric_literals``. Product Stage15 is
+broader: ``rocketdict-maintained-numeric-integrity/5`` evaluates every selected
+translation row because symbol-only corruption and unlicensed target numbers
+are hard failures too.
 
-The audit is contract-relative rather than tied to a historical failure count:
-the baseline JSON is authoritative for its own reported numeric result, while
-this script independently recomputes that result from the persisted rows and
-fails closed on disagreement. That keeps the inventory usable when a maintained
-planner/structural contract legitimately changes the corpus result.
+This audit therefore keeps two independently checkable surfaces:
 
-It is evidence only: no database writes, no target repair, no threshold changes
-and no automatic Product promotion are performed here.
+* the literal-bearing subset must reproduce the baseline stress JSON exactly;
+* the complete numeric/symbol gate is recomputed across every persisted Stage12
+  row, alongside punctuation and length-ratio gates.
+
+The distinction is evidence, not evaluator weakening. No database writes,
+target repair, threshold changes or automatic Product promotion occur here.
 """
 
 from collections import defaultdict
@@ -28,12 +27,12 @@ from typing import Any
 
 from rocketdict.database import connect, get_document, get_run, get_run_items
 from rocketdict.numeric_integrity import CONTRACT as NUMERIC_CONTRACT
-from rocketdict.numeric_integrity import evaluate_numeric_symbol_pair
+from rocketdict.numeric_integrity import evaluate_numeric_symbol_pair, extract_numeric_literals
 from rocketdict.stages import _length_issues, _punctuation_issues
 from rocketdict.structural_labels import STRUCTURAL_LABEL_CONTRACT
 from rocketdict.translation_stage import PLANNER_CONTRACT
 
-SCHEMA = "rocketdict-full-opticks-hard-gate-inventory/2"
+SCHEMA = "rocketdict-full-opticks-hard-gate-inventory/3"
 BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/3"
 OPTICKS_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
 
@@ -74,6 +73,7 @@ def _numeric_issue(row: dict[str, Any]) -> dict[str, Any] | None:
     verdict = evaluate_numeric_symbol_pair(source, target)
     if verdict.get("passed") is True:
         return None
+    source_numeric_literals = extract_numeric_literals(source)
     return {
         "type": "numeric_symbol_mismatch",
         "segment_sequence": int(row["sequence_number"]),
@@ -81,6 +81,8 @@ def _numeric_issue(row: dict[str, Any]) -> dict[str, Any] | None:
         "source_end": int(row["source_end"]),
         "source_text": source,
         "target_text": target,
+        "source_has_numeric_literal": bool(source_numeric_literals),
+        "source_numeric_literal_count": len(source_numeric_literals),
         "numeric_contract": NUMERIC_CONTRACT,
         "verdict": verdict,
     }
@@ -130,13 +132,19 @@ def main() -> int:
         raise RuntimeError("Hard-gate inventory requires current planner baseline")
     if baseline.get("structural_label_contract") != STRUCTURAL_LABEL_CONTRACT:
         raise RuntimeError("Hard-gate inventory requires current structural-label contract")
-    reported_numeric_failure_count = int(
+
+    reported_literal_failure_count = int(
         baseline.get("product_numeric_failure_count")
         if baseline.get("product_numeric_failure_count") is not None
         else -1
     )
-    if reported_numeric_failure_count < 0:
-        raise RuntimeError("Full Opticks baseline lacks a reported numeric failure count")
+    reported_literal_failure_sequences = sorted(
+        int(value) for value in baseline.get("product_numeric_failure_sequences", [])
+    )
+    if reported_literal_failure_count < 0:
+        raise RuntimeError("Full Opticks baseline lacks its numeric-stress failure count")
+    if len(reported_literal_failure_sequences) != reported_literal_failure_count:
+        raise RuntimeError("Full Opticks baseline numeric-stress failure sequence count drift")
 
     selected_run_id = int((baseline.get("stage12") or {})["translation_run_id"])
     document_version_id = int(baseline["document_version_id"])
@@ -200,10 +208,22 @@ def main() -> int:
         if length_issue is not None:
             length.append(length_issue)
 
-    if len(numeric) != reported_numeric_failure_count:
+    literal_numeric = [
+        issue for issue in numeric if issue["source_has_numeric_literal"] is True
+    ]
+    nonliteral_numeric = [
+        issue for issue in numeric if issue["source_has_numeric_literal"] is not True
+    ]
+    literal_sequences = sorted(int(issue["segment_sequence"]) for issue in literal_numeric)
+    if len(literal_numeric) != reported_literal_failure_count:
         raise RuntimeError(
-            "Recomputed maintained numeric failure count disagrees with baseline: "
-            f"{len(numeric)} != {reported_numeric_failure_count}"
+            "Recomputed literal-bearing numeric/symbol subset disagrees with numeric-stress baseline: "
+            f"{len(literal_numeric)} != {reported_literal_failure_count}"
+        )
+    if literal_sequences != reported_literal_failure_sequences:
+        raise RuntimeError(
+            "Recomputed literal-bearing numeric/symbol failure identities disagree with "
+            "numeric-stress baseline"
         )
 
     def split_count(issues: list[dict[str, Any]]) -> int:
@@ -234,15 +254,24 @@ def main() -> int:
             baseline.get("structural_label_family_counts") or {}
         ),
         "numeric_contract": NUMERIC_CONTRACT,
-        "baseline_reported_numeric_failure_count": reported_numeric_failure_count,
+        "numeric_stress_baseline_scope": "source rows containing extract_numeric_literals(source)",
+        "baseline_reported_literal_bearing_numeric_failure_count": reported_literal_failure_count,
+        "baseline_reported_literal_bearing_numeric_failure_sequences": reported_literal_failure_sequences,
         "segment_count": len(ordered),
         "split_context_count": len(split_contexts),
         "split_segment_count": len(split_segment_sequences),
         "numeric_failure_count": len(numeric),
+        "literal_bearing_numeric_failure_count": len(literal_numeric),
+        "nonliteral_source_numeric_failure_count": len(nonliteral_numeric),
+        "nonliteral_source_numeric_failure_sequences": [
+            int(issue["segment_sequence"]) for issue in nonliteral_numeric
+        ],
         "punctuation_failure_count": len(punctuation),
         "length_failure_count": len(length),
         "hard_failure_segment_union_count": len(hard_union),
         "split_numeric_failure_count": split_count(numeric),
+        "split_literal_bearing_numeric_failure_count": split_count(literal_numeric),
+        "split_nonliteral_source_numeric_failure_count": split_count(nonliteral_numeric),
         "split_punctuation_failure_count": split_count(punctuation),
         "split_length_failure_count": split_count(length),
         "split_hard_failure_segment_union_count": len(split_hard_union),
@@ -252,6 +281,8 @@ def main() -> int:
             "length_ratio": length_parameters,
         },
         "numeric_failures": numeric,
+        "literal_bearing_numeric_failures": literal_numeric,
+        "nonliteral_source_numeric_failures": nonliteral_numeric,
         "punctuation_failures": punctuation,
         "length_failures": length,
         "database_unchanged": True,
@@ -273,6 +304,11 @@ def main() -> int:
                 "segment_count": len(ordered),
                 "split_context_count": len(split_contexts),
                 "numeric_failure_count": len(numeric),
+                "literal_bearing_numeric_failure_count": len(literal_numeric),
+                "nonliteral_source_numeric_failure_count": len(nonliteral_numeric),
+                "nonliteral_source_numeric_failure_sequences": [
+                    int(issue["segment_sequence"]) for issue in nonliteral_numeric
+                ],
                 "punctuation_failure_count": len(punctuation),
                 "length_failure_count": len(length),
                 "hard_failure_segment_union_count": len(hard_union),
