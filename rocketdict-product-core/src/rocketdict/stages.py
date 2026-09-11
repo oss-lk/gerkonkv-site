@@ -192,7 +192,7 @@ def run_stage10(
     *,
     nlp_run_id: int,
     parameters: dict[str, Any] | None = None,
-    implementation: str = "structural-entity-term-discourse-pronoun-v2",
+    implementation: str = "structural-entity-term-discourse-pronoun-v1",
 ) -> dict[str, Any]:
     from .context_sentence_boundaries import (
         STAGE10_BOUNDARY_POLICY,

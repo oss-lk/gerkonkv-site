@@ -72,7 +72,7 @@ def _seed_nlp_run(db: Path, document_version_id: int, content: str) -> int:
     return run_id
 
 
-def test_stage10_v2_coalesces_false_parser_boundary_and_invalidates_v1_cache(tmp_path: Path) -> None:
+def test_stage10_default_is_v1_and_explicit_v2_coalesces_false_parser_boundary(tmp_path: Path) -> None:
     data = tmp_path / "data"
     source = tmp_path / "sample.txt"
     content = "Nor do I see but that light returns. Next."
@@ -93,7 +93,16 @@ def test_stage10_v2_coalesces_false_parser_boundary_and_invalidates_v1_cache(tmp
     assert legacy["sentence_count"] == 3
     assert legacy["cache_hit"] is False
 
-    repaired = run_stage10(db, nlp_run_id=nlp_run_id)
+    defaulted = run_stage10(db, nlp_run_id=nlp_run_id)
+    assert defaulted["schema"] == "rocketdict-product-stage10/1"
+    assert defaulted["context_run_id"] == legacy["context_run_id"]
+    assert defaulted["cache_hit"] is True
+
+    repaired = run_stage10(
+        db,
+        nlp_run_id=nlp_run_id,
+        implementation=STAGE10_CONTEXT_IMPLEMENTATION_V2,
+    )
     assert repaired["schema"] == "rocketdict-product-stage10/2"
     assert repaired["implementation"] == STAGE10_CONTEXT_IMPLEMENTATION_V2
     assert repaired["spacy_sentence_count"] == 3
@@ -121,6 +130,10 @@ def test_stage10_v2_coalesces_false_parser_boundary_and_invalidates_v1_cache(tmp
     assert first_payload["coalesced_boundary_count"] == 1
     assert first_payload["coalesced_boundaries"][0]["reason"] == "lowercase_continuation_without_terminal"
 
-    cached = run_stage10(db, nlp_run_id=nlp_run_id)
+    cached = run_stage10(
+        db,
+        nlp_run_id=nlp_run_id,
+        implementation=STAGE10_CONTEXT_IMPLEMENTATION_V2,
+    )
     assert cached["context_run_id"] == repaired["context_run_id"]
     assert cached["cache_hit"] is True
