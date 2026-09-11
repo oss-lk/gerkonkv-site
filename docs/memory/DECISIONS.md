@@ -38,15 +38,18 @@ Bare `II.`, `IV.` and similar fragments created by sentence segmentation are not
 - `rocketdict-stage12-citation-boundary-pair-rescue/1` — public opt-in/default OFF.
 - `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` — default OFF/not public-wired. Context `2725` remains the key semantic-loss counterexample proving mechanical cleanliness is insufficient.
 - `rocketdict-stage12-illustration-label-rescue/1` — default OFF/not public-wired.
-- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` — default OFF/not public-wired; now backed by persisted run `10`.
-- `rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1` — default OFF/not public-wired; heavy verification is being repaired after an audit-harness zero-handling defect.
+- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` — default OFF/not public-wired; persisted run `10`.
+- `rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1` — default OFF/not public-wired; persisted run `11`.
+- `rocketdict-stage12-tc-big-figure-reference-lead-rescue/1` — default OFF/not public-wired; persisted run `12`.
+- `rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1` — default OFF/not public-wired; persisted run `13`.
+- `rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1` — default OFF/not public-wired; implementation/CI green, no persisted full-corpus promotion yet.
 - `rocketdict-maintained-emphasis-markup-preservation/1` remains a rescue veto, not a retroactive Product hard gate.
 
 No internal rescue becomes Product default merely because a corpus-specific heavy run improves hard-gate counts.
 
-## Punctuation residuals are defect-family-specific
+## Punctuation and numeric residuals are defect-family-specific
 
-**Decision.** Do not introduce a universal punctuation fixer. Current failures mix source-owned labels/reference leads, square-bracket payload loss, target-only delimiter hallucination, long-context question migration and other families with different root causes.
+**Decision.** Do not introduce universal punctuation/numeric fixers. Current failures mix source-owned labels/references, symbol corruption, target-only additions, prime notation, long-context punctuation migration and other root causes.
 
 A failed OPUS formulation does not forbid a materially different model/source-defined formulation. Conversely, success on one source-defined class does not authorize generic second-model fallback.
 
@@ -54,7 +57,7 @@ A failed OPUS formulation does not forbid a materially different model/source-de
 
 **Decision.** Use pinned `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, license `CC-BY-4.0`, as the independent real-MT comparator/current narrow-rescue source.
 
-Broad TC-big replacement remains rejected. All-52 and whole-context research proves substantial baseline-model-specific debt but also semantic false positives. A second model may only be invoked by a narrow existing-hard-failure/source-defined trigger with exact source geometry and explicit semantic evidence.
+Broad TC-big replacement remains rejected. Row-local and whole-context research proves substantial baseline-model-specific debt but also semantic false positives. A second model may only be invoked by a narrow existing-hard-failure/source-defined trigger with exact source geometry and explicit semantic evidence.
 
 ## CTranslate2 is the accepted TC-big inference backend
 
@@ -68,33 +71,37 @@ TC-big inference may therefore use CTranslate2 float32 without Torch. Search-ord
 
 `rocketdict-assets build-tc-big-en-ru` is explicit provisioning. Builder dependencies and runtime dependencies remain separate; accepted inference is Torch-free. The baseline `production` extra must not silently acquire TC-big.
 
-## Run 10 is the current persisted residual basis
+## Run 13 is the current persisted residual basis
 
-**Decision.** Stage12 run `10` supersedes run `9` as the current persisted research residual basis: **24 numeric / 25 punctuation / 0 length, 47 unique**.
+**Decision.** Stage12 run `13` supersedes run `12` as the current persisted research residual basis: **23 numeric / 18 punctuation / 0 length, 40 unique**.
 
-**Evidence.** CPU-provisioning workflow `34631662056`, artifact `10276009101`, output SHA `6dec2080a8fe21716587e4f4ffbe1f8ebf816911b542ab99ac598a8462ed01df`. It composes over exact run `9`, preserves byte-exact source coverage and exact untouched rows, selects five raw TC-big rank0 candidates, passes independent gate recount/SQLite integrity and records exact TC-big asset identities.
+**Evidence.** Heavy workflow `34639494681`, artifact `10279502482`, digest `88dcd100745530a67add70faeedf27d5a623f597eaea03044530cfc4f5b923ef`, output SHA `2fda987f054681a6561272d4c802980f498d9a01019a43c2c9bd2c7bbfb7f4c7`. It composes over exact run `12`, preserves byte-exact source coverage and 3343 exact untouched rows, selects one raw TC-big rank0 candidate, passes independent gate recount/SQLite integrity and records exact TC-big asset identities.
 
-**Interpretation.** This is persisted quality progress, not Product-default promotion. The delimiter wrapper remains default OFF/not public-wired.
+**Interpretation.** The candidate repairs an OPUS semicolon→question migration while preserving the complete Newton sentence and its `Ray / Medium / something else` alternatives. Manual semantic review found it materially more faithful. This is persisted quality progress, not Product-default promotion.
+
+## Footnote and figure rescues are source-defined, not corpus whitelists
+
+**Decision.** The footnote wrapper triggers on exact source leads `[A-Z] _..._` with lost ASCII marker, exact Stage10/current-row geometry and existing hard failure. Run `11` verified 5/5 raw rank0 accepts and reduced **24/25/0,47 → 24/20/0,42**. The earlier red run was an audit `0 -> -1` defect; no selector weakening was permitted.
+
+**Decision.** The figure wrapper recognizes a leading `[in _Fig._ N.]` source-defined structure and requires exact number/emphasis preservation plus strict mechanics. Run `12` attempted two current failures, safely accepted only `Fig.15` and fail-closed rejected `Fig.16`, reducing **24/20/0,42 → 23/19/0,41** without any figure-number whitelist.
+
+## Semicolon→question migration is a narrow sentence-level class
+
+**Decision.** The semicolon wrapper is not a generic question-mark fixer. Trigger requires an exact complete Stage10/current row, source terminal period, source semicolon(s), zero source `?`, and a current hard failure that loses semicolon(s) while adding `?`. Raw candidate must restore both punctuation counts, preserve the terminal period and pass strict/emphasis/source-relative checks.
+
+This deliberately excludes incomplete `And whence is it` geometry. Run `13` demonstrates one safe persisted correction.
+
+## Target-only equals addition is admissible mechanically but not yet semantically proven
+
+**Decision.** A target-only-equals wrapper may trigger only on an exact single Stage10/current row that already hard-fails, has zero `=` in immutable source and added `=` in the current target. Candidate must be an unmodified raw TC-big hypothesis, strict-mechanical clean, emphasis-preserving, exact on equals count and within source-relative alpha `0.75..1.50`.
+
+Product Core workflow `34639617628` is green. Geometry excludes the known unsafe `_per deliquium_` context `2725` without any corpus whitelist.
+
+**Critical decision.** Do **not** persist/promote the mechanically admissible remaining equals candidate solely because gates are clean. Its source contains mathematical terminology `Square of the Sine`; a candidate rendering such as `площадь Сина` is semantically suspect. Mathematical terminology is content, not punctuation. Either semantic review proves the raw candidate acceptable, or the equals hypothesis remains rejected/needs a source-defined semantic veto. Never patch the target to `квадрат синуса` after generation.
 
 ## Source-relative completeness replaces corrupt-baseline verbosity only for justified alternative-MT selectors
 
 **Decision.** `candidate target alpha >= baseline target alpha` is not a universal alternative-MT rule when the baseline itself is inflated by hallucination. Narrow TC-big selectors may use conservative immutable-source-relative alpha bounds, but this does not weaken legacy OPUS selectors globally.
-
-## Target-only delimiter hallucination is an admissible TC-big defect class
-
-**Decision.** A delimiter rescue context must contain a current hard failure, be exactly row-aligned to complete current Stage12 rows, and add `()[]{}` delimiters beyond source counts. Candidate acceptance requires raw TC-big output, maintained strict cleanliness, emphasis preservation, zero added delimiters and source-relative alpha `0.75..1.50`.
-
-Persisted run `10` confirms the earlier five-context counterfactual exactly: **24/30/0,52 → 24/25/0,47**. Manual review found removal of serious OPUS hallucinated content rather than punctuation-only masking.
-
-## Gutenberg footnote-reference leads are a separate source-defined candidate class
-
-**Decision.** The footnote-reference wrapper is intentionally narrower than “all square-bracket failures.” It triggers only when one exact Stage10/current Stage12 row is a complete source lead matching `[A-Z] _..._`, the current row is already Product-hard-failing, and its exact ASCII marker is lost.
-
-Candidate acceptance requires an unmodified raw TC-big hypothesis, exact marker restoration, strict mechanical pass, Gutenberg emphasis preservation and source-relative alpha `0.70..2.00`. There is no G/H/J/K/M whitelist in the selector; those letters arise from the actual hard-failing corpus cohort.
-
-**Evidence so far.** Product Core workflow `34632793371` is fully green. The first heavy run `34632917048` persisted run `11` with five attempts, five raw rank0 accepts and zero rejects, but the audit script then failed because `int(rejected_count or -1)` converts valid `0` to `-1`.
-
-**Decision.** Treat that red run as an audit/orchestration defect, not a translation/model defect. Do not change the selector, trigger or acceptance thresholds to make the workflow green. Correct only the zero-handling assertion, rerun the independent gate/SQLite/source evidence, and promote run `11` to current residual basis only if the rerun is green.
 
 ## Audit failures must be classified before changing Product logic
 
