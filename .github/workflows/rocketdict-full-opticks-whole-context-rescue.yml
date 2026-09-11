@@ -16,6 +16,8 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/product_policy.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/product_preflight.py'
       - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_hard_gates.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_whole_context_hard_failures.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_rescue.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_product_rescue.py'
@@ -82,12 +84,16 @@ jobs:
             sleep 30
           done
           wait "$child"
+      - name: Inventory all maintained Product hard-gate failures
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_hard_gates.py
       - name: Evaluate whole Stage10 context rescue on all eligible omissions
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_whole_context_rescue.py
       - name: Persist and audit whole-context rescue through public Product Stage12
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_whole_context_product_rescue.py
       - name: Shadow all bounded split Stage10 contexts for semantic-loss discovery
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_whole_context_shadow.py
+      - name: Correlate hard-failing split contexts with strict whole-context candidates
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_whole_context_hard_failures.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -106,9 +112,11 @@ jobs:
           path: |
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
+            work/full-opticks-numeric-stress/full-opticks-hard-gate-inventory.json
             work/full-opticks-numeric-stress/full-opticks-whole-context-rescue-feasibility.json
             work/full-opticks-numeric-stress/full-opticks-whole-context-product-rescue-optin.json
             work/full-opticks-numeric-stress/full-opticks-whole-context-shadow.json
+            work/full-opticks-numeric-stress/full-opticks-whole-context-hard-failure-cohort.json
             work/full-opticks-numeric-stress/runtime-evidence-whole-context/**
           if-no-files-found: warn
           retention-days: 90
