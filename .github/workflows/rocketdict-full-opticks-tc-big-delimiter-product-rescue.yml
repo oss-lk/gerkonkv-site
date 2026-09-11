@@ -38,11 +38,21 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install TC-big provisioning runtime
+      - name: Install TC-big provisioning runtime with pinned CPU Torch
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e './rocketdict-product-core[alt-mt-build]'
-          python -m pip install 'huggingface_hub==0.34.4'
+          python -m pip install -e ./rocketdict-product-core \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' 'transformers==4.56.2' \
+            'sacremoses==0.1.1' 'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python - <<'PY'
+          import ctranslate2, torch, transformers
+          if '+cpu' not in torch.__version__:
+              raise SystemExit(f'expected CPU Torch wheel, got {torch.__version__}')
+          print('builder runtime:', ctranslate2.__version__, transformers.__version__, torch.__version__)
+          PY
 
       - name: Download immutable run-9 Product database
         uses: actions/download-artifact@v4
