@@ -1,0 +1,124 @@
+name: RocketDict Full Opticks Alternative MT Hard Contexts Run9
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_hard_contexts_run9.py'
+      - '.github/workflows/rocketdict-full-opticks-alternative-mt-hard-contexts-run9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  alternative-mt-hard-contexts-run9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BASE_RUN_ID: '34610787826'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      BASE_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      ALT_MODEL_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      ALT_MODEL_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      ALT_MODEL_SAFETENSORS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      ROCKETDICT_ALT_MT_MODEL_DIR: ${{ github.workspace }}/work/alt-mt-model
+      ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT: ${{ github.workspace }}/work/alt-mt-context-run9
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained evaluator and pinned alternative-MT runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python -m pip install 'transformers==4.56.2' 'huggingface_hub==0.34.4' 'safetensors==0.6.2' 'sentencepiece==0.2.1' 'sacremoses==0.1.1'
+      - name: Download immutable illustration run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Assemble and verify persisted run-9 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT"
+          cp work/base/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Restore pinned alternative model cache
+        uses: actions/cache@v4
+        with:
+          path: work/alt-mt-model
+          key: rocketdict-alt-mt-tc-big-en-zle-708be1d-e68caa9
+      - name: Obtain exact alternative MT snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['ALT_MODEL_REPO'],
+              revision=os.environ['ALT_MODEL_REVISION'],
+              local_dir=os.environ['ROCKETDICT_ALT_MT_MODEL_DIR'],
+              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors"
+          echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
+      - name: Run pinned TC-big on original Stage10 hard contexts
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_hard_contexts_run9.py
+      - name: Verify read-only context evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT/full-opticks-alternative-mt-hard-contexts-run9.json"
+          test -s "$evidence"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT'])/'full-opticks-alternative-mt-hard-contexts-run9.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-alternative-mt-hard-contexts-run9/1': raise SystemExit('schema drift')
+          if e['hard_row_count'] != 52 or e['unique_context_count'] != 50: raise SystemExit('hard-context cohort drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':24,'punctuation':30,'length':0,'unique':52}: raise SystemExit('base gate drift')
+          b=e['base_hard_gate_counts']; u=e['mechanical_upper_bound_hard_gate_counts']
+          if any(u[k] > b[k] for k in ('numeric_symbol','punctuation','length','unique')): raise SystemExit(f'context mechanical regression: {u!r}')
+          if e['database_mutated'] is not False or e['source_coverage_byte_exact'] is not True: raise SystemExit('read-only/source proof drift')
+          if e['mechanical_upper_bound_is_not_product_selection'] is not True or e['automatic_semantic_selector'] is not False: raise SystemExit('context promotion guard drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False or e['semantic_review_required'] is not True: raise SystemExit('context promotion state drift')
+          for flag in ('source_rewriting','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
+              if e[flag] is not False: raise SystemExit(f'unsafe context flag drift: {flag}')
+          print('Run-9 TC-big Stage10-context evidence verified.')
+          PY
+      - name: Record runtime identities and resources
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/alt-mt-context-run9-runtime
+          python -VV > work/alt-mt-context-run9-runtime/python.txt || true
+          python -m pip freeze | sort > work/alt-mt-context-run9-runtime/pip-freeze.txt || true
+          df -h > work/alt-mt-context-run9-runtime/disk.txt || true
+          free -h > work/alt-mt-context-run9-runtime/memory.txt || true
+          sha256sum "$ROCKETDICT_ALT_MT_MODEL_DIR"/* > work/alt-mt-context-run9-runtime/model-files.sha256 || true
+          if [ -s "$ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT/full-opticks-alternative-mt-hard-contexts-run9.json" ]; then
+            sha256sum "$ROCKETDICT_ALT_MT_CONTEXT_RUN9_ROOT/full-opticks-alternative-mt-hard-contexts-run9.json" > work/alt-mt-context-run9-runtime/evidence.sha256
+          fi
+      - name: Upload context alternative-MT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-alternative-mt-hard-contexts-run9
+          path: |
+            work/alt-mt-context-run9/full-opticks-alternative-mt-hard-contexts-run9.json
+            work/alt-mt-context-run9-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
