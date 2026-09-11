@@ -12,6 +12,7 @@ This file stores durable conclusions from maintained Product translation-quality
 - Length rescue: `rocketdict-stage12-length-failure-whole-context-rescue/1`, default OFF.
 - Citation pair rescue: `rocketdict-stage12-citation-boundary-pair-rescue/1`, default OFF.
 - Numeric-hard whole-context rescue: `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1`, selector `/1`, default OFF and not yet public-wired.
+- Illustration-label rescue: `rocketdict-stage12-illustration-label-rescue/1`, selector `/1`, target-form `/1`, default OFF and not yet public-wired.
 - Gutenberg underscore-emphasis diagnostic: `rocketdict-maintained-emphasis-markup-preservation/1`; research veto, not Product hard gate.
 
 ## Canonical full contiguous Opticks evidence
@@ -23,60 +24,67 @@ Pinned complete Project Gutenberg *Opticks*:
 
 Structural-label `/2` baseline: workflow `34575909618`, artifact `10190059238`, Stage12 run `4`, output SHA `b5c42141767a9760495c84023349402bf637b6591f3fa60d723d42c7d5760e22`, SQLite SHA `eaff048389e8cdabfd9dc47af0bc841e77657122883ee1bf10b26de7575d4b8c`. Complete gates: **30 numeric/symbol / 34 punctuation / 5 length**, **64 unique failures**.
 
-Length+pair-citation composition: workflow `34597648856`, artifact `10263095872`, Stage12 run `7`, output SHA `b9e61f1f381ac9cd32e450e66c36a1f16d380eb2ef8b20c18ed7fc5bfc2c38e8`, `3348` segments, **29/34/0**, **59 unique**. Source coverage byte-exact; untouched rows base-exact; accepted outputs exact raw rank-0; no rewriting/placeholders/literal injection.
+Length+pair-citation composition: workflow `34597648856`, artifact `10263095872`, Stage12 run `7`, output SHA `b9e61f1f381ac9cd32e450e66c36a1f16d380eb2ef8b20c18ed7fc5bfc2c38e8`, `3348` segments, **29/34/0**, **59 unique**.
 
-Numeric-hard whole-context opt-in: workflow `34601313026`, artifact `10264132732`, artifact digest `3020f5bb9e6c59b312bb8e09a26d1fea4e29deac29ace3bbeca0cfd695b4bd76`, Stage12 run `8`, output SHA `d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346`, SQLite SHA `a84b2118f00bc386953fe11db48bdc29fcfe8db62735f9acf86178e1dbacf9a2`, `3343` segments, **25 numeric / 33 punctuation / 0 length**, **55 unique**. Accepted Stage10 contexts: `550, 669, 1024, 2238`; rejected: `1460, 2132, 2176, 2190, 2634, 2725`. Context `2725` is a durable counterexample: old strict mechanics accepted a candidate that silently dropped `_per deliquium_`; the emphasis-preservation veto correctly blocks it. Product Core CI `34601005247` is green.
+Numeric-hard whole-context opt-in: workflow `34601313026`, artifact `10264132732`, Stage12 run `8`, output SHA `d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346`, SQLite SHA `a84b2118f00bc386953fe11db48bdc29fcfe8db62735f9acf86178e1dbacf9a2`, `3343` segments, **25/33/0**, **55 unique**. Accepted Stage10 contexts `550,669,1024,2238`; context `2725` remains the durable semantic-loss counterexample blocked by emphasis preservation.
 
-## Current residual basis
+## Validated illustration-label rescue and current residual basis
 
-Run `8` is the strongest persisted research basis: **25 numeric/symbol / 33 punctuation / 0 length**, **55 unique failures**; three rows overlap numeric and punctuation. Future work must key on immutable source spans/current Stage10 context identity rather than shifted sequence IDs.
+Research v3 workflow `34609890716` succeeded on exact run `8`; artifact `10267328730`, digest `2c5a8b0d11c5924e370076cf4dc5d00b26ad8c4e580f8ca14e2faf642bf7b6e2`. The source-defined hard-failing standalone illustration starts are `72401,90105,203786`. Deterministic raw candidates selected ranks `3,3,0` with exact targets `Иллюстрация.`, `Иллюстрация.`, `С центром O`. Counterfactual becomes **24 numeric / 30 punctuation / 0 length, 52 unique** with byte-exact source coverage and no target rewrite/placeholders/literal injection.
 
-Residuals are heterogeneous. Prime notation, compact formula/fraction corruption, large integers, footnote markers, illustration payloads, parentheticals/question punctuation and other delimiter failures are separate families. A universal punctuation or generic whole-context repair remains unsafe.
+The opt-in Product wrapper `rocketdict-stage12-illustration-label-rescue/1` reproduces that mechanism and remains default OFF. Product Core CI `34610493157` is green including real Stage8→25 smoke.
 
-## Illustration-label research — source structure, not target patching
+Persisted audit workflow `34610787826` succeeded; artifact `10268850347`, digest `1818c3cb67746d9ff1c8a49968e11584018264954f6204f014292344e37dbaee`. It creates Stage12 run `9`, output SHA `c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be`, SQLite SHA `9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad`, `3346` segments and **24/30/0**, **52 unique**. Untouched rows are base-exact; applied targets are exact raw hypotheses; source coverage and SQLite integrity are clean; all rewrite/placeholder safety flags remain false.
 
-Run-8 classification found three current hard-failing rows beginning with a standalone Gutenberg line `[Illustration: ...]` followed by a blank line. The complete corpus contains 57 standalone illustration-label lines. This is a source-defined document-structure family; it must not be generalized to arbitrary bracketed linguistic text.
+**Run `9` is now the current residual basis.** Future residual work must key on immutable source spans/current context identity, not shifted sequence numbers.
 
-### Negative v1 evidence
+## Illustration-label negative evidence remains binding
 
-A first read-only split preserved `[Illustration: ...]` + separator byte-exactly and translated only the linguistic remainder. Mechanical gates suggested a counterfactual **24 numeric / 30 punctuation / 0 length, 52 unique**, but semantic review caught malformed raw OPUS output for exact source suffix `_Illustration._`: `*Иллюстрация._`. Therefore mechanical hard-gate improvement was insufficient and v1 promotion was rejected.
+Do not regress to v1/v2 shortcuts:
+- exact `_Illustration._` raw rank0 can be malformed (`*Иллюстрация._`);
+- canonical rank0 `Illustration.` can choose wrong sense `Пример.`;
+- only the deterministic raw n-best structural target selector has contiguous three-case evidence.
 
-### Fail-closed v2 evidence
+This does not authorize default promotion. It only supports the current default-OFF wrapper.
 
-The maintained v2 research contract is `rocketdict-full-opticks-illustration-label-feasibility/2`. For exact `_Illustration._`, model input is source-derived canonical `Illustration.` while immutable source bytes remain unchanged; ordinary linguistic suffixes use exact source text. The semantic target-form check accepts only the intended structural lexical class and no markup artifacts.
+## Block footnote markers: marker-only split is mechanically good but semantically insufficient
 
-Workflow run `34603765083` succeeded; artifact `10265862004`, digest `85231d8a9eca686deb6cf72240fc395aecfd0fc3d85de116ba3b0d7132026a4e`. Evidence file SHA-256 `0043d0a912a0ff35001d55fcea0b792ca534fe43b434f015c8f7ceec7d866653`, internal evidence field `9a785068bb2c1fb9c580e3bf0419d4c350b9a9bad7b0471b43ef018d1c570ad6`.
+Run `9` contains a closed current hard-failing block-start marker cohort at source starts `151466,151557,253849,253919,254102`, corresponding to `[G]`, `[H]`, `[J]`, `[K]`, `[M]`. Inline markers are out of scope.
 
-The three attempted immutable source starts are `72401, 90105, 203786`. Rank-0 canonical `Illustration.` produced `Пример.` at starts `72401` and `90105`, so both are correctly rejected by the semantic target-form check. Only the ordinary suffix case at `203786` (`With the Center O ` → raw rank-0 `С центром O`) is accepted. Counterfactual result: **24 numeric / 32 punctuation / 0 length, 54 unique**. Source coverage remains byte-exact and the run-8 database is unchanged.
+Marker-only feasibility workflow `34611175668`, artifact `10268975960`, evidence SHA `14ecc93fe080a218dd9c62de35c7e6dff534867849e6c42cd677b905ef8d76fa`, mechanically accepts all five and would move **24/30/0, 52 unique → 24/25/0, 47 unique**. This branch is **rejected for Productization** because semantic inspection catches at least:
+- `[H]` `_How to do this, is shewn in our_` → `Как это сделать, сшито в нашем...`;
+- `[J]` `_See our_` → `Посмотри на нас.`.
 
-### Illustration-word OPUS DOE
+Therefore a locally clean marker/body split is not enough; these first rows are fragments of larger footnote-reference paragraphs.
 
-Because v2 proved rank-0 ambiguity rather than absence of a good raw model candidate, a separate source-side DOE searched canonical model inputs and n-best cells without target rewriting. Workflow run `34603700499` succeeded; artifact `10265013225`, digest `3e92ac761908175f25d0a66c0942e1772809f402fedb9c637c2f8ad8f1bf50c0`. Evidence file SHA-256 `54e23fd53c2a4015e030aee5699aa92bb6c051471ae6b4f367cc16957f683025`, internal evidence field `3c7d3a6e651a33654783cff551d477fdd0973fc75a1a63048c0e0afc44414e08`.
+## Whole-footnote-context research and boundary lesson
 
-DOE evaluated 8 canonical model inputs × two n-best generation cells, 144 raw hypotheses total, and found 25 mechanically + semantically admissible structural-word candidates. The selected deterministic candidate is:
-- canonical model input `Illustration.`;
-- beam `6`, `num_hypotheses=6`;
-- raw rank `3`;
-- exact raw target `Иллюстрация.`;
-- no target rewrite/placeholders/literal injection.
+The promising next formulation is source-owned marker + source-owned paragraph/trailing separators + translation of the complete linguistic footnote body using deterministic raw n-best, strict hard checks and the emphasis-preservation veto.
 
-This supports a **research v3**, not Product promotion: preserve immutable `_Illustration._` source bytes, generate n-best from canonical `Illustration.`, and select only an unmodified raw hypothesis satisfying hard/strict gates plus exact structural target shape. Full three-case/full-corpus counterfactual evidence is still required before any Product wrapper.
+Initial workflow `34611517906` failed **before MT evaluation** due a harness-boundary assertion, not due a model candidate. The script used the first `\n\n` as both semantic paragraph end and existing Stage12 replacement-row boundary. L3 immutable source/run-9 rows prove these are different for two cases:
+- G: semantic paragraph end = row coverage end `151557`;
+- H: semantic paragraph end `151652`, enclosing current Stage12 row ends `151655` because it owns three additional newline bytes;
+- J: both `253919`;
+- K: both `254026`;
+- M: semantic paragraph end `254202`, enclosing current Stage12 row ends `254205` because it owns three additional newline bytes.
 
-## Block footnote markers
+The correct harness must keep semantic body boundaries and row-replacement/source-coverage boundaries separate. Do not merely change fixture constants: preserve marker, translated paragraph body, paragraph separator and any extra trailing whitespace explicitly and byte-exactly.
 
-The source also contains a closed block-start marker family `[A] ` … `[M] `. Existing research `real_translation_full_opticks_block_footnote_marker_feasibility.py` treats the marker+following horizontal whitespace as source-owned structure and translates only the linguistic body. Inline markers such as `understand,[G] that` and `[Illustration: ...]` are explicitly out of scope. This is a promising punctuation family but must be revalidated against run `8` before Productization.
+## Residual families / durable negative evidence
 
-## Durable negative evidence / promotion rules
+Residuals remain heterogeneous. Prime notation, compact formula/fraction corruption, large integers, source-owned footnote markers, parentheticals/question punctuation and other delimiter failures require separate mechanisms.
 
 Do not repeat unchanged without new evidence:
-- prime-fragment structural decomposition is semantically unacceptable (`53 deg.`→`53 балла`, `hundred Feet`→`сто ног`); whole-unit prime normalization/hints and broad staged n-best do not solve the class;
+- prime-fragment structural decomposition is semantically unacceptable (`53 deg.`→`53 балла`, `hundred Feet`→`сто ног`);
 - thousands grouping / narrow `x→×` preprocessing rescued `0/4` and regressed successful cases;
 - compact-formula spacing did not rescue the investigated formula unit;
 - broad citation/group coalescing lost unrelated content;
 - generic whole-context strictness is not semantic proof;
+- marker-only footnote repair is not semantically sufficient despite a five-failure mechanical gain;
 - broad n-best fallback, target repair, literal injection, placeholders, source rewriting and evaluator weakening remain rejected.
 
-Promotion principles:
+## Promotion rules
+
 1. Never weaken maintained evaluators to make a real loss green.
 2. Classify planner/evaluator/source/document/model/resource defects first.
 3. Prefer source/planner fixes for pre-MT defects; select only unmodified raw model candidates when evidence supports them.
