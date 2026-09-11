@@ -1,0 +1,92 @@
+name: RocketDict Full Opticks TC-big Target Delimiter Context Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/audit_full_opticks_tc_big_target_delimiter_context_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-target-delimiter-context-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  target-delimiter-context-feasibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUN9_RUN_ID: '34610787826'
+      RUN9_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      RUN9_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      CONTEXT_RUN_ID: '34626136705'
+      CONTEXT_ARTIFACT_NAME: rocketdict-full-opticks-alternative-mt-hard-contexts-run9
+      CONTEXT_FILE_SHA256: 49d679789207440d5160f044944f4261cc957070462f0cce464e047c955878d3
+      ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT: ${{ github.workspace }}/work/tc-big-delimiter-context
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained evaluator
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+      - name: Download immutable run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN9_ARTIFACT_NAME }}
+          path: work/run9
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN9_RUN_ID }}
+      - name: Download immutable whole-context TC-big evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CONTEXT_ARTIFACT_NAME }}
+          path: work/context
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.CONTEXT_RUN_ID }}
+      - name: Assemble and verify immutable inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT"
+          cp work/run9/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT/rocketdict.sqlite"
+          cp work/context/alt-mt-context-run9/full-opticks-alternative-mt-hard-contexts-run9.json "$ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT/full-opticks-alternative-mt-hard-contexts-run9.json"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT/rocketdict.sqlite" | sha256sum -c -
+          echo "$CONTEXT_FILE_SHA256  $ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT/full-opticks-alternative-mt-hard-contexts-run9.json" | sha256sum -c -
+      - name: Audit target-delimiter context rescue
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_tc_big_target_delimiter_context_rescue.py
+      - name: Verify feasibility evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT/full-opticks-tc-big-target-delimiter-context-rescue-feasibility.json"
+          test -s "$evidence"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_TC_BIG_DELIMITER_CONTEXT_ROOT'])/'full-opticks-tc-big-target-delimiter-context-rescue-feasibility.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-tc-big-target-delimiter-context-rescue-feasibility/1': raise SystemExit('schema drift')
+          if e['triggered_context_count'] < e['accepted_context_count'] or e['accepted_context_count'] < 1: raise SystemExit('delimiter selector cohort drift')
+          b=e['base_hard_gate_counts']; u=e['mechanical_upper_bound_hard_gate_counts']
+          if any(u[k] > b[k] for k in ('numeric_symbol','punctuation','length','unique')): raise SystemExit(f'mechanical regression: {u!r}')
+          if e['selector']['baseline_target_alpha_non_decrease_required'] is not False: raise SystemExit('selector semantics drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False or e['semantic_review_required'] is not True: raise SystemExit('promotion guard drift')
+          for flag in ('database_mutated','source_rewriting','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag drift: {flag}')
+          print('TC-big target-delimiter context feasibility verified.')
+          PY
+      - name: Upload feasibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-target-delimiter-context-rescue
+          path: work/tc-big-delimiter-context/full-opticks-tc-big-target-delimiter-context-rescue-feasibility.json
+          if-no-files-found: warn
+          retention-days: 90
