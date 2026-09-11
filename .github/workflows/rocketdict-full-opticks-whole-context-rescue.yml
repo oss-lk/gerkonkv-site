@@ -18,6 +18,7 @@ on:
       - 'rocketdict-workbench/src/rocketdict_workbench/product_profile.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_stress.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_rescue.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_product_rescue.py'
       - '.github/workflows/rocketdict-full-opticks-whole-context-rescue.yml'
   workflow_dispatch:
 
@@ -82,6 +83,8 @@ jobs:
           wait "$child"
       - name: Evaluate whole Stage10 context rescue on all eligible omissions
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_whole_context_rescue.py
+      - name: Persist and audit whole-context rescue through public Product Stage12
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_whole_context_product_rescue.py
       - name: Record runtime identities and resources
         if: always()
         run: |
@@ -101,6 +104,7 @@ jobs:
             work/opus-asset-build.json
             work/full-opticks-numeric-stress/full-opticks-numeric-stress.json
             work/full-opticks-numeric-stress/full-opticks-whole-context-rescue-feasibility.json
+            work/full-opticks-numeric-stress/full-opticks-whole-context-product-rescue-optin.json
             work/full-opticks-numeric-stress/runtime-evidence-whole-context/**
           if-no-files-found: warn
           retention-days: 90
