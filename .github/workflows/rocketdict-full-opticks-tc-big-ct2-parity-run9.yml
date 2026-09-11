@@ -102,6 +102,7 @@ jobs:
           python -m venv work/ct2-runtime-venv
           work/ct2-runtime-venv/bin/python -m pip install --upgrade pip
           work/ct2-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench
+          work/ct2-runtime-venv/bin/python -m pip install 'transformers==4.56.2' 'sentencepiece==0.2.1' 'sacremoses==0.1.1'
           if work/ct2-runtime-venv/bin/python - <<'PY'
           import importlib.util
           raise SystemExit(0 if importlib.util.find_spec('torch') is None else 1)
@@ -129,15 +130,18 @@ jobs:
           from pathlib import Path
           p=Path(os.environ['ROCKETDICT_TC_BIG_CT2_RUN9_ROOT'])/'full-opticks-tc-big-ct2-parity-run9.json'
           e=json.loads(p.read_text(encoding='utf-8'))
-          if e['schema'] != 'rocketdict-full-opticks-tc-big-ct2-parity-run9/1': raise SystemExit('schema drift')
+          if e['schema'] != 'rocketdict-full-opticks-tc-big-ct2-parity-run9/2': raise SystemExit('schema drift')
           if e['case_count'] != 52: raise SystemExit('case count drift')
-          if e['runtime']['torch_imported_by_script'] is not False: raise SystemExit('torch-free proof drift')
+          if e['input_token_parity_count'] != 52: raise SystemExit(f"MarianTokenizer input parity drift: {e['input_token_parity_count']}")
+          if e['runtime']['torch_available'] is not False or e['runtime']['torch_imported_by_script'] is not False: raise SystemExit('torch-free proof drift')
           if e['runtime']['ctranslate2_version'] != '4.8.2': raise SystemExit(f"CTranslate2 drift: {e['runtime']['ctranslate2_version']!r}")
+          if e['runtime']['transformers_version'] != '4.56.2': raise SystemExit(f"Transformers tokenizer runtime drift: {e['runtime']['transformers_version']!r}")
+          if e['runtime']['tokenizer_class'] != 'MarianTokenizer': raise SystemExit('Marian tokenizer class drift')
           if e['converted_model']['compute_type'] != 'float32': raise SystemExit('compute type drift')
           if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('parity research unexpectedly authorizes promotion')
           for flag in ('database_mutated','source_rewriting','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
               if e[flag] is not False: raise SystemExit(f'unsafe parity flag drift: {flag}')
-          print('TC-big CTranslate2 parity evidence verified.')
+          print('TC-big exact-MarianTokenizer CTranslate2 parity evidence verified.')
           PY
       - name: Record conversion/runtime identities
         if: always()
