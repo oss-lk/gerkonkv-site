@@ -32,13 +32,13 @@ Persisted research progression:
 
 ## Current best persisted research basis: run 16
 
-Composed angular-minute + short-DMS workflow `34645769684` is green; artifact `10282227627`.
+Composed angular-minute + short-DMS workflow `34645769684` is green; artifact `10282227627`; artifact ZIP SHA-256 `92b2ad3fa98af1d12c27eeb4ee749071d5152464b34c4ac1f3bf40ed7cc02e14`.
 
 - exact base is run `14` (`12e1fe77ab8df3959b4bb9265292cdc5b9db279797d94e2f15df6482429e2c44`, DB `dfce68a8f7cae08b90380630ae29e31418b4d6e8987d3e7001fe72fa1d781304`);
 - angular intermediate run `15` output SHA `0e0ebb851e43079b3029a2a2638d0dc0ff5eb45bebd6c91895cb04483349fb45`;
-- final run `16` output SHA `6580654826710367569682fdd44805163d8f23a1ec3ede1c0d74c62b16ec06e`;
-- persisted run-16 SQLite SHA `2f7fb592777a9ca18c86ff393954f9032dbe48e4b10d626a322596d5ed56a862`;
-- audit evidence SHA `34598d7a05df08d01c610c83e9db8e2433e7537e31c9196fdc80eacc5b3f839`;
+- final run `16` output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`;
+- persisted run-16 SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`;
+- audit evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`;
 - gates compose as **22/18/0,39 → 21/18/0,38 → 20/18/0,37 unique**;
 - angular layer changes only source start `431358` to raw rank0 `В то же время появляется гало на расстоянии около 22 градусов 35' от центра Луны.`;
 - DMS layer changes only source start `110881` to raw rank2 `Откуда этот угол 2 град. 0'. 7''.` and preserves all other 3343 rows exactly relative to run `15`;
@@ -75,9 +75,11 @@ Persisted success is research evidence, not automatic Product-default authorizat
 
 ## Boundary/context frontier
 
-Read-only workflow `34644023517` showed that the exact pair `And whence is it | but from ... ?` yields six strict + semantic TC-big hypotheses when translated as one contiguous source span. L3 then located the deeper cause: the immutable source has no terminal punctuation at the split, but Stage8 marks token `it` as sentence end and lowercase `but` as sentence start; Stage10 preserves that false boundary. The run-16 punctuation residual is therefore partly an upstream sentence-segmentation problem, not merely a translation-model problem.
+Read-only workflow `34644023517` showed that the exact pair `And whence is it | but from ... ?` yields six strict + semantic TC-big hypotheses when translated as one contiguous source span. L3 then located the deeper cause: the immutable source has no terminal punctuation at the split, but Stage8 assigns separate spaCy sentence indices and Stage10 preserves that false boundary. The run-16 punctuation residual is therefore partly an upstream sentence-segmentation problem, not merely a translation-model problem.
 
-A simple full-corpus Stage10 inventory of `previous fragment lacks terminal punctuation` plus `next fragment starts lowercase` yields only five candidate boundaries: four plausible prose continuations (`...in a Prism | nor...`, `Nor do I see but that there is | a general Law...`, `And whence is it | but...`, `...seeing whether | it...`) and one suspicious math/roman structure. This small cohort is promising but not yet sufficient to authorize merging. The next evidence step is to inspect the Stage8/Stage10 implementation and metadata, derive a generic fail-closed rule if possible, and rerun affected maintained stages rather than adding a phrase-specific `Whence` patch.
+A complete Stage10 census of `previous fragment lacks terminal sentence punctuation` plus `next fragment starts lowercase` yields exactly five boundaries. Full immutable-source and token review confirms **all five are genuine false spaCy sentence splits**, including the superficially structural `_ B | any where...` boundary, which is actually one sentence: `Line C _prt_ B any where between the Ends...`.
+
+`run_stage10` currently groups directly by spaCy `sentence_index`. Therefore the next evidence-backed engineering step is a generic fail-closed Stage10 coalescer, not a phrase-specific `Whence` rescue. The coalescer must merge only contiguous adjacent parser sentences when the left side has no actual sentence-terminal punctuation, the right side begins with lowercase lexical continuation, and the gap does not cross a paragraph boundary. Raw Stage8 spaCy evidence should remain unchanged; Stage10 must expose merge provenance. Because current caching keys include the implementation name, changed behavior also requires a Stage10 implementation/schema contract bump so old cached run2 cannot masquerade as repaired output.
 
 ## Exhausted / rejected branches still binding
 
