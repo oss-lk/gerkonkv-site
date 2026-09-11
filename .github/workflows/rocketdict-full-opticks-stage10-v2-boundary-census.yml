@@ -1,0 +1,118 @@
+name: RocketDict Full Opticks Stage10 v2 Boundary Census
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/context_sentence_boundaries.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_stage10_v2_boundary_census.py'
+      - '.github/workflows/rocketdict-full-opticks-stage10-v2-boundary-census.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  boundary-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUN16_RUN_ID: '34645769684'
+      RUN16_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-angular-dms-composed-product-rescue
+      RUN16_DB_SHA256: 573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11
+      ROCKETDICT_STAGE10_V2_CENSUS_ROOT: ${{ github.workspace }}/work/full-opticks-stage10-v2-boundary-census
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install maintained Product Core
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+
+      - name: Download immutable persisted run-16 database
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN16_ARTIFACT_NAME }}
+          path: work/run16
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN16_RUN_ID }}
+
+      - name: Verify and stage exact run-16 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_db=work/run16/tc-big-angular-dms-composed-product-rescue/rocketdict.sqlite
+          test -s "$source_db"
+          echo "$RUN16_DB_SHA256  $source_db" | sha256sum -c -
+          mkdir -p "$ROCKETDICT_STAGE10_V2_CENSUS_ROOT"
+          cp "$source_db" "$ROCKETDICT_STAGE10_V2_CENSUS_ROOT/rocketdict.sqlite"
+          echo "$RUN16_DB_SHA256  $ROCKETDICT_STAGE10_V2_CENSUS_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Build read-only Stage10 v2 raw-boundary census
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/real_translation_full_opticks_stage10_v2_boundary_census.py \
+            > "$ROCKETDICT_STAGE10_V2_CENSUS_ROOT/census-stdout.json"
+
+      - name: Print compact boundary classification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import collections, json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_STAGE10_V2_CENSUS_ROOT'])
+          evidence = json.loads((root/'full-opticks-stage10-v2-boundary-census.json').read_text(encoding='utf-8'))
+          inside = [d for d in evidence['decisions'] if d['inside_stage12_protected_span']]
+          outside = [d for d in evidence['decisions'] if not d['inside_stage12_protected_span']]
+          kinds = collections.Counter(
+              span['kind']
+              for d in inside
+              for span in d['containing_stage12_protected_spans']
+          )
+          compact = {
+              'schema': evidence['schema'],
+              'raw_spacy_sentence_count': evidence['raw_spacy_sentence_count'],
+              'stage10_v2_context_group_count': evidence['stage10_v2_context_group_count'],
+              'merged_boundary_count': evidence['merged_boundary_count'],
+              'inside_stage12_protected_span_count': evidence['inside_stage12_protected_span_count'],
+              'outside_stage12_protected_span_count': evidence['outside_stage12_protected_span_count'],
+              'protected_span_kind_memberships': dict(sorted(kinds.items())),
+              'inside_offsets': evidence['inside_stage12_protected_span_offsets'],
+              'outside_offsets': evidence['outside_stage12_protected_span_offsets'],
+              'outside_decisions': [
+                  {
+                      'source_offset': d['source_offset'],
+                      'left_sentence_index': d['left_sentence_index'],
+                      'right_sentence_index': d['right_sentence_index'],
+                      'left_tail': d['left_tail'],
+                      'right_head': d['right_head'],
+                      'left_last_tokens': d['left_last_tokens'],
+                      'right_first_tokens': d['right_first_tokens'],
+                  }
+                  for d in outside
+              ],
+              'evidence_sha256': evidence['evidence_sha256'],
+          }
+          print(json.dumps(compact, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload boundary census evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-stage10-v2-boundary-census
+          path: |
+            work/full-opticks-stage10-v2-boundary-census/full-opticks-stage10-v2-boundary-census.json
+            work/full-opticks-stage10-v2-boundary-census/census-stdout.json
+          if-no-files-found: warn
+          retention-days: 90
