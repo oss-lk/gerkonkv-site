@@ -2,13 +2,18 @@ from __future__ import annotations
 
 """Research-only full-Opticks illustration-label structural split feasibility.
 
-Start from the persisted Stage12 run after length + citation + numeric-hard
-opt-in rescues. Identify only rows that already fail a maintained Product hard
-gate and whose immutable source begins with a standalone Gutenberg
-``[Illustration: ...]`` line followed by a blank line. Preserve that label and
-its separating blank line byte-exactly as source-owned structure, translate only
-the remaining linguistic suffix once with pinned OPUS beam=6/rank0, and audit an
-in-memory counterfactual. The database is read-only.
+Version 2 keeps the immutable source split from v1 but closes a semantic hole
+found during review. Direct OPUS translation of the exact Gutenberg suffix
+``_Illustration._`` produced malformed raw output ``*Иллюстрация._`` even
+though the maintained hard gates were green. For that one source-defined
+structural word, v2 records a separate canonical model input ``Illustration.``
+and accepts only an unmodified raw OPUS target with the exact Russian
+``Иллюстрация`` lexical form and no markup artifacts. Ordinary linguistic
+suffixes still use their exact immutable source as model input.
+
+The standalone ``[Illustration: ...]`` line plus following blank-line separator
+remains source-owned and byte-exact. This is read-only research evidence; no
+Product planner/default is changed here.
 """
 
 import hashlib
@@ -22,14 +27,18 @@ from rocketdict.database import connect, get_document, get_run, get_run_items
 from rocketdict.runtime import OpusTranslator
 from rocketdict.translation_rescue import evaluate_rescue_pair
 
-SCHEMA = "rocketdict-full-opticks-illustration-label-feasibility/1"
+SCHEMA = "rocketdict-full-opticks-illustration-label-feasibility/2"
 SOURCE_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
 SOURCE_TEXT_SHA256 = "436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a"
 BASE_DATABASE_SHA256 = "a84b2118f00bc386953fe11db48bdc29fcfe8db62735f9acf86178e1dbacf9a2"
 BASE_RUN_ID = 8
 BASE_OUTPUT_SHA256 = "d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346"
 EXPECTED_SOURCE_STARTS = [72401, 90105, 203786]
+EXPECTED_NORMALIZED_SOURCE_STARTS = [72401, 90105]
 EXPECTED_CORPUS_LABEL_COUNT = 57
+ILLUSTRATION_WORD_SOURCE = "_Illustration._"
+ILLUSTRATION_WORD_MODEL_INPUT = "Illustration."
+ILLUSTRATION_WORD_TARGET = "иллюстрация"
 _LABEL_LINE_RE = re.compile(r"(?m)^\[Illustration:[^\]\r\n]+\](?=\r?$)")
 _PREFIX_RE = re.compile(
     r"\A(?P<label>\[Illustration:[^\]\r\n]+\])(?P<gap>\r?\n[ \t]*\r?\n)"
@@ -95,6 +104,28 @@ def _split_prefix(source: str) -> tuple[str, str] | None:
     if not remainder.strip():
         return None
     return structural, remainder
+
+
+def _model_input_for_remainder(remainder: str) -> tuple[str, bool, str]:
+    if remainder.strip() == ILLUSTRATION_WORD_SOURCE:
+        return ILLUSTRATION_WORD_MODEL_INPUT, True, "standalone_illustration_word"
+    return remainder, False, "ordinary_linguistic_suffix"
+
+
+def _illustration_word_target_shape(target: str) -> dict[str, Any]:
+    stripped = target.strip()
+    no_markup_artifacts = not any(char in stripped for char in "_*[]{}")
+    canonical = stripped.rstrip(".").strip().casefold()
+    exact_lexical_form = canonical == ILLUSTRATION_WORD_TARGET
+    return {
+        "contract": "rocketdict-illustration-word-target-form/1",
+        "target_text": target,
+        "canonical_target": canonical,
+        "expected_target": ILLUSTRATION_WORD_TARGET,
+        "no_markup_artifacts": no_markup_artifacts,
+        "exact_lexical_form": exact_lexical_form,
+        "passed": no_markup_artifacts and exact_lexical_form,
+    }
 
 
 def _candidate_rows(
@@ -194,21 +225,32 @@ def main() -> int:
         if not any(flags.values()):
             continue
         structural, remainder = split
+        model_input, normalized, candidate_kind = _model_input_for_remainder(remainder)
         attempts.append(
             {
                 "row": row,
                 "structural": structural,
                 "remainder": remainder,
+                "model_input": model_input,
+                "source_model_input_normalized": normalized,
+                "candidate_kind": candidate_kind,
                 "base_gate_failures": [name for name, failed in flags.items() if failed],
             }
         )
     starts = [int(item["row"]["source_start"]) for item in attempts]
     if starts != EXPECTED_SOURCE_STARTS:
         raise RuntimeError(f"illustration hard-failure cohort drift: {starts}")
+    normalized_starts = [
+        int(item["row"]["source_start"])
+        for item in attempts
+        if item["source_model_input_normalized"]
+    ]
+    if normalized_starts != EXPECTED_NORMALIZED_SOURCE_STARTS:
+        raise RuntimeError(f"illustration normalized-input cohort drift: {normalized_starts}")
 
     translator = OpusTranslator(device="cpu", compute_type="float32")
     generated = translator.translate(
-        [str(item["remainder"]) for item in attempts],
+        [str(item["model_input"]) for item in attempts],
         beam_size=6,
         num_hypotheses=1,
         max_decoding_length=128,
@@ -238,9 +280,19 @@ def main() -> int:
         remainder_verdict = evaluate_rescue_pair(
             candidate[1]["source_text"], candidate[1]["target_text"]
         )
+        target_shape = (
+            _illustration_word_target_shape(rank0)
+            if bool(attempt["source_model_input_normalized"])
+            else {
+                "contract": "rocketdict-illustration-word-target-form/1",
+                "applicable": False,
+                "passed": True,
+            }
+        )
         accepted = (
             structural_verdict.get("strictly_eligible") is True
             and remainder_verdict.get("strictly_eligible") is True
+            and target_shape.get("passed") is True
         )
         start = int(base["source_start"])
         if accepted:
@@ -255,12 +307,20 @@ def main() -> int:
                 "base_gate_failures": list(attempt["base_gate_failures"]),
                 "structural_source": str(attempt["structural"]),
                 "remainder_source": str(attempt["remainder"]),
+                "model_input": str(attempt["model_input"]),
+                "source_model_input_normalized": bool(
+                    attempt["source_model_input_normalized"]
+                ),
+                "candidate_kind": str(attempt["candidate_kind"]),
                 "remainder_rank0_target": rank0,
                 "remainder_rank0_score": hypotheses[0].get("score"),
                 "structural_verdict": structural_verdict,
                 "remainder_verdict": remainder_verdict,
+                "illustration_word_target_shape": target_shape,
                 "accepted": accepted,
                 "raw_model_rank0": True,
+                "source_bytes_rewritten": False,
+                "target_rewriting": False,
             }
         )
 
@@ -274,7 +334,16 @@ def main() -> int:
 
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "research-only source-owned standalone illustration-label split with raw OPUS rank0 suffix translation",
+        "purpose": (
+            "research-only source-owned standalone illustration-label split with "
+            "source-derived model-input normalization for exact _Illustration._ suffix"
+        ),
+        "v1_negative_evidence": {
+            "direct_immutable_suffix_model_input": ILLUSTRATION_WORD_SOURCE,
+            "observed_raw_rank0_target": "*Иллюстрация._",
+            "mechanical_hard_gates_missed_markup_corruption": True,
+            "promotion_rejected": True,
+        },
         "promotion_allowed": False,
         "automatic_product_default_allowed": False,
         "automatic_product_selection_allowed": False,
@@ -286,6 +355,7 @@ def main() -> int:
         "base_translation_output_sha256": BASE_OUTPUT_SHA256,
         "standalone_illustration_label_count": len(corpus_labels),
         "attempted_source_starts": starts,
+        "normalized_model_input_source_starts": normalized_starts,
         "accepted_source_starts": accepted_starts,
         "attempt_count": len(attempts),
         "accepted_count": len(accepted_starts),
