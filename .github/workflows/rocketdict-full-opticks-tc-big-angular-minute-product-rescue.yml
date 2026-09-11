@@ -1,0 +1,201 @@
+name: RocketDict Full Opticks TC-big Angular Minute Product Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/alternative_mt_runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/alternative_mt_assets.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_tc_big_angular_minute_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_translation_tc_big_angular_minute_rescue_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_angular_minute_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-angular-minute-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  tc-big-angular-minute-product-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      RUN14_RUN_ID: '34643230375'
+      RUN14_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-equals-addition-product-rescue
+      RUN14_DB_SHA256: dfce68a8f7cae08b90380630ae29e31418b4d6e8987d3e7001fe72fa1d781304
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT: ${{ github.workspace }}/work/tc-big-angular-minute-product-rescue
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install TC-big provisioning runtime with pinned CPU Torch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' 'transformers==4.56.2' \
+            'sacremoses==0.1.1' 'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python - <<'PY'
+          import ctranslate2, torch, transformers
+          if '+cpu' not in torch.__version__:
+              raise SystemExit(f'expected CPU Torch, got {torch.__version__}')
+          print('builder runtime:', ctranslate2.__version__, transformers.__version__, torch.__version__)
+          PY
+
+      - name: Download immutable persisted run-14 database
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN14_ARTIFACT_NAME }}
+          path: work/run14
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN14_RUN_ID }}
+
+      - name: Assemble and verify immutable run-14 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT"
+          cp work/run14/tc-big-equals-product-rescue/rocketdict.sqlite "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$RUN14_DB_SHA256  $ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+          cp "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict.sqlite" "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict-before.sqlite"
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/tc-big-angular-asset-build.json
+
+      - name: Build torch-free inference runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/tc-big-angular-runtime-venv
+          work/tc-big-angular-runtime-venv/bin/python -m pip install --upgrade pip
+          work/tc-big-angular-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench
+          work/tc-big-angular-runtime-venv/bin/python - <<'PY'
+          import importlib.util, ctranslate2, transformers
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in TC-big inference runtime')
+          print('torch-free runtime:', ctranslate2.__version__, transformers.__version__)
+          PY
+
+      - name: Run persisted TC-big angular-minute Stage12 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/tc-big-angular-runtime-venv/bin/python -u rocketdict-workbench/tests/real_translation_full_opticks_tc_big_angular_minute_product_rescue.py
+
+      - name: Verify persisted fail-closed evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/full-opticks-tc-big-angular-minute-product-rescue-optin.json"
+          test -s "$evidence"
+          echo "$RUN14_DB_SHA256  $ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict-before.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os, sqlite3
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT'])
+          e = json.loads((root/'full-opticks-tc-big-angular-minute-product-rescue-optin.json').read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-tc-big-angular-minute-product-rescue-optin/1':
+              raise SystemExit('schema drift')
+          if e['base_translation_run_id'] != 14:
+              raise SystemExit('base run drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':22,'punctuation':18,'length':0,'unique':39}:
+              raise SystemExit(f"base gate drift {e['base_hard_gate_counts']!r}")
+          if e['enabled_hard_gate_counts'] != {'numeric_symbol':21,'punctuation':18,'length':0,'unique':38}:
+              raise SystemExit(f"enabled gate drift {e['enabled_hard_gate_counts']!r}")
+          if e['attempted_source_starts'] != [431358] or e['accepted_source_starts'] != [431358]:
+              raise SystemExit('cohort drift')
+          if e['selected_ranks'] != [0]:
+              raise SystemExit(f"rank drift {e['selected_ranks']!r}")
+          if e['base_segment_count'] != 3344 or e['enabled_segment_count'] != 3344 or e['untouched_base_exact_count'] != 3343:
+              raise SystemExit('row accounting drift')
+          if e['source_coverage_byte_exact'] is not True:
+              raise SystemExit('source coverage missing')
+          case = e['applied_cases'][0]
+          if case['selection']['semantic_angle_preserved'] is not True or case['selection']['prime_notation']['passed'] is not True:
+              raise SystemExit('semantic/prime anchor drift')
+          if case['trigger']['source_angle'] != {'degrees':'22','minutes':'35'}:
+              raise SystemExit('source angle drift')
+          if e['runtime']['asset_manifest_sha256'] != e['asset']['manifest_sha256'] or e['runtime']['asset_payload_tree_sha256'] != e['asset']['payload_tree_sha256']:
+              raise SystemExit('asset provenance drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False or e['public_stage12_surface_allowed'] is not False:
+              raise SystemExit('unexpected promotion authorization')
+          if any(e.get(flag) is not False for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches')):
+              raise SystemExit('unsafe evidence flags')
+          with sqlite3.connect(root/'rocketdict.sqlite') as con:
+              if con.execute('PRAGMA integrity_check').fetchone()[0] != 'ok' or con.execute('PRAGMA foreign_key_check').fetchall():
+                  raise SystemExit('SQLite integrity drift')
+          print('Persisted TC-big angular-minute evidence verified.')
+          PY
+
+      - name: Record runtime identities
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/tc-big-angular-runtime
+          python -VV > work/tc-big-angular-runtime/builder-python.txt || true
+          python -m pip freeze | sort > work/tc-big-angular-runtime/builder-pip-freeze.txt || true
+          work/tc-big-angular-runtime-venv/bin/python -VV > work/tc-big-angular-runtime/inference-python.txt || true
+          work/tc-big-angular-runtime-venv/bin/python -m pip freeze | sort > work/tc-big-angular-runtime/inference-pip-freeze.txt || true
+          sha256sum "$ROCKETDICT_TC_BIG_ASSET_DIR/rocketdict-tc-big-asset.json" > work/tc-big-angular-runtime/asset-manifest.sha256 || true
+          cp "$ROCKETDICT_TC_BIG_ASSET_DIR/rocketdict-tc-big-asset.json" work/tc-big-angular-runtime/asset-manifest.json || true
+          cp "$ROCKETDICT_TC_BIG_ASSET_DIR/SOURCE_README.md" work/tc-big-angular-runtime/SOURCE_README.md || true
+          if [ -s "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict.sqlite" ]; then
+              sha256sum "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/rocketdict.sqlite" > work/tc-big-angular-runtime/persisted-db.sha256
+          fi
+          if [ -s "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/full-opticks-tc-big-angular-minute-product-rescue-optin.json" ]; then
+              sha256sum "$ROCKETDICT_TC_BIG_ANGULAR_PRODUCT_ROOT/full-opticks-tc-big-angular-minute-product-rescue-optin.json" > work/tc-big-angular-runtime/evidence.sha256
+          fi
+
+      - name: Upload persisted TC-big angular-minute Product evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-angular-minute-product-rescue
+          path: |
+            work/tc-big-angular-asset-build.json
+            work/tc-big-angular-minute-product-rescue/full-opticks-tc-big-angular-minute-product-rescue-optin.json
+            work/tc-big-angular-minute-product-rescue/rocketdict.sqlite
+            work/tc-big-angular-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
