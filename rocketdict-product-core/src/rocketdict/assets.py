@@ -2,11 +2,12 @@ from __future__ import annotations
 
 """Provision verified external model assets for RocketDict Product Core.
 
-Processing itself is offline. Provisioning is a separate explicit step: it
-accepts the official OPUS archive already downloaded by the operator/installer,
-verifies the pinned SHA-256, safely extracts it, converts the Marian model to
-CTranslate2 float32, copies the exact SentencePiece models and writes the
-manifest consumed by :mod:`rocketdict.runtime`.
+Processing itself is offline. Provisioning is a separate explicit step. The
+accepted baseline OPUS builder consumes the official archive already downloaded
+by the operator/installer. The optional independent TC-big builder consumes an
+already-downloaded pinned Hugging Face snapshot. Both builders verify immutable
+source identities before creating CTranslate2 float32 assets; neither downloads
+anything during the build operation.
 """
 
 import argparse
@@ -57,13 +58,7 @@ def _tree_identity(root: Path) -> dict[str, Any]:
 
 
 def _discover_opus_model_dir(source_root: Path) -> tuple[Path, list[Path]]:
-    """Locate the actual OPUS model directory without assuming model.npz.
-
-    Official OPUS archives use release-specific Marian weight filenames. The
-    CTranslate2 OPUS converter takes the containing model directory, not a fixed
-    model filename, so the durable discovery contract is decoder.yml + at least
-    one NPZ + source/target SentencePiece evidence in one directory.
-    """
+    """Locate the actual OPUS model directory without assuming model.npz."""
     candidate_dirs = {source_root}
     candidate_dirs.update(path.parent for path in source_root.rglob("decoder.yml"))
     candidate_dirs.update(path.parent for path in source_root.rglob("*.npz"))
@@ -231,6 +226,10 @@ def parser() -> argparse.ArgumentParser:
     opus.add_argument("archive", type=Path)
     opus.add_argument("destination", type=Path)
     opus.add_argument("--force", action="store_true")
+    tc_big = commands.add_parser("build-tc-big-en-ru")
+    tc_big.add_argument("source_snapshot", type=Path)
+    tc_big.add_argument("destination", type=Path)
+    tc_big.add_argument("--force", action="store_true")
     return p
 
 
@@ -239,6 +238,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "build-opus-en-ru":
             payload = build_opus_asset(args.archive, args.destination, force=args.force)
+        elif args.command == "build-tc-big-en-ru":
+            from .alternative_mt_assets import build_tc_big_asset
+            payload = build_tc_big_asset(args.source_snapshot, args.destination, force=args.force)
         else:
             raise AssertionError(args.command)
     except Exception as exc:
