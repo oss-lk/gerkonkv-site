@@ -14,7 +14,6 @@ Nothing is written back to the Product database and no target repair, placeholde
 or post-translation literal insertion is used.
 """
 
-from collections import Counter
 import hashlib
 import json
 import os
@@ -71,7 +70,7 @@ def main() -> int:
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     if baseline.get("source_sha256") != OPTICKS_SHA256:
         raise RuntimeError("Block-footnote pinned Opticks source identity drift")
-    selected_run_id = int(baseline["selected_translation_run_id"])
+    selected_run_id = int(baseline["stage12"]["translation_run_id"])
 
     with connect(database, readonly=True) as connection:
         run = get_run(connection, selected_run_id)
