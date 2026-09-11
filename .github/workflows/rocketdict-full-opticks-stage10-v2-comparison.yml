@@ -1,0 +1,264 @@
+name: RocketDict Full Opticks Stage10 v2 Comparison
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/context_sentence_boundaries.py'
+      - 'rocketdict-product-core/src/rocketdict/stages.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_*_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_context_sentence_boundaries.py'
+      - 'rocketdict-product-core/tests/test_stage10_context_coalescing.py'
+      - 'rocketdict-product-core/tests/test_product_stages.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_stage10_v2_comparison.py'
+      - '.github/workflows/rocketdict-full-opticks-stage10-v2-comparison.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  stage10-v2-full-opticks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      RUN16_RUN_ID: '34645769684'
+      RUN16_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-angular-dms-composed-product-rescue
+      RUN16_DB_SHA256: 573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11
+      RUN16_EVIDENCE_SHA256: 86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_STAGE10_V2_COMPARISON_ROOT: ${{ github.workspace }}/work/full-opticks-stage10-v2-comparison
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install builder and focused regression dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core \
+            'pytest>=8,<9' 'ctranslate2==4.8.2' 'sentencepiece==0.2.1' \
+            'transformers==4.56.2' 'sacremoses==0.1.1' \
+            'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Re-run focused Stage10 regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_context_sentence_boundaries.py \
+            rocketdict-product-core/tests/test_stage10_context_coalescing.py \
+            rocketdict-product-core/tests/test_product_stages.py
+
+      - name: Download immutable persisted run-16 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN16_ARTIFACT_NAME }}
+          path: work/run16
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN16_RUN_ID }}
+
+      - name: Verify immutable run-16 lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_root=work/run16/tc-big-angular-dms-composed-product-rescue
+          test -s "$source_root/rocketdict.sqlite"
+          test -s "$source_root/full-opticks-tc-big-angular-dms-composed-product-rescue.json"
+          echo "$RUN16_DB_SHA256  $source_root/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path('work/run16/tc-big-angular-dms-composed-product-rescue/full-opticks-tc-big-angular-dms-composed-product-rescue.json')
+          evidence = json.loads(p.read_text(encoding='utf-8'))
+          if evidence.get('evidence_sha256') != os.environ['RUN16_EVIDENCE_SHA256']:
+              raise SystemExit(f"run-16 evidence identity drift: {evidence.get('evidence_sha256')!r}")
+          if evidence.get('final_translation_run_id') != 16:
+              raise SystemExit(f"run-16 translation id drift: {evidence.get('final_translation_run_id')!r}")
+          print(json.dumps({
+              'run16_evidence_sha256': evidence['evidence_sha256'],
+              'run16_final_output_sha256': evidence['final_translation_output_sha256'],
+              'run16_hard_gate_counts': evidence['final_hard_gate_counts'],
+          }, indent=2))
+          PY
+          mkdir -p "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT"
+          cp "$source_root/rocketdict.sqlite" "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/rocketdict.sqlite"
+          cp "$source_root/full-opticks-tc-big-angular-dms-composed-product-rescue.json" \
+            "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/run16-source-evidence.json"
+          echo "$RUN16_DB_SHA256  $ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain exact pinned OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
+              "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+
+      - name: Build byte-verified offline OPUS asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" \
+            | tee work/stage10-v2-opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" \
+            | tee work/stage10-v2-tc-big-asset-build.json
+
+      - name: Build torch-free replay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/stage10-v2-runtime-venv
+          work/stage10-v2-runtime-venv/bin/python -m pip install --upgrade pip
+          work/stage10-v2-runtime-venv/bin/python -m pip install \
+            -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench
+          work/stage10-v2-runtime-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in replay inference runtime')
+          PY
+
+      - name: Replay exact full Opticks through Stage10 v2 and composed Stage12
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/stage10-v2-runtime-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_stage10_v2_comparison.py &
+          child=$!
+          while kill -0 "$child" 2>/dev/null; do
+            echo "[heartbeat] Stage10-v2 full Opticks replay active at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            sleep 30
+          done
+          wait "$child"
+
+      - name: Verify persisted comparison evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/stage10-v2-runtime-venv/bin/python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_STAGE10_V2_COMPARISON_ROOT'])
+          p = root/'full-opticks-stage10-v2-comparison.json'
+          evidence = json.loads(p.read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-stage10-v2-comparison/1':
+              raise SystemExit('schema drift')
+          if evidence['base_hard_gate_counts'] != {'numeric_symbol':20,'punctuation':18,'length':0,'unique':37}:
+              raise SystemExit(f"base count drift: {evidence['base_hard_gate_counts']!r}")
+          if evidence['stage10_v2_coalesced_boundary_count'] != 5:
+              raise SystemExit('Stage10 v2 boundary-count drift')
+          if 522572 not in evidence['stage10_v2_boundary_offsets']:
+              raise SystemExit('known whence boundary missing')
+          if evidence['source_character_count'] != 586543:
+              raise SystemExit('source-length drift')
+          if evidence['unchanged_geometry_target_drift_count'] != 0:
+              raise SystemExit('unchanged translation geometry drifted')
+          if not all(evidence['validation'].values()):
+              raise SystemExit(f"comparison validation failed: {evidence['validation']!r}")
+          if evidence['sqlite_integrity_check'] != 'ok' or evidence['sqlite_foreign_key_violation_count'] != 0:
+              raise SystemExit('SQLite integrity drift')
+          if any(evidence.get(flag) is not False for flag in (
+              'source_bytes_rewritten','target_rewriting','placeholders',
+              'post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened'
+          )):
+              raise SystemExit('unsafe evidence flag')
+          print(json.dumps({
+              'boundary_offsets': evidence['stage10_v2_boundary_offsets'],
+              'replay_hard_gate_counts': evidence['replay_hard_gate_counts'],
+              'hard_gate_delta': evidence['hard_gate_delta'],
+              'whence_punctuation_repaired': evidence['validation']['whence_punctuation_repaired'],
+              'replay_translation_output_sha256': evidence['replay_translation_output_sha256'],
+              'persisted_database_sha256': evidence['persisted_database_sha256'],
+              'evidence_sha256': evidence['evidence_sha256'],
+          }, indent=2))
+          PY
+
+      - name: Record replay runtime identities and resources
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence"
+          work/stage10-v2-runtime-venv/bin/python -VV > "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence/python.txt" 2>&1
+          work/stage10-v2-runtime-venv/bin/python -m pip freeze | sort > "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence/pip-freeze.txt" 2>&1
+          df -h > "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence/disk.txt" 2>&1
+          free -h > "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence/memory.txt" 2>&1
+          sha256sum work/opus-2020-02-11.zip > "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence/opus.sha256" 2>&1
+          sha256sum "$TC_BIG_SNAPSHOT/model.safetensors" > "$ROCKETDICT_STAGE10_V2_COMPARISON_ROOT/runtime-evidence/tc-big-weights.sha256" 2>&1
+
+      - name: Upload Stage10 v2 full-Opticks comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-stage10-v2-comparison
+          path: |
+            work/stage10-v2-opus-asset-build.json
+            work/stage10-v2-tc-big-asset-build.json
+            work/full-opticks-stage10-v2-comparison/run16-source-evidence.json
+            work/full-opticks-stage10-v2-comparison/full-opticks-stage10-v2-comparison.json
+            work/full-opticks-stage10-v2-comparison/rocketdict.sqlite
+            work/full-opticks-stage10-v2-comparison/runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
