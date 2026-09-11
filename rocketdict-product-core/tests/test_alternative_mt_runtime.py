@@ -48,6 +48,24 @@ def test_load_tc_big_asset_verifies_pinned_manifest_and_payload_tree(tmp_path: P
     assert asset.payload_tree_sha256 == runtime._tree_identity(tmp_path)["sha256"]
 
 
+def test_tc_big_status_persists_exact_asset_byte_identities(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _write_asset(tmp_path)
+    observed_tree = runtime._tree_identity(tmp_path)
+    monkeypatch.setenv(runtime.TC_BIG_ASSET_ENV, str(tmp_path))
+    status = runtime.tc_big_status()
+    assert status["asset_configured"] is True
+    assert status["asset_error"] is None
+    assert status["asset_manifest_sha256"] == runtime._file_sha256(manifest)
+    assert status["asset_payload_tree_sha256"] == observed_tree["sha256"]
+    assert status["asset_payload_file_count"] == observed_tree["file_count"]
+    assert status["asset_payload_bytes"] == observed_tree["bytes"]
+    assert status["repository"] == runtime.TC_BIG_REPOSITORY
+    assert status["revision"] == runtime.TC_BIG_REVISION
+    assert status["model_safetensors_sha256"] == runtime.TC_BIG_MODEL_SAFETENSORS_SHA256
+
+
 def test_load_tc_big_asset_rejects_payload_mutation(tmp_path: Path) -> None:
     _write_asset(tmp_path)
     (tmp_path / "tokenizer" / "vocab.json").write_text("mutated", encoding="utf-8")
@@ -78,6 +96,8 @@ def test_tc_big_status_is_fail_closed_without_asset(monkeypatch: pytest.MonkeyPa
     status = runtime.tc_big_status()
     assert status["available"] is False
     assert status["asset_configured"] is False
+    assert status["asset_manifest_sha256"] is None
+    assert status["asset_payload_tree_sha256"] is None
     assert status["offline"] is True
     assert status["compute_type"] == "float32"
     assert status["torch_required_for_inference"] is False
