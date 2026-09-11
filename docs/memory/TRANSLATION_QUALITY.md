@@ -1,182 +1,114 @@
 # RocketDict maintained translation quality — L2
 
-This file stores durable conclusions from the **maintained Product** translation-quality work. It is not a changelog and does not replace [`../../rocketdict/PRODUCT_TARGET.md`](../../rocketdict/PRODUCT_TARGET.md). Source, tests, immutable CI artifacts and Git history are L3 authority and outrank this summary if they disagree.
+This file stores durable conclusions from maintained Product translation-quality work. It is not a changelog and does not replace [`../../rocketdict/PRODUCT_TARGET.md`](../../rocketdict/PRODUCT_TARGET.md). Source/tests/CI/artifacts are L3 authority and outrank this summary if they disagree.
 
-## Current maintained contracts
+## Maintained contracts
 
-- Production MT: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian, acceptance compute type `float32`.
-- Stage12 maintained Product planner: `rocketdict-stage12-protected-split/8`.
-- Structural-label contract: `rocketdict-stage12-block-structural-label-opus/2`.
-  - 108 block `_Exper._/_Obs._/_Qu._` labels are isolated byte-exactly and translated only through strict raw-OPUS heading candidates.
-  - 54 complete pinned-*Opticks* legacy Roman headings (`DEFIN.`, `AX.`, `PROP.`, `_PROP._ ... PROB./THEOR.`) are the same source-owned structural family, with their own strict raw-OPUS forms.
-  - Inline linguistic references remain ordinary prose; a bare `IV.`/`II.` created by sentence segmentation is **not** sufficient evidence of a structural heading.
-- Block section identifier contract: `rocketdict-stage12-block-section-identifier/1`; block IDs such as `1.B.` / `1.F.3.` are source-owned structure excluded from MT, while inline references remain ordinary prose.
-- ASCII-table geometry and alpha-free structural cells remain source-owned; logical text groups use real OPUS.
-- Stage12 backend execution contract: `rocketdict-stage12-bounded-request-batch/1`, default batch `48`, maximum `128`; backend batching must not change planner units/model inputs/order.
-- Maintained numeric/symbol hard gate: `rocketdict-maintained-numeric-integrity/5`; prime/unit notation is fail-closed and the gate applies to **all** selected translation rows, not only rows whose source contains a digit literal.
-- Length-failure whole-context rescue is exposed under `rocketdict-stage12-length-failure-whole-context-rescue/1` with selector `rocketdict-stage12-length-failure-whole-context-selector/1`. It is **opt-in and disabled by default**.
-- Citation-boundary pair rescue is exposed under `rocketdict-stage12-citation-boundary-pair-rescue/1` with selector `rocketdict-stage12-citation-boundary-pair-selector/1`. It is **opt-in and disabled by default** and composes on top of the length-rescue stage.
-- Research diagnostics are evidence surfaces, not Product selectors unless separately promoted.
+- Production MT: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian, acceptance `float32`.
+- Stage12 planner: `rocketdict-stage12-protected-split/8`.
+- Structural-label contract: `rocketdict-stage12-block-structural-label-opus/2`; source-proven block headings only. Bare Roman fragments produced by sentence segmentation are not headings.
+- Block section identifier contract: `rocketdict-stage12-block-section-identifier/1`.
+- Numeric/symbol hard gate: `rocketdict-maintained-numeric-integrity/5`, applied to every selected translation row.
+- Backend batching: `rocketdict-stage12-bounded-request-batch/1`, default `48`, max `128`; batching may not alter planner units/model inputs/order.
+- Length whole-context rescue: `rocketdict-stage12-length-failure-whole-context-rescue/1`, default OFF.
+- Citation pair rescue: `rocketdict-stage12-citation-boundary-pair-rescue/1`, default OFF.
+- Numeric-hard whole-context rescue: `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1`, selector `/1`, implemented as a separate wrapper above citation+length composition, default OFF and not yet public-wired.
+- Gutenberg underscore-emphasis diagnostic: `rocketdict-maintained-emphasis-markup-preservation/1`. This is a research veto, not a Product hard gate.
 
 ## Canonical full contiguous Opticks baseline
 
-Acceptance source: complete pinned Project Gutenberg *Opticks*, source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` immutable source characters.
+Pinned complete Project Gutenberg *Opticks*:
+- source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`;
+- normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`;
+- `586543` source characters.
 
-The structural-label `/2` Product baseline is CI run `34575909618`, artifact `10190059238`. Baseline JSON SHA-256 is `48385b0b9e2539c9b82feb1f98fa68b660307aa1f76ce58e6e56ed6a93f32133`; baseline SQLite SHA-256 is `eaff048389e8cdabfd9dc47af0bc841e77657122883ee1bf10b26de7575d4b8c`. Canonical Stage12 run id is `4`, output SHA-256 `b5c42141767a9760495c84023349402bf637b6591f3fa60d723d42c7d5760e22`.
+Structural-label `/2` Product baseline: run `34575909618`, artifact `10190059238`, JSON SHA `48385b0b9e2539c9b82feb1f98fa68b660307aa1f76ce58e6e56ed6a93f32133`, SQLite SHA `eaff048389e8cdabfd9dc47af0bc841e77657122883ee1bf10b26de7575d4b8c`, Stage12 run id `4`, output SHA `b5c42141767a9760495c84023349402bf637b6591f3fa60d723d42c7d5760e22`.
 
-Canonical maintained hard-gate inventory:
+Complete baseline gates: `3353` segments, **30 numeric/symbol / 34 punctuation / 5 length**, **64 unique failures**. Historical `product_numeric_failure_count=27` is only the literal-bearing stress subset; the complete gate also catches three non-literal-source failures.
 
-- selected Stage12 segments: `3353`;
-- complete numeric/symbol failures: `30`;
-- punctuation failures: `34`;
-- length-ratio failures: `5`;
-- unique segments failing at least one hard gate: `64`.
+## Validated length and citation rescue composition
 
-The historical `product_numeric_failure_count = 27` remains only the literal-bearing stress subset. The complete Product gate adds three non-literal-source failures: sequence `617` invents `=`, sequence `1798` renders spelled `ten hundred thousand` as target literal `100 000`, and sequence `3013` invents `=` before `_per deliquium_`.
+Length rescue on full *Opticks* accepts Stage10 contexts `577`, `629`, `919`, resulting in Stage12 run `6`, SHA `2224d71b20df64e853db1480380f4a78f01184d9021ef8e35142a66dd99d8437`, `3350` segments and **29/34/2**, `61` unique failures.
 
-## Opt-in length-failure whole-context rescue
+The two remaining length failures were bare `IV.`/`II.` fragments split from inline `Sect. IV.` / `Sect. II.` references. A broad citation-group merge was unsafe because it lost unrelated numeric content and a footnote marker. The narrow exact-pair mechanism was therefore implemented instead; it accepts raw rank-0 OPUS only when Product hard gates and length pass and strict debt categories do not worsen.
 
-The narrow length rescue targets an already-maintained length hard failure inside a split Stage10 context, uses the exact whole context as model input, and accepts only an unchanged raw rank-0 OPUS candidate that clears the maintained Product hard gates. It does not rewrite source or target and performs no placeholder/literal injection.
+Combined run `34597648856`, artifact `10263095872`, evidence SHA `5edfe5b917c2274332ff27ce1e3be5191c95a4a8879a9a643a29ecb2516316da` gives Stage12 run `7`, SHA `b9e61f1f381ac9cd32e450e66c36a1f16d380eb2ef8b20c18ed7fc5bfc2c38e8`, `3348` segments and **29 numeric / 34 punctuation / 0 length**, **59 unique failures**. Source coverage is byte-exact, untouched rows are base-exact, applied targets are exact raw rank-0, and all rewrite/placeholder flags are false.
 
-Full-*Opticks* persisted Product audit: workflow run `34596212688`; the same path was rerun successfully through the later public Stage12 wrapper as `34597532192`.
+## Composed residual whole-context lineage
 
-Canonical evidence:
+A post-composition audit mapped run-7 residuals by immutable source span/Stage10 context and cross-referenced the old whole-context shadow. The old mechanically accepted contexts still lineage-match exactly for `550, 669, 1024, 1393, 2238, 2462, 2725, 2726` (`919` is already consumed by length rescue).
 
-- accepted Stage10 contexts: `577`, `629`, `919`;
-- resulting Stage12 run id: `6`;
-- output SHA-256: `2224d71b20df64e853db1480380f4a78f01184d9021ef8e35142a66dd99d8437`;
-- segments: `3350`;
-- hard gates: `29` numeric/symbol, `34` punctuation, `2` length;
-- unique hard-failing segments: `61`.
+Mechanical acceptance is **not semantic proof**. Manual/L3 inspection found the decisive counterexample in context `2725`: the raw whole-context candidate removes an invented `=` but also silently drops source phrase `_per deliquium_`. The existing strict selector did not detect this because `critical_technical_tokens/3` only treats symbolic underscore emphasis as critical, not ordinary emphasized prose.
 
-The mechanism therefore removes three current length failures and incidentally removes one numeric/symbol failure without weakening any evaluator. It remains opt-in because mechanical improvement alone is not sufficient promotion evidence.
+Therefore generic strict whole-context selection remains non-promotable.
 
-## Bare Roman fragments are inline citation boundaries, not headings
+## Emphasis markup preservation veto
 
-Two canonical length failures were tiny rows `IV. ` and `II. ` translated as explanatory headings. L3 source inspection proves that both are sentence-split tails of inline references `Sect. IV.` / `Sect. II.`. Do **not** broaden structural-label detection to standalone Roman fragments.
+`rocketdict-maintained-emphasis-markup-preservation/1` was added as a separate versioned research diagnostic rather than silently changing historical `critical_technical_tokens/3`. It checks preservation of Gutenberg underscore-emphasis markup shape/content conservatively enough to reject the `2725` loss.
 
-A broad citation-context merge was tested earlier and is unsafe: one relevant whole-group candidate lost numeric content and a footnote marker. The safe research direction was therefore narrowed to the exact previous-row + Roman-fragment pair.
+This diagnostic is currently a selector veto only for the new numeric-hard whole-context rescue. It is not a release hard gate and must not be retroactively treated as one.
 
-Pair feasibility run `34597127952`, artifact `10261744281`, evidence JSON SHA-256 `0f90314ad6831647234ae6576b25c407d5c5fdb66dd11fa6e9b71c06404fbc49`, established:
+## Numeric-hard split-context whole-context rescue
 
-- `Sect. IV.` pair raw rank-0: `[А] В части I раздела IV нашего автора.`; Product hard gates and length pass; the only strict debt is the already-existing footnote-marker debt, so no new debt category is introduced;
-- `Sect. II.` pair raw rank-0: `Раздел II части I.`; Product hard gates, length and strict checks all pass;
-- 2/2 pairs are mechanically promising; 1/2 is fully strict-clean.
+The new wrapper targets only current split Stage10 contexts where at least one selected Stage12 row already fails `rocketdict-maintained-numeric-integrity/5`. It uses the exact unchanged whole Stage10 source context, bounded by the existing 160 non-space NLP token cap, translated once using pinned OPUS beam=6/rank0.
 
-This evidence justified the narrow Product implementation `rocketdict-stage12-citation-boundary-pair-rescue/1`.
+Acceptance requires both:
+1. existing strict whole-context selector acceptance (`evaluate_candidate_context`), including Product hard checks, research diagnostics and alpha non-decrease;
+2. `rocketdict-maintained-emphasis-markup-preservation/1` pass.
 
-### Citation pair selector contract
+No source rewrite, target rewrite, placeholders or post-translation literal injection are permitted. Rejected candidates leave the current base output untouched.
 
-Trigger remains deliberately closed:
+Full-*Opticks* persisted audit run `34601313026` succeeded. Artifact `10264132732`, digest `3020f5bb9e6c59b312bb8e09a26d1fea4e29deac29ace3bbeca0cfd695b4bd76`; evidence file SHA-256 `8af5a3e15997e55a790f0cf408274873a2281c5a7ddda29072039367043ca22d`, internal canonical evidence field `c8908cbf8248b140c4efecd01ec0d1e83a84c51385760212659662a598c1c61e`.
 
-- current row is only an uppercase Roman fragment matching `[IVXLCDM]+.\s*`;
-- immediately previous ordinary row ends with `Sect.`;
-- spans are contiguous source bytes;
-- rows are not source-owned `ascii_table`, `structural_label`, or `block_section_identifier` units;
-- the Roman-fragment row already fails the maintained length gate;
-- exact pair source length is within the bounded cap.
+Persisted result:
+- base Stage12 run `7` reused from cache;
+- enabled Stage12 run `8`, output SHA `d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346`;
+- resulting SQLite SHA `a84b2118f00bc386953fe11db48bdc29fcfe8db62735f9acf86178e1dbacf9a2`;
+- attempted contexts: `550, 669, 1024, 1460, 2132, 2176, 2190, 2238, 2634, 2725`;
+- accepted: `550, 669, 1024, 2238`;
+- rejected: `1460, 2132, 2176, 2190, 2634, 2725`;
+- emphasis veto rejects `2725`;
+- segments `3348 → 3343`;
+- gates **29/34/0 → 25/33/0**;
+- unique hard failures **59 → 55**;
+- source coverage byte-exact; untouched rows base-exact; applied targets exact raw rank-0; safety flags false.
 
-Acceptance requires:
+Product Core CI run `34601005247` for the wrapper/tests completed successfully. The persisted audit explicitly keeps `promotion_allowed=false`, `automatic_product_default_allowed=false`, `semantic_review_required=true`.
 
-1. raw rank-0 OPUS output on the exact contiguous pair;
-2. maintained Product hard gates pass;
-3. maintained length gate passes;
-4. strict-debt categories do not worsen relative to the original two rows.
+## Current residual frontier
 
-No source rewrite, target rewrite, placeholders or post-translation literal injection are permitted. The accepted pair is persisted as one merged translation row covering exactly the original contiguous source bytes.
+The strongest validated opt-in research output is run `8`: **25 numeric/symbol / 33 punctuation / 0 length**, **55 unique failures**. Three rows fail both numeric and punctuation (`25 + 33 - 55 = 3`).
 
-## Combined full-Opticks Product audit
+All further residual work must key on immutable source spans/current Stage10 context identity from run 8; sequence numbers may shift after merged contexts.
 
-The composed opt-in path enables both narrow length rescue and citation pair rescue while keeping both disabled by default in normal Product execution.
+## Punctuation residual remains heterogeneous
 
-Heavy workflow run `34597648856` completed successfully; artifact `10263095872`, artifact digest SHA-256 `e2407b28bd7d9a6f76e614551117e8feb8d4729373911b6a33cf53aacacd2aa7`. Evidence JSON schema is `rocketdict-full-opticks-combined-length-citation-product-rescue-optin/1`, SHA-256 `5edfe5b917c2274332ff27ce1e3be5191c95a4a8879a9a643a29ecb2516316da`.
+The punctuation class contains multiple defect families, including lost square-bracket footnote markers, illustration/bracket payload mismatches, omitted/added parentheticals, question-mark drift and mixed delimiter failures. A universal punctuation fixer is unsafe. The run-8 cohort must be reclassified because one punctuation failure disappeared incidentally in the numeric-hard rescue.
 
-Composed result:
-
-- baseline: `30` numeric / `34` punctuation / `5` length, `64` unique failures, `3353` segments;
-- length rescue only: `29` / `34` / `2`, `61` unique failures, `3350` segments;
-- length + citation pair: **`29` / `34` / `0`**, **`59` unique failures**, `3348` segments;
-- combined Stage12 run id: `7`;
-- combined output SHA-256: `b9e61f1f381ac9cd32e450e66c36a1f16d380eb2ef8b20c18ed7fc5bfc2c38e8`;
-- accepted length contexts: `577`, `629`, `919`;
-- accepted citation-pair source starts: `24799`, `151438`;
-- copied length-base rows: `3346`; applied citation pairs: `2`;
-- source coverage remains byte-exact;
-- untouched rows are base-exact;
-- applied targets are exact raw rank-0 hypotheses;
-- all rewrite/placeholder safety flags are false;
-- resulting SQLite SHA-256: `afc9eba1177e1ada86ae208d3f175cc34f84cd287145b236f4dad79fd73f7f67`;
-- SQLite `integrity_check=ok`; foreign-key check is empty.
-
-This closes the complete current length-hard-failure class in the opt-in composition and reduces the complete numeric/symbol gate by one. It **does not authorize default promotion**. The artifact explicitly keeps `promotion_allowed=false`, `automatic_product_default_allowed=false`, and requires semantic review.
-
-## Current unresolved frontier
-
-After the composed opt-in audit, the remaining hard-gate frontier is:
-
-- `29` numeric/symbol failures;
-- `34` punctuation failures;
-- `0` length failures;
-- `59` unique failing segments.
-
-Because `29 + 34 - 59 = 4`, four residual segments fail both numeric/symbol and punctuation gates.
-
-The next safe research step is to inventory these residuals by immutable source span/context identity on the composed run, not by assuming old sequence numbers survive row merges. Recompute which residuals still belong to split Stage10 contexts and cross-reference them against existing whole-context shadow evidence before proposing any broader selector.
-
-## Whole-context content-loss research remains non-default
-
-The corpus-wide shadow `rocketdict-full-opticks-whole-context-shadow/2` evaluates unchanged Stage10 contexts against the immutable planner `/8` split baseline. It does not rewrite source/target and does not authorize Product selection.
-
-Durable baseline facts:
-
-- split contexts within the mechanically proven 160-NLP-token cap: `451`;
-- over cap: `20`;
-- mechanically accepted by the existing strict selector: `234`;
-- accepted with positive alphabetic-content gain: `213`.
-
-Generic alpha gain is **not** an acceptance rule. In the canonical already-hard-failing split cohort, `26` failing segments formed `24` Stage10 contexts; `23` fit the 160-token cap, and the existing strict selector accepted nine contexts: `550, 669, 919, 1024, 1393, 2238, 2462, 2725, 2726`.
-
-Context `2725` remains useful evidence: split output invents `=`, while unchanged whole-context raw rank-0 removes it, preserves the question, passes strict checks and increases alphabetic target content. But the composed run has already changed some rows/contexts (including `919`), so any future hard-failure whole-context mechanism must recompute the cohort against the **current composed source-span identities** rather than blindly reuse canonical sequence/context numbers.
-
-The pre-existing whole-context Product implementation remains research opt-in and narrowly triggered. Broad fallback/rewrite/literal injection/placeholders remain forbidden.
-
-## Punctuation residual is heterogeneous
-
-The current 34 punctuation failures are not one repair class. Observed families include:
-
-- lost square-bracket footnote markers (`[G]`, `[H]`, `[J]`, `[K]`, `[M]`, etc.);
-- illustration/bracket payload mismatches;
-- lost or added round parentheses, including real omitted parenthetical content and model hallucinations;
-- `?` count changes and combined delimiter failures.
-
-A universal punctuation fixer is unsafe. Source-owned footnote/illustration structure, split-context omissions and model hallucinations must be investigated separately.
-
-## MetricX is research evidence, not a selector contract
-
-Pinned MetricX-24 QE (`google/metricx-24-hybrid-large-v2p6-bfloat16`, revision `febb720e29a059df2e8af3ffd71dcdc9e0a24910`) may compare immutable raw candidates, but neither a score nor “MetricX prefers candidate” is sufficient for Product selection. Scores are ranking evidence only and require mechanical gates plus semantic review.
-
-## Durable negative evidence
+## Numeric residual families / negative evidence
 
 Do not repeat unchanged without genuinely new evidence:
-
-- prime-fragment structural decomposition: mechanically strong but semantically unacceptable (`53 deg.` → `53 балла`, `hundred Feet` → `сто ног`); whole-unit prime normalization/hints and broad staged n-best also do not solve the class;
-- long-integer thousands grouping / `x→×`: rescued `0/4` baseline failures and regressed some successful cases;
-- compact-formula operator spacing for the `3/8A ... ((61-1/2)/8)A` class: no rescue even with staged raw n-best;
-- broad n-best fallback and historical numeric-island/target-repair approaches remain rejected;
-- broad citation/group coalescing is rejected for the Roman-inline-reference class because it can remove unrelated numeric and footnote content.
+- prime-fragment structural decomposition is semantically unacceptable (`53 deg.`→`53 балла`, `hundred Feet`→`сто ног`); whole-unit prime normalization/hints and broad staged n-best do not solve the class;
+- thousands grouping / narrow `x→×` preprocessing rescued `0/4` and regressed successful cases;
+- compact formula operator spacing did not rescue the investigated `3/8A ... ((61-1/2)/8)A` unit even with staged raw n-best;
+- broad n-best fallback, target repair, literal injection and generic whole-context fallback remain rejected;
+- broad citation/group coalescing is unsafe.
 
 Prime notation, formula/fraction corruption and very-large-integer corruption remain separate unresolved model/notation families.
 
+## MetricX remains research-only
+
+Pinned MetricX-24 QE may rank immutable raw candidates but cannot by itself authorize Product selection. Learned QE must remain evidence alongside mechanical checks and semantic review.
+
 ## Promotion rules
 
-1. Quality is a release invariant; never weaken evaluators to make a real loss green.
-2. Identify planner, evaluator, source-selection, document-structure, resource or model defects before changing Product behavior.
-3. Prefer source/planner fixes for pre-MT defects; select raw-model candidates only when evidence shows a semantically valid candidate exists.
-4. Source-owned bytes may bypass MT only for exhaustively identified non-linguistic structure; inline linguistic references stay ordinary.
-5. No post-hoc literal insertion, final placeholders, fabricated closing structure or corpus-specific target patch lists.
-6. A promoted mechanism must preserve source identity, be versioned/replayable and have contiguous-corpus evidence.
-7. Mechanical integrity is necessary but not sufficient; semantic review/QE evidence must not be collapsed into a single automatic threshold without validation.
-8. Product promotion must preserve zero empty/backend failures and direct/unified real Stage8→25 behavior.
-9. Narrow n-best or rescue escalation requires a source-defined trigger and explicit evidence; broad fallback remains rejected.
-10. Full-gate reports must distinguish literal-bearing stress subsets from complete Product evaluators; subset metrics may not be relabeled as release-wide counts.
-11. Expensive negative results belong here so future iterations do not repeat them blindly.
+1. Never weaken maintained evaluators to make a real loss green.
+2. Classify planner/evaluator/source/document/model/resource defects before changing Product behavior.
+3. Prefer source/planner fixes for pre-MT defects; select only unmodified raw model candidates when evidence supports them.
+4. Source-owned bypass is allowed only for exhaustively identified non-linguistic structure; inline linguistic text remains ordinary.
+5. No post-hoc literal insertion, target patch lists, fabricated structure or final placeholders.
+6. Promoted mechanisms must preserve source identity, be versioned/replayable and have contiguous-corpus evidence.
+7. Mechanical integrity is necessary but not sufficient; semantic review remains required.
+8. Narrow rescue escalation requires a source-defined trigger and explicit evidence.
+9. Stress-subset metrics may not be relabeled as complete release-wide gate counts.
+10. Expensive negative evidence belongs here so it is not rediscovered blindly.
