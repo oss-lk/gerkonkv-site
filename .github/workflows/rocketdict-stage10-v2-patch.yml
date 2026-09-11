@@ -1,0 +1,241 @@
+name: RocketDict Stage10 v2 Patch
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-stage10-v2-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Replace Stage10 implementation with versioned coalescer integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('rocketdict-product-core/src/rocketdict/stages.py')
+          text = path.read_text(encoding='utf-8')
+          start = text.index('def run_stage10(\n')
+          end = text.index('\ndef _segment_units(\n', start)
+          old = text[start:end]
+          if 'structural-entity-term-discourse-pronoun-v1' not in old:
+              raise SystemExit('expected Stage10 v1 implementation not found; refusing blind patch')
+
+          new = '''def run_stage10(
+              database: Path | str,
+              *,
+              nlp_run_id: int,
+              parameters: dict[str, Any] | None = None,
+              implementation: str = "structural-entity-term-discourse-pronoun-v2",
+          ) -> dict[str, Any]:
+              from .context_sentence_boundaries import (
+                  STAGE10_BOUNDARY_POLICY,
+                  STAGE10_CONTEXT_IMPLEMENTATION_V1,
+                  STAGE10_CONTEXT_IMPLEMENTATION_V2,
+                  coalesce_spacy_sentence_groups,
+                  parser_sentence_groups,
+              )
+
+              database = Path(database).expanduser().resolve()
+              if implementation not in {
+                  STAGE10_CONTEXT_IMPLEMENTATION_V1,
+                  STAGE10_CONTEXT_IMPLEMENTATION_V2,
+              }:
+                  raise StageExecutionError(
+                      f"Unsupported Stage10 context implementation: {implementation}"
+                  )
+              parameters = dict(parameters or {})
+              with connect(database, readonly=True) as connection:
+                  nlp_run = get_run(connection, int(nlp_run_id))
+                  if int(nlp_run["stage_number"]) != 8 or nlp_run["status"] != "completed":
+                      raise StageExecutionError("Stage10 requires a completed Stage8 NLP run")
+                  tokens = get_run_items(connection, int(nlp_run_id), kind="nlp_token")
+                  nlp_output = dict(nlp_run.get("output") or {})
+                  document = get_document(connection, int(nlp_output["document_version_id"]))
+              input_identity = {
+                  "nlp_run_id": int(nlp_run_id),
+                  "nlp_output_sha256": str(nlp_run.get("output_sha256") or ""),
+              }
+              run_id, cached = _start(
+                  database,
+                  stage_number=10,
+                  implementation=implementation,
+                  input_identity=input_identity,
+                  parameters=parameters,
+              )
+              if cached is not None:
+                  return cached
+              try:
+                  grouped: dict[int, list[dict[str, Any]]] = {}
+                  for token in tokens:
+                      sentence = int((token.get("payload") or {}).get("sentence_index") or 0)
+                      grouped.setdefault(sentence, []).append(token)
+                  content = str(document["content_text"])
+                  if implementation == STAGE10_CONTEXT_IMPLEMENTATION_V1:
+                      context_groups = parser_sentence_groups(grouped)
+                  else:
+                      context_groups = coalesce_spacy_sentence_groups(grouped, content)
+
+                  items: list[dict[str, Any]] = []
+                  entity_mentions = 0
+                  pronouns = 0
+                  covered_tokens = 0
+                  coalesced_boundary_count = sum(
+                      len(group["coalesced_boundaries"]) for group in context_groups
+                  )
+                  coalesced_context_count = sum(
+                      bool(group["coalesced_boundaries"]) for group in context_groups
+                  )
+                  for sequence, group in enumerate(context_groups):
+                      sentence_tokens = list(group["tokens"])
+                      sentence_indices = list(group["sentence_indices"])
+                      if not sentence_tokens or not sentence_indices:
+                          continue
+                      sentence_number = int(sentence_indices[0])
+                      start = min(int(row["source_start"]) for row in sentence_tokens)
+                      # Include trailing whitespace up to the next context start so the
+                      # ordered spans remain auditable against immutable source bytes.
+                      if sequence + 1 < len(context_groups):
+                          next_tokens = list(context_groups[sequence + 1]["tokens"])
+                          end = min(int(next_tokens[0]["source_start"]), len(content))
+                      else:
+                          end = len(content)
+                      if end <= start or content[start:end] == "":
+                          raise StageExecutionError(
+                              f"Stage10 produced invalid source geometry at context {sequence}"
+                          )
+                      entities = []
+                      sentence_pronouns = []
+                      for row in sentence_tokens:
+                          payload = row.get("payload") or {}
+                          if payload.get("entity_type"):
+                              entity_mentions += 1
+                              entities.append(
+                                  {
+                                      "token_index": payload.get("token_index"),
+                                      "text": row.get("source_text"),
+                                      "entity_type": payload.get("entity_type"),
+                                  }
+                              )
+                          if str(payload.get("pos") or "") == "PRON":
+                              pronouns += 1
+                              sentence_pronouns.append(
+                                  {
+                                      "token_index": payload.get("token_index"),
+                                      "text": row.get("source_text"),
+                                      "lemma": payload.get("lemma"),
+                                  }
+                              )
+                      covered_tokens += len(sentence_tokens)
+                      payload = {
+                          "sentence_index": sentence_number,
+                          "token_count": len(sentence_tokens),
+                          "first_token_index": (sentence_tokens[0].get("payload") or {}).get("token_index"),
+                          "last_token_index": (sentence_tokens[-1].get("payload") or {}).get("token_index"),
+                          "entities": entities,
+                          "pronouns": sentence_pronouns,
+                      }
+                      if implementation == STAGE10_CONTEXT_IMPLEMENTATION_V2:
+                          payload.update(
+                              {
+                                  "spacy_sentence_indices": sentence_indices,
+                                  "spacy_sentence_count": len(sentence_indices),
+                                  "coalesced_boundary_count": len(group["coalesced_boundaries"]),
+                                  "coalesced_boundaries": list(group["coalesced_boundaries"]),
+                                  "boundary_policy": STAGE10_BOUNDARY_POLICY,
+                              }
+                          )
+                      items.append(
+                          {
+                              "sequence_number": sequence,
+                              "kind": "context_sentence",
+                              "source_start": start,
+                              "source_end": end,
+                              "source_text": content[start:end],
+                              "target_text": None,
+                              "payload": payload,
+                          }
+                      )
+                  if covered_tokens != len(tokens):
+                      raise StageExecutionError(
+                          f"Stage10 token coverage mismatch: {covered_tokens} != {len(tokens)}"
+                      )
+                  if implementation == STAGE10_CONTEXT_IMPLEMENTATION_V1:
+                      output = {
+                          "schema": "rocketdict-product-stage10/1",
+                          "context_run_id": run_id,
+                          "nlp_run_id": int(nlp_run_id),
+                          "document_version_id": int(nlp_output["document_version_id"]),
+                          "sentence_count": len(items),
+                          "token_count": len(tokens),
+                          "entity_mention_count": entity_mentions,
+                          "pronoun_token_count": pronouns,
+                          "coverage_complete": covered_tokens == len(tokens),
+                      }
+                  else:
+                      output = {
+                          "schema": "rocketdict-product-stage10/2",
+                          "context_run_id": run_id,
+                          "nlp_run_id": int(nlp_run_id),
+                          "document_version_id": int(nlp_output["document_version_id"]),
+                          "implementation": implementation,
+                          "boundary_policy": STAGE10_BOUNDARY_POLICY,
+                          "spacy_sentence_count": len(grouped),
+                          "sentence_count": len(items),
+                          "coalesced_boundary_count": coalesced_boundary_count,
+                          "coalesced_context_count": coalesced_context_count,
+                          "token_count": len(tokens),
+                          "entity_mention_count": entity_mentions,
+                          "pronoun_token_count": pronouns,
+                          "coverage_complete": covered_tokens == len(tokens),
+                      }
+                  return _complete(database, run_id, output, items=items)
+              except Exception as exc:
+                  _fail(database, run_id, exc)
+                  raise
+          '''
+          # Normalize only the synthetic indentation introduced by the triple string.
+          import textwrap
+          new = textwrap.dedent(new)
+          path.write_text(text[:start] + new + text[end:], encoding='utf-8')
+          PY
+
+      - name: Install and run Stage10 regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core 'pytest>=8,<9'
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_context_sentence_boundaries.py \
+            rocketdict-product-core/tests/test_stage10_context_coalescing.py \
+            rocketdict-product-core/tests/test_product_stages.py
+
+      - name: Commit verified Stage10 v2 and remove one-shot patch workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/rocketdict-stage10-v2-patch.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rocketdict-product-core/src/rocketdict/stages.py .github/workflows/rocketdict-stage10-v2-patch.yml
+          git diff --cached --check
+          git commit -m 'Integrate fail-closed Stage10 boundary coalescing'
+          git push origin HEAD:chatgpt/product-core-forward
