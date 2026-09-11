@@ -5,7 +5,7 @@
 ## Current state
 
 - Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- Engineering/L3 checkpoint incorporated here: `b97825c5cbf1b1fab7f35133feca3f76cdd4b456` (`Integrate fail-closed Stage10 boundary coalescing`). HEAD may be ahead only by mandatory memory-sync or evidence commits.
+- Engineering/L3 checkpoint incorporated here: `4564f383cc2b964fbecd15d1f214619cc52ef5c5` (`Document Stage10 v2 and current Opticks evidence`). HEAD may be ahead only by work from the current iteration.
 - Maintained Product Core + Workbench are the forward implementation. Authoritative Product contract: `rocketdict/PRODUCT_TARGET.md`.
 - Final heavy 90k+ evidence still requires **0 unresolved numeric/symbol, punctuation and length hard failures**. Current work is research, not release completion.
 - Current best persisted full-*Opticks* research basis remains Stage12 run `16`: **20 numeric/symbol / 18 punctuation / 0 length, 37 unique failures** over `3344` rows.
@@ -45,7 +45,7 @@ Workflow `34645769684` is green; artifact `10282227627`; artifact ZIP SHA-256 `9
 
 The upstream cause behind `And whence is it | but from ... ?` is now repaired generically in Stage10 rather than by a phrase-specific MT patch. `context_sentence_boundaries.py` evaluates adjacent raw Stage8 parser sentences from immutable source geometry and merges only consecutive, whitespace-contiguous, non-paragraph boundaries with no source terminal punctuation when the next lexical character is lowercase. Stage8 evidence remains untouched and Stage10 v2 persists original spaCy indices plus every removed-boundary decision.
 
-Integration commit `b97825c5...` was produced only after the dedicated Stage10 workflow passed **12/12** tests (`test_context_sentence_boundaries.py`, `test_stage10_context_coalescing.py`, `test_product_stages.py`). Because the workflow pushed the final commit with `GITHUB_TOKEN`, GitHub did not launch the ordinary Product workflow for that resulting HEAD; therefore terminal-head GT5/GT8/full-corpus evidence is still pending and must not be inferred from the focused test run.
+Integration commit `b97825c5...` passed the dedicated Stage10 workflow with **12/12** tests (`test_context_sentence_boundaries.py`, `test_stage10_context_coalescing.py`, `test_product_stages.py`). Terminal documentation HEAD `4564f383...` then triggered ordinary Product Core workflow `34648989553`, which completed successfully in both dependency-light and real-runtime jobs. The real-runtime path exercised maintained Stage8→25 and unified source→25 with pinned production NLP/real OPUS/CEFR-J. Thus the maintained downstream Product path is green with Stage10 v2 installed; complete-*Opticks* v1↔v2 evidence is still pending and must not be inferred from smoke CI.
 
 ## Durable guardrails
 
@@ -57,6 +57,6 @@ Integration commit `b97825c5...` was produced only after the dedicated Stage10 w
 
 ## Active next actions
 
-1. Run terminal-HEAD Product/GT5+GT8 regression gates with Stage10 v2 installed.
-2. Rerun the exact complete *Opticks* Stage10→translation path and compare hard gates/semantic changes against run `16`, including the five coalesced boundaries and untouched-row invariants.
-3. Classify the new residual inventory and continue only source-defined/general repairs toward zero hard failures.
+1. Rerun the exact complete *Opticks* Stage10→translation path from immutable run-16/Stage8 evidence and compare V1/V2 hard gates, the five coalesced boundaries, semantic changes and untouched-row invariants.
+2. Classify the resulting residual inventory and continue only source-defined/general repairs toward zero hard failures.
+3. After translation hard gates reach zero, carry the accepted heavy run through downstream learner-dictionary/export acceptance and then Windows distribution validation.

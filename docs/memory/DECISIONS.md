@@ -48,7 +48,7 @@ The implemented default is `structural-entity-term-discourse-pronoun-v2` / schem
 
 **Reason.** A complete run-16 census found exactly five candidate boundaries and source/token review confirmed all five are genuine false splits. Narrow source-defined coalescing fixes ownership at the earliest maintained layer without target surgery, model-specific guessing, or destruction of Stage8 provenance.
 
-**Evidence state.** Integration commit `b97825c5cbf1b1fab7f35133feca3f76cdd4b456` passed **12/12** focused Stage10 regressions before commit. Its self-patching workflow pushed final HEAD with `GITHUB_TOKEN`, which does not create a follow-on ordinary Product run, so terminal-head GT5/GT8 and complete-*Opticks* evidence are still required. Fail closed on any broader regression; do not weaken the source rule or patch targets.
+**Evidence state.** Integration commit `b97825c5cbf1b1fab7f35133feca3f76cdd4b456` passed **12/12** focused Stage10 regressions before commit. Terminal HEAD `4564f383cc2b964fbecd15d1f214619cc52ef5c5` subsequently passed ordinary Product Core workflow `34648989553` in dependency-light and real-runtime jobs; real-runtime exercised maintained Stage8→25 plus unified source→25 with pinned production NLP, real OPUS and CEFR-J. The remaining evidence gap is complete-*Opticks* Stage10-v1↔v2 replay and semantic/hard-gate comparison against run16. Fail closed on any broader regression; do not weaken the source rule or patch targets.
 
 ## Punctuation and numeric residuals remain defect-family-specific
 
