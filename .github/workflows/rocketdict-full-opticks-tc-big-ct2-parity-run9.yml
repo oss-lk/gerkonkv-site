@@ -1,0 +1,166 @@
+name: RocketDict Full Opticks TC-big CTranslate2 Parity Run9
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_ct2_parity_run9.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-ct2-parity-run9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  tc-big-ct2-parity-run9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      RUN9_RUN_ID: '34610787826'
+      RUN9_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      RUN9_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      ALT52_RUN_ID: '34621706640'
+      ALT52_ARTIFACT_NAME: rocketdict-full-opticks-alternative-mt-current-hard-failures-run9
+      ALT52_FILE_SHA256: 5c87500453f9443f5aff42d4bfea1bc055b48fa3a2ec747e13ec99581fe16f69
+      ALT_MODEL_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      ALT_MODEL_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      ALT_MODEL_SAFETENSORS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      ROCKETDICT_ALT_MT_MODEL_DIR: ${{ github.workspace }}/work/alt-mt-model
+      ROCKETDICT_ALT_MT_CT2_DIR: ${{ github.workspace }}/work/alt-mt-ct2
+      ROCKETDICT_TC_BIG_CT2_RUN9_ROOT: ${{ github.workspace }}/work/tc-big-ct2-run9
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install converter build runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'ctranslate2==4.8.2' 'sentencepiece==0.2.1' 'transformers==4.56.2' 'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+      - name: Download immutable run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN9_ARTIFACT_NAME }}
+          path: work/run9
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN9_RUN_ID }}
+      - name: Download immutable all-52 TC-big evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ALT52_ARTIFACT_NAME }}
+          path: work/alt52
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ALT52_RUN_ID }}
+      - name: Assemble immutable parity inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_TC_BIG_CT2_RUN9_ROOT"
+          cp work/run9/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/rocketdict.sqlite"
+          cp work/alt52/alternative-mt-current-hard-failures-run9/full-opticks-alternative-mt-current-hard-failures-run9.json \
+            "$ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          echo "$ALT52_FILE_SHA256  $ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json" | sha256sum -c -
+      - name: Restore pinned alternative model cache
+        uses: actions/cache@v4
+        with:
+          path: work/alt-mt-model
+          key: rocketdict-alt-mt-tc-big-en-zle-708be1d-e68caa9
+      - name: Obtain exact TC-big Hugging Face snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['ALT_MODEL_REPO'],
+              revision=os.environ['ALT_MODEL_REVISION'],
+              local_dir=os.environ['ROCKETDICT_ALT_MT_MODEL_DIR'],
+              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors"
+          echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
+      - name: Convert exact pinned Marian model to CTranslate2 float32
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_ALT_MT_CT2_DIR"
+          ct2-transformers-converter --model "$ROCKETDICT_ALT_MT_MODEL_DIR" --output_dir "$ROCKETDICT_ALT_MT_CT2_DIR" --quantization float32 --force
+          test -s "$ROCKETDICT_ALT_MT_CT2_DIR/model.bin"
+          test -s "$ROCKETDICT_ALT_MT_CT2_DIR/config.json"
+      - name: Build torch-free maintained runtime venv
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/ct2-runtime-venv
+          work/ct2-runtime-venv/bin/python -m pip install --upgrade pip
+          work/ct2-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench
+          if work/ct2-runtime-venv/bin/python - <<'PY'
+          import importlib.util
+          raise SystemExit(0 if importlib.util.find_spec('torch') is None else 1)
+          PY
+          then
+            echo 'Confirmed torch is absent from CTranslate2 runtime venv.'
+          else
+            echo 'Unexpected torch installation in CTranslate2 runtime venv.' >&2
+            exit 1
+          fi
+      - name: Run all-52 CTranslate2 parity audit in torch-free runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/ct2-runtime-venv/bin/python -u rocketdict-workbench/tests/real_translation_full_opticks_tc_big_ct2_parity_run9.py
+      - name: Verify research-only parity evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/full-opticks-tc-big-ct2-parity-run9.json"
+          test -s "$evidence"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_TC_BIG_CT2_RUN9_ROOT'])/'full-opticks-tc-big-ct2-parity-run9.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-tc-big-ct2-parity-run9/1': raise SystemExit('schema drift')
+          if e['case_count'] != 52: raise SystemExit('case count drift')
+          if e['runtime']['torch_imported_by_script'] is not False: raise SystemExit('torch-free proof drift')
+          if e['runtime']['ctranslate2_version'] != '4.8.2': raise SystemExit(f"CTranslate2 drift: {e['runtime']['ctranslate2_version']!r}")
+          if e['converted_model']['compute_type'] != 'float32': raise SystemExit('compute type drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('parity research unexpectedly authorizes promotion')
+          for flag in ('database_mutated','source_rewriting','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
+              if e[flag] is not False: raise SystemExit(f'unsafe parity flag drift: {flag}')
+          print('TC-big CTranslate2 parity evidence verified.')
+          PY
+      - name: Record conversion/runtime identities
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/tc-big-ct2-runtime-evidence
+          python -VV > work/tc-big-ct2-runtime-evidence/converter-python.txt || true
+          python -m pip freeze | sort > work/tc-big-ct2-runtime-evidence/converter-pip-freeze.txt || true
+          work/ct2-runtime-venv/bin/python -VV > work/tc-big-ct2-runtime-evidence/runtime-python.txt || true
+          work/ct2-runtime-venv/bin/python -m pip freeze | sort > work/tc-big-ct2-runtime-evidence/runtime-pip-freeze.txt || true
+          sha256sum "$ROCKETDICT_ALT_MT_CT2_DIR"/* > work/tc-big-ct2-runtime-evidence/ct2-files.sha256 || true
+          df -h > work/tc-big-ct2-runtime-evidence/disk.txt || true
+          free -h > work/tc-big-ct2-runtime-evidence/memory.txt || true
+          if [ -s "$ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/full-opticks-tc-big-ct2-parity-run9.json" ]; then
+            sha256sum "$ROCKETDICT_TC_BIG_CT2_RUN9_ROOT/full-opticks-tc-big-ct2-parity-run9.json" > work/tc-big-ct2-runtime-evidence/evidence.sha256
+          fi
+      - name: Upload CTranslate2 parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-ct2-parity-run9
+          path: |
+            work/tc-big-ct2-run9/full-opticks-tc-big-ct2-parity-run9.json
+            work/tc-big-ct2-runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
