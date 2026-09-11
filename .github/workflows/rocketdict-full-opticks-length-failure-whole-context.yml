@@ -1,0 +1,60 @@
+name: RocketDict Full Opticks Length Failure Whole Context Audit
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_length_failure_whole_context.py'
+      - '.github/workflows/rocketdict-full-opticks-length-failure-whole-context.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  length-failure-whole-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOURCE_RUN_ID: '34575909649'
+      SOURCE_ARTIFACT_NAME: rocketdict-full-opticks-whole-context-rescue
+      SHADOW_JSON_SHA256: 48e3966ce961b48dc931e26a12c2eaa6d97476dc94a929d246e74b67d40eb509
+      ROCKETDICT_LENGTH_WHOLE_ROOT: ${{ github.workspace }}/work/whole-context-input
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product Core
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+      - name: Download immutable whole-context shadow evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOURCE_ARTIFACT_NAME }}
+          path: work/source-artifact
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+      - name: Assemble and verify pinned shadow input
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_LENGTH_WHOLE_ROOT"
+          cp work/source-artifact/full-opticks-numeric-stress/full-opticks-whole-context-shadow.json "$ROCKETDICT_LENGTH_WHOLE_ROOT/full-opticks-whole-context-shadow.json"
+          echo "$SHADOW_JSON_SHA256  $ROCKETDICT_LENGTH_WHOLE_ROOT/full-opticks-whole-context-shadow.json" | sha256sum -c -
+      - name: Audit trigger-specific whole-context candidates
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_length_failure_whole_context.py
+      - name: Upload length-failure whole-context evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-length-failure-whole-context
+          path: work/whole-context-input/full-opticks-length-failure-whole-context.json
+          if-no-files-found: error
+          retention-days: 90
