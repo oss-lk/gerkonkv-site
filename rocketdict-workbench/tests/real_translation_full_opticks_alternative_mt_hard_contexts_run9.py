@@ -3,15 +3,20 @@ from __future__ import annotations
 """Research-only pinned TC-big whole-Stage10-context audit for run-9 failures.
 
 Row-level alternative MT can look mechanically clean while completing a dangling
-Stage12 fragment and damaging continuity.  This audit therefore reconstructs
-the exact Stage10 context sentence/group for every current run-9 hard failure,
-translates each unique context as one immutable source unit, and accepts a raw
-hypothesis only for the mechanical upper-bound calculation when the whole
-context is strict-clean, emphasis-safe, and does not shrink aggregate target
-alphabetic content versus the current run-9 member rows.
+Stage12 fragment and damaging continuity. This audit therefore reconstructs the
+exact Stage10 context sentence/group for every current run-9 hard failure.
 
-The result is research evidence only: no Product selection, no database write,
-no source/target rewriting.
+A context is eligible for a replacement counterfactual only when its immutable
+Stage10 source span is exactly representable by complete current Stage12 rows.
+If a Stage10 boundary cuts through a Stage12 row, the context is recorded as
+``replacement_row_aligned=false`` and skipped fail-closed: the audit never slices
+an existing target and never expands the source span to make replacement easier.
+
+For row-aligned contexts, TC-big translates the complete immutable context and a
+raw hypothesis can enter the mechanical upper bound only when whole-context
+selection is accepted and Gutenberg emphasis is preserved. The result is
+research evidence only: no Product selection, no database write, no source or
+target rewriting.
 """
 
 import hashlib
@@ -33,7 +38,7 @@ if SPEC is None or SPEC.loader is None:
 BASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BASE)
 
-SCHEMA = "rocketdict-full-opticks-alternative-mt-hard-contexts-run9/1"
+SCHEMA = "rocketdict-full-opticks-alternative-mt-hard-contexts-run9/2"
 DB_SHA = "9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad"
 RUN9_OUTPUT_SHA = "c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be"
 TEXT_SHA = "436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a"
@@ -148,6 +153,7 @@ def main() -> int:
 
     context_cases: list[dict[str, Any]] = []
     spans: list[tuple[int, int]] = []
+    non_row_aligned_contexts: list[str] = []
     for (first, last), entry in sorted(contexts.items()):
         source_rows = [stage10_by_sequence[index] for index in range(first, last + 1)]
         source = "".join(str(row["source_text"]) for row in source_rows)
@@ -155,28 +161,51 @@ def main() -> int:
         end = int(source_rows[-1]["source_end"])
         if source != content[start:end]:
             raise RuntimeError(f"Stage10 context source coverage drift {first}:{last}")
+
+        overlapping = [
+            row for row in run9_rows
+            if int(row["source_end"]) > start and int(row["source_start"]) < end
+        ]
         members = [
             row for row in run9_rows
             if start <= int(row["source_start"]) and int(row["source_end"]) <= end
         ]
-        if "".join(str(row["source_text"]) for row in members) != source:
-            raise RuntimeError(f"run9 member coverage drift for context {first}:{last}")
+        member_source = "".join(str(row["source_text"]) for row in members)
+        row_aligned = bool(members) and member_source == source
+        if row_aligned:
+            row_aligned = (
+                int(members[0]["source_start"]) == start
+                and int(members[-1]["source_end"]) == end
+                and len(overlapping) == len(members)
+            )
+
+        case_id = f"stage10_context_{first}_{last}"
+        if not row_aligned:
+            non_row_aligned_contexts.append(case_id)
         spans.append((start, end))
         context_cases.append(
             {
-                "case_id": f"stage10_context_{first}_{last}",
+                "case_id": case_id,
                 "family": "run9_hard_stage10_context",
                 "source_start": start,
                 "source_end": end,
                 "source_text": source,
-                "baseline_target_text": "".join(str(row["target_text"]) for row in members),
+                "baseline_target_text": (
+                    "".join(str(row["target_text"]) for row in members)
+                    if row_aligned else None
+                ),
                 "source_origin": "run9_stage10_context",
                 "context_sentence_start": first,
                 "context_sentence_end": last,
                 "planner_sources": sorted(entry["planner_sources"]),
                 "hard_sequences": sorted(entry["hard_sequences"]),
+                "replacement_row_aligned": row_aligned,
                 "member_sequences": [int(row["sequence_number"]) for row in members],
-                "primary_rows": members,
+                "overlapping_sequences": [int(row["sequence_number"]) for row in overlapping],
+                "overlapping_spans": [
+                    [int(row["source_start"]), int(row["source_end"])] for row in overlapping
+                ],
+                "primary_rows": members if row_aligned else [],
             }
         )
     for previous, current in zip(sorted(spans), sorted(spans)[1:]):
@@ -201,10 +230,20 @@ def main() -> int:
     accepted_contexts: list[str] = []
 
     for case in context_cases:
+        out = {key: value for key, value in case.items() if key != "primary_rows"}
+        if case["replacement_row_aligned"] is not True:
+            out["skipped_reason"] = "stage10_span_not_exactly_representable_by_complete_run9_rows"
+            out["input_token_count"] = None
+            out["model_max_position_embeddings"] = max_positions
+            out["over_model_context"] = False
+            out["hypotheses"] = []
+            out["first_mechanically_admissible_rank"] = None
+            cases_out.append(out)
+            continue
+
         model_input = BASE.TARGET_PREFIX + str(case["source_text"])
         encoded = tokenizer(model_input, return_tensors="pt", add_special_tokens=True, truncation=False)
         input_tokens = int(encoded["input_ids"].shape[-1])
-        out = {key: value for key, value in case.items() if key != "primary_rows"}
         out["input_token_count"] = input_tokens
         out["model_max_position_embeddings"] = max_positions
         if input_tokens > max_positions:
@@ -273,9 +312,10 @@ def main() -> int:
     if _sha(database) != DB_SHA:
         raise RuntimeError("whole-context TC-big research mutated run9 database")
 
+    row_aligned_count = sum(1 for case in context_cases if case["replacement_row_aligned"] is True)
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "research-only pinned TC-big on original Stage10 context boundaries containing current run9 hard failures",
+        "purpose": "research-only pinned TC-big on exact row-aligned original Stage10 context boundaries containing current run9 hard failures",
         "promotion_allowed": False,
         "automatic_product_default_allowed": False,
         "automatic_semantic_selector": False,
@@ -288,6 +328,9 @@ def main() -> int:
         "base_hard_gate_counts": BASE_COUNTS,
         "hard_row_count": len(hard_rows),
         "unique_context_count": len(context_cases),
+        "row_aligned_context_count": row_aligned_count,
+        "non_row_aligned_context_count": len(non_row_aligned_contexts),
+        "non_row_aligned_contexts": non_row_aligned_contexts,
         "over_model_context_count": len(over_model_context),
         "over_model_contexts": over_model_context,
         "mechanically_admissible_context_count": len(accepted_contexts),
@@ -300,6 +343,7 @@ def main() -> int:
         "cases": cases_out,
         "database_mutated": False,
         "source_coverage_byte_exact": True,
+        "non_row_aligned_contexts_skipped_fail_closed": True,
         "source_rewriting": False,
         "target_rewriting": False,
         "placeholders": False,
@@ -307,12 +351,14 @@ def main() -> int:
         "corpus_specific_target_patches": False,
     }
     payload["evidence_sha256"] = _canonical_sha(payload)
-    output = root / "full-opticks-alternative-mt-hard-contexts-run9.json"
-    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    output_path = root / "full-opticks-alternative-mt-hard-contexts-run9.json"
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({
         "schema": SCHEMA,
         "hard_row_count": len(hard_rows),
         "unique_context_count": len(context_cases),
+        "row_aligned_context_count": row_aligned_count,
+        "non_row_aligned_context_count": len(non_row_aligned_contexts),
         "over_model_context_count": len(over_model_context),
         "mechanically_admissible_context_count": len(accepted_contexts),
         "mechanical_upper_bound_hard_gate_counts": upper,
