@@ -324,7 +324,7 @@ def main() -> int:
     current = _inventory(ordered, length_parameters=length_parameters)
     expected_counts = dict(combined.get("enabled_hard_gate_counts") or {})
     expected = {
-        "numeric_count": int(expected_counts.get("numeric") or 0),
+        "numeric_count": int(expected_counts.get("numeric_symbol") or 0),
         "punctuation_count": int(expected_counts.get("punctuation") or 0),
         "length_count": int(expected_counts.get("length") or 0),
         "unique_failure_count": int(combined["enabled_unique_hard_failure_count"]),
