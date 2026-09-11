@@ -85,8 +85,8 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          p = Path('work/run16/tc-big-angular-dms-composed-product-rescue/full-opticks-tc-big-angular-dms-composed-product-rescue.json')
-          evidence = json.loads(p.read_text(encoding='utf-8'))
+          source_root = Path('work/run16/tc-big-angular-dms-composed-product-rescue')
+          evidence = json.loads((source_root/'full-opticks-tc-big-angular-dms-composed-product-rescue.json').read_text(encoding='utf-8'))
           if evidence.get('evidence_sha256') != os.environ['RUN16_EVIDENCE_SHA256']:
               raise SystemExit(f"run-16 evidence identity drift: {evidence.get('evidence_sha256')!r}")
           if evidence.get('final_translation_run_id') != 16:
@@ -200,17 +200,23 @@ jobs:
           work/stage10-v2-runtime-venv/bin/python - <<'PY'
           import json, os
           from pathlib import Path
+          expected_offsets = [
+              655,10277,18355,23464,50306,54796,63563,64046,64118,
+              89748,92716,106061,112001,132089,137981,146358,155895,
+              166588,168067,180246,189201,203830,220080,223062,228046,
+              247799,266720,301082,349036,355851,412197,434836,455648,
+              507039,522572,545343,548282,556573,
+          ]
           root = Path(os.environ['ROCKETDICT_STAGE10_V2_COMPARISON_ROOT'])
-          p = root/'full-opticks-stage10-v2-comparison.json'
-          evidence = json.loads(p.read_text(encoding='utf-8'))
+          evidence = json.loads((root/'full-opticks-stage10-v2-comparison.json').read_text(encoding='utf-8'))
           if evidence['schema'] != 'rocketdict-full-opticks-stage10-v2-comparison/1':
               raise SystemExit('schema drift')
           if evidence['base_hard_gate_counts'] != {'numeric_symbol':20,'punctuation':18,'length':0,'unique':37}:
               raise SystemExit(f"base count drift: {evidence['base_hard_gate_counts']!r}")
-          if evidence['stage10_v2_coalesced_boundary_count'] != 5:
+          if evidence['stage10_v2_coalesced_boundary_count'] != len(expected_offsets):
               raise SystemExit('Stage10 v2 boundary-count drift')
-          if 522572 not in evidence['stage10_v2_boundary_offsets']:
-              raise SystemExit('known whence boundary missing')
+          if evidence['stage10_v2_boundary_offsets'] != expected_offsets:
+              raise SystemExit(f"Stage10 v2 exact boundary-offset drift: {evidence['stage10_v2_boundary_offsets']!r}")
           if evidence['source_character_count'] != 586543:
               raise SystemExit('source-length drift')
           if evidence['unchanged_geometry_target_drift_count'] != 0:
@@ -225,7 +231,8 @@ jobs:
           )):
               raise SystemExit('unsafe evidence flag')
           print(json.dumps({
-              'boundary_offsets': evidence['stage10_v2_boundary_offsets'],
+              'boundary_count': evidence['stage10_v2_coalesced_boundary_count'],
+              'replay_segment_count': evidence['replay_segment_count'],
               'replay_hard_gate_counts': evidence['replay_hard_gate_counts'],
               'hard_gate_delta': evidence['hard_gate_delta'],
               'whence_punctuation_repaired': evidence['validation']['whence_punctuation_repaired'],
