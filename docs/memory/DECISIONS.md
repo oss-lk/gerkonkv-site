@@ -39,68 +39,60 @@ Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of miss
 - `rocketdict-stage12-length-failure-whole-context-rescue/1` remains default OFF.
 - `rocketdict-stage12-citation-boundary-pair-rescue/1` remains default OFF.
 - `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains default OFF/not public-wired. Context `2725` remains the semantic-loss counterexample proving generic mechanical cleanliness is insufficient.
-- `rocketdict-stage12-illustration-label-rescue/1` is accepted only as a narrow default-OFF/not-public-wired wrapper. Persisted run `9` is **24 numeric / 30 punctuation / 0 length, 52 unique**.
+- `rocketdict-stage12-illustration-label-rescue/1` remains a narrow default-OFF/not-public-wired wrapper. Persisted run `9` is **24 numeric / 30 punctuation / 0 length, 52 unique**.
 - `rocketdict-maintained-emphasis-markup-preservation/1` remains a separate research veto rather than a retroactive Product hard gate.
 
-## Punctuation residuals must remain defect-family-specific
+## Punctuation residuals remain defect-family-specific
 
-**Decision.** Do not introduce a universal punctuation fixer. Current run-9 failures mix block footnotes, square-bracket payload loss, target-only delimiter hallucination, long-context question migration and other families with different root causes.
+**Decision.** Do not introduce a universal punctuation fixer. Run-9 failures mix block footnotes, square-bracket payload loss, target-only delimiter hallucination, long-context question migration and other families with different root causes.
 
-## Marker-only footnote split is rejected
+The current exact-source OPUS formulations are exhausted or rejected for whole-footnote, square-bracket, context-2730, prime/formula and broad citation/group branches. A future attempt needs a materially new source representation/model hypothesis rather than deeper identical beam search.
 
-**Decision.** Do not Productize marker-only `[G]/[H]/[J]/[K]/[M]` retranslation despite the attractive **24/25/0, 47 unique** counterfactual.
-
-**Why.** Semantic inspection exposes fragment mistranslations (`shewn`→`сшито`, `_See our_`→`Посмотри на нас.`). Mechanical punctuation repair hides worse translation.
-
-## Exact-source OPUS whole-footnote n-best is exhausted for the current formulation
-
-**Decision.** Do not continue increasing beam/n-best on the same exact linguistic footnote bodies without a materially new representation/model hypothesis.
-
-**Evidence.** Corrected whole-context workflow `34615540238` gives **0/30** strict+emphasis-safe candidates. Depth DOE `34615819431` evaluates beam/n-best `6/6`, `12/12`, `24/24`: **210 raw hypotheses, 0 mechanically admissible**.
-
-The failure is dominated by Gutenberg underscore/emphasis corruption and, in H, persistent archaic-word semantic error. This is model/representation evidence, not a reason to weaken emphasis preservation.
-
-## Context 2730 must not be rescued by the current whole/pair formulations
-
-**Decision.** Do not raise the maintained whole-context cap merely to absorb context `2730`, and do not Productize the tested 138/132-token pair windows.
-
-**Why.** The whole Stage10 context is 339 NLP tokens; workflow `34616386780` produces 0 admissible candidates and clear long-context degradation. The <=160 pair experiment `34616665018` gives a mechanically clean opening window but semantic repetition/distortion, while the closing window loses context and has no admissible candidate. This is another direct case where gate cleanliness is not semantic proof.
-
-## Current square-bracket-loss OPUS n-best branch is negative
-
-**Decision.** Do not treat raw OPUS n-best as a solution for the current `[in Fig.]`, inline `[G]`, and `[Greek:a]` loss family.
-
-**Evidence.** Workflow `34617363701` evaluates 24 raw hypotheses across the four current rows and finds zero admissible candidates. A future attempt needs a different source representation or model, not a deeper identical beam.
-
-## Target-only delimiter hallucinations expose a baseline-model basin
-
-**Decision.** For the seven current source-no-delimiter / target-invented-delimiter rows, ordinary OPUS n-best is not a general rescue mechanism.
-
-**Evidence.** Workflow `34616844554`: only metadata seq `3` has strict-clean OPUS alternatives; six substantive rows remain without a strict-clean candidate. Some baseline outputs contain obvious unrelated domain/religious hallucinations that persist across the beam.
-
-Do not implement target punctuation deletion. The correct research direction is model differential on the same immutable source bytes.
-
-## Pinned TC-big is the active independent model differential, not yet a Product fallback
+## Pinned TC-big is the active independent model differential, not a Product fallback
 
 **Decision.** Use pinned `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, as the current independent real-MT research comparator.
 
-**Evidence.** Delimiter differential workflow `34617224048` finds strict-clean raw alternatives for **6/7** current cases (`3,1864,1878,2219,2382,2862`). Rank0 candidates in the severe hallucination rows restore source-domain meaning rather than just altering punctuation. Seq `3220` remains unresolved mechanically.
+**Evidence.** The all-current-failures workflow `34621706640` evaluates all 52 run-9 hard rows and finds at least one mechanically admissible raw TC-big hypothesis for **32/52** cases, with 172 admissible hypotheses total. The purely mechanical upper bound is **24/30/0, 52 unique → 13/8/0, 20 unique**.
 
-**Interpretation.** A material portion of the remaining frontier is likely OPUS-baseline-model-specific rather than purely planner/evaluator failure.
+**Interpretation.** A material portion of the remaining frontier is baseline-model-specific rather than purely planner/evaluator failure.
 
-**Non-promotion rule.** TC-big is research-only until an all-current-failures screen, semantic family review, deterministic source/failure trigger, persisted full-corpus regression, clean-row guardrail, license attribution, asset/runtime size/performance assessment and offline release strategy are complete.
+**Non-promotion rule.** The 32 mechanically clean cases are not 32 safe Product replacements. Manual review found boundary-fragment completions and semantic/terminology concerns. TC-big remains research-only until a boundary-aware selector, persisted regression and release plan are proven.
+
+## A second MT may only be failure-triggered and boundary-aware
+
+**Decision.** Do not replace clean OPUS rows merely because another model exists. Any second-model Product path must start from an existing maintained hard failure or a separately justified source-defined trigger, so already-clean Product output remains untouched by default.
+
+**Decision.** Do not implement isolated Stage12-row TC-big substitution as the general fallback mechanism. A Stage12 row may be only a fragment of a larger sentence/context; a mechanically clean candidate can finish or punctuate a clause that source text continues in the neighboring row.
+
+A future selector must reason on a source-defined contiguous group/context and verify that the candidate is semantically valid for that full source span.
+
+## Exact Stage10 contexts are not guaranteed to align with current Stage12 row boundaries
+
+**Decision.** A Stage10 context may be used as a research translation unit only when its exact source span can be represented by whole replacement rows, or when the larger covering group is freshly translated and validated as its own source-defined unit. Do not slice an existing target string to force alignment.
+
+**Evidence.** Stage10 context `2480` spans `[480217,480300)` and includes the trailing space after `_Qu._ 19.`. Current run-9 row 2729 ends at `480299`; row 2730 begins at `480299` and owns the following space plus the next question body. Initial context workflow `34623402220` therefore failed correctly with `run9 member coverage drift for context 2480:2480`.
+
+This is orchestration/boundary evidence, not a TC-big quality failure.
+
+## MetricX is a research ranking signal only
+
+**Decision.** MetricX/QE may rank immutable raw candidates but neither its absolute score nor its preference is sufficient for Product selection.
+
+**Evidence.** Run `34622530818` scores all 172 mechanically admissible TC-big hypotheses. MetricX prefers some admissible TC-big candidate over OPUS in **30/32** cases and the first admissible candidate in **29/32**, while the best-QE rank is spread across ranks 0–5.
+
+**Interpretation.** This strengthens the hypothesis that TC-big often improves the hard residuals, but it does not define an acceptance threshold and cannot override boundary or semantic vetoes.
+
+## CTranslate2 conversion feasibility does not imply generation parity
+
+**Decision.** The pinned TC-big Marian model may be converted to CTranslate2 for research, and a torch-free inference runtime is technically feasible. Do not claim that the converted backend reproduces Transformers output until tokenizer and generation semantics are proven equivalent.
+
+**Evidence.** Initial parity workflow `34622860381` runs successfully in CTranslate2 4.8.2 float32 without Torch import by the audit script, but has `0/52` exact rank0 matches, `0/52` any-hypothesis overlap and only `15/52` mechanically admissible cases, compared with `32/52` under Transformers.
+
+The first harness used raw SentencePiece-side multilingual-prefix handling rather than demonstrated MarianTokenizer-equivalent behavior. A corrected parity experiment is required before choosing CT2 as the release backend for TC-big.
 
 ## Run 9 is the current persisted residual basis
 
 **Decision.** Residual research uses run `9` source spans/current identities. Current persisted gates are **24 numeric / 30 punctuation / 0 length, 52 unique**. Research counterfactuals do not replace that basis until a new persisted Product audit is created.
-
-## Prime/formula negative evidence remains binding
-
-**Decision.** Do not promote prime-fragment structural decomposition, thousands grouping / narrow `x→×` preprocessing, compact-formula spacing, or broad citation/group coalescing based on prior experiments; those branches regressed semantics/successful cases or failed to rescue the class.
-
-## MetricX is research-only
-
-**Decision.** MetricX/QE may rank immutable raw candidates, but neither its score nor preference is sufficient for Product selection without mechanical gates and semantic review.
 
 ## Acceptance order remains smoke → full corpus → distributable Product
 
