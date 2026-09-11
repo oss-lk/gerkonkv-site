@@ -1,0 +1,141 @@
+name: RocketDict Full Opticks Composed Whole Context Residual Audit
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
+      - 'rocketdict-product-core/src/rocketdict/stages.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_length_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_citation_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_composed_whole_context_residuals.py'
+      - '.github/workflows/rocketdict-full-opticks-composed-whole-context-residual-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  composed-residual-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COMBINED_RUN_ID: '34597648856'
+      COMBINED_ARTIFACT_NAME: rocketdict-full-opticks-combined-length-citation-product-rescue
+      COMBINED_JSON_SHA256: 71aedf2f55434d770d524cff2977df80efb5cd82e66421e01b22b43ad47b34c9
+      COMBINED_DB_SHA256: afc9eba1177e1ada86ae208d3f175cc34f84cd287145b236f4dad79fd73f7f67
+      SHADOW_RUN_ID: '34575909649'
+      SHADOW_ARTIFACT_NAME: rocketdict-full-opticks-whole-context-rescue
+      SHADOW_JSON_SHA256: 48e3966ce961b48dc931e26a12c2eaa6d97476dc94a929d246e74b67d40eb509
+      ROCKETDICT_COMPOSED_RESIDUAL_ROOT: ${{ github.workspace }}/work/composed-residual
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product audit runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core
+          python -m pip install -e ./rocketdict-workbench
+      - name: Download immutable composed Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMBINED_ARTIFACT_NAME }}
+          path: work/combined-source
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.COMBINED_RUN_ID }}
+      - name: Download immutable canonical whole-context shadow
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SHADOW_ARTIFACT_NAME }}
+          path: work/shadow-source
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.SHADOW_RUN_ID }}
+      - name: Assemble and verify immutable audit inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT"
+          cp \
+            work/combined-source/combined-rescue/full-opticks-combined-length-citation-product-rescue-optin.json \
+            "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-combined-length-citation-product-rescue-optin.json"
+          cp \
+            work/combined-source/combined-rescue/rocketdict.sqlite \
+            "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/rocketdict.sqlite"
+          cp \
+            work/shadow-source/full-opticks-numeric-stress/full-opticks-whole-context-shadow.json \
+            "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-whole-context-shadow.json"
+          echo "$COMBINED_JSON_SHA256  $ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-combined-length-citation-product-rescue-optin.json" | sha256sum -c -
+          echo "$COMBINED_DB_SHA256  $ROCKETDICT_COMPOSED_RESIDUAL_ROOT/rocketdict.sqlite" | sha256sum -c -
+          echo "$SHADOW_JSON_SHA256  $ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-whole-context-shadow.json" | sha256sum -c -
+      - name: Recompute composed residuals and shadow lineage
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_composed_whole_context_residuals.py
+      - name: Verify read-only evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-composed-whole-context-residual-audit.json"
+          echo "$COMBINED_DB_SHA256  $ROCKETDICT_COMPOSED_RESIDUAL_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ['ROCKETDICT_COMPOSED_RESIDUAL_ROOT'])
+          evidence = json.loads(
+              (root / 'full-opticks-composed-whole-context-residual-audit.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          expected_current = {'numeric': 29, 'punctuation': 34, 'length': 0, 'unique': 59}
+          expected_contexts = [550, 669, 1024, 1393, 2238, 2462, 2725, 2726]
+          expected_counterfactual = {'numeric': 24, 'punctuation': 30, 'length': 0, 'unique': 51}
+          if evidence['current_hard_gate_counts'] != expected_current:
+              raise SystemExit(f"current hard gates drift: {evidence['current_hard_gate_counts']!r}")
+          if evidence['lineage_exact_mechanically_accepted_context_sequences'] != expected_contexts:
+              raise SystemExit(
+                  'accepted context identity drift: '
+                  f"{evidence['lineage_exact_mechanically_accepted_context_sequences']!r}"
+              )
+          if evidence['counterfactual_hard_gate_counts'] != expected_counterfactual:
+              raise SystemExit(
+                  f"counterfactual hard gates drift: {evidence['counterfactual_hard_gate_counts']!r}"
+              )
+          if evidence['source_coverage_byte_exact'] is not True:
+              raise SystemExit('source coverage proof missing')
+          if evidence['database_unchanged'] is not True:
+              raise SystemExit('database read-only proof missing')
+          print('Composed residual lineage audit invariants verified.')
+          PY
+      - name: Record runtime identities
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/composed-residual-runtime
+          python -VV > work/composed-residual-runtime/python.txt || true
+          python -m pip freeze | sort > work/composed-residual-runtime/pip-freeze.txt || true
+          printf '%s\n' "$COMBINED_RUN_ID" > work/composed-residual-runtime/combined-run-id.txt
+          printf '%s\n' "$SHADOW_RUN_ID" > work/composed-residual-runtime/shadow-run-id.txt
+          if [ -s "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-composed-whole-context-residual-audit.json" ]; then
+            sha256sum \
+              "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-composed-whole-context-residual-audit.json" \
+              > work/composed-residual-runtime/audit-json.sha256
+          fi
+      - name: Upload composed residual lineage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-composed-whole-context-residual-audit
+          path: |
+            work/composed-residual/full-opticks-composed-whole-context-residual-audit.json
+            work/composed-residual-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
