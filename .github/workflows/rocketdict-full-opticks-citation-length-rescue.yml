@@ -10,7 +10,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_citation_length_rescue.py'
-      - 'rocketdict-workbench/tests/real_translation_full_opticks_citation_length_nbest.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_citation_length_nbest_stable.py'
       - '.github/workflows/rocketdict-full-opticks-citation-length-rescue.yml'
   workflow_dispatch:
 
@@ -83,7 +83,7 @@ jobs:
       - name: Run isolated citation length rescue feasibility
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_citation_length_rescue.py
       - name: Probe staged raw n-best for isolated citation failures
-        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_citation_length_nbest.py
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_citation_length_nbest_stable.py
       - name: Re-verify immutable Product database
         if: always()
         shell: bash
