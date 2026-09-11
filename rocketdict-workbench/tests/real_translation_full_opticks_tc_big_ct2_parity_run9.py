@@ -3,13 +3,18 @@ from __future__ import annotations
 """Research-only CTranslate2 parity audit for pinned TC-big over run-9 failures.
 
 The independent model is first converted from the exact pinned Hugging Face
-Marian snapshot to CTranslate2 float32.  This script then runs only the
-CTranslate2 + SentencePiece runtime over the same immutable 52 run-9 hard
-failures and compares raw n-best/mechanical behavior with the previously
-persisted Transformers evidence.  It never selects Product output.
+Marian snapshot to CTranslate2 float32. This v2 audit deliberately uses the
+same Hugging Face MarianTokenizer semantics as the reference Transformers run
+while keeping the actual inference runtime torch-free. This matters for
+multilingual Marian models because language codes such as ``>>rus<<`` are
+special vocabulary tokens and must not be passed through raw SentencePiece.
+
+The script never selects Product output. It measures tokenizer parity, raw
+hypothesis overlap, mechanical behavior, and backend/runtime feasibility only.
 """
 
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,7 +24,7 @@ from rocketdict.emphasis_markup import compare_emphasis_markup_preservation
 from rocketdict.translation_rescue import evaluate_rescue_pair
 
 
-SCHEMA = "rocketdict-full-opticks-tc-big-ct2-parity-run9/1"
+SCHEMA = "rocketdict-full-opticks-tc-big-ct2-parity-run9/2"
 INPUT_SCHEMA = "rocketdict-full-opticks-alternative-mt-current-hard-failures-run9/1"
 EXPECTED_INPUT_FILE_SHA256 = "5c87500453f9443f5aff42d4bfea1bc055b48fa3a2ec747e13ec99581fe16f69"
 EXPECTED_INPUT_EVIDENCE_SHA256 = "1e3ce22828f72b2409e1a4093646ef0a74a4dcf9b224b3f59d286011acbebca7"
@@ -88,7 +93,14 @@ def main() -> int:
     database = root / "rocketdict.sqlite"
     hf_model_dir = Path(os.environ["ROCKETDICT_ALT_MT_MODEL_DIR"]).resolve()
     ct2_model_dir = Path(os.environ["ROCKETDICT_ALT_MT_CT2_DIR"]).resolve()
-    for path in (evidence_path, database, hf_model_dir / "source.spm", hf_model_dir / "target.spm", ct2_model_dir / "model.bin"):
+    for path in (
+        evidence_path,
+        database,
+        hf_model_dir / "source.spm",
+        hf_model_dir / "target.spm",
+        hf_model_dir / "vocab.json",
+        ct2_model_dir / "model.bin",
+    ):
         if not path.exists():
             raise RuntimeError(f"TC-big CTranslate2 parity input missing: {path}")
 
@@ -102,19 +114,46 @@ def main() -> int:
         raise RuntimeError("run9 database identity drift")
 
     required = {row["path"]: row["sha256"] for row in evidence["model"]["required_files"]}
-    for relative in ("source.spm", "target.spm"):
+    for relative in ("source.spm", "target.spm", "vocab.json"):
         if _sha(hf_model_dir / relative) != required.get(relative):
-            raise RuntimeError(f"pinned TC-big SentencePiece identity drift: {relative}")
+            raise RuntimeError(f"pinned TC-big tokenizer identity drift: {relative}")
+
+    if importlib.util.find_spec("torch") is not None:
+        raise RuntimeError("parity inference runtime unexpectedly contains torch")
 
     import ctranslate2
-    import sentencepiece as spm
+    import transformers
+    from transformers import MarianTokenizer
 
-    source_sp = spm.SentencePieceProcessor(model_file=str(hf_model_dir / "source.spm"))
-    target_sp = spm.SentencePieceProcessor(model_file=str(hf_model_dir / "target.spm"))
+    tokenizer = MarianTokenizer.from_pretrained(str(hf_model_dir), local_files_only=True)
     translator = ctranslate2.Translator(str(ct2_model_dir), device="cpu", compute_type="float32")
 
     sources = [str(case["source_text"]) for case in evidence["cases"]]
-    tokenized = [source_sp.encode(TARGET_PREFIX + source, out_type=str) for source in sources]
+    tokenized: list[list[str]] = []
+    input_token_parity_count = 0
+    input_token_rows: list[dict[str, Any]] = []
+    for case, source in zip(evidence["cases"], sources, strict=True):
+        input_ids = tokenizer.encode(TARGET_PREFIX + source, add_special_tokens=True)
+        tokens = tokenizer.convert_ids_to_tokens(input_ids)
+        expected_count = int(case.get("input_token_count") or -1)
+        if len(input_ids) == expected_count:
+            input_token_parity_count += 1
+        input_token_rows.append(
+            {
+                "sequence_number": int(case["baseline_planned_sequence"]),
+                "transformers_input_token_count": expected_count,
+                "ct2_hf_tokenizer_input_token_count": len(input_ids),
+                "count_matches": len(input_ids) == expected_count,
+                "first_token": tokens[0] if tokens else None,
+                "last_token": tokens[-1] if tokens else None,
+            }
+        )
+        tokenized.append(tokens)
+    if input_token_parity_count != len(sources):
+        raise RuntimeError(
+            f"MarianTokenizer input parity drift: {input_token_parity_count}/{len(sources)}"
+        )
+
     translated = translator.translate_batch(
         tokenized,
         beam_size=BEAM_SIZE,
@@ -141,7 +180,8 @@ def main() -> int:
         first_admissible: int | None = None
         overlap = False
         for rank, tokens in enumerate(result.hypotheses):
-            target = target_sp.decode(tokens).strip()
+            target_ids = tokenizer.convert_tokens_to_ids(list(tokens))
+            target = tokenizer.decode(target_ids, skip_special_tokens=True).strip()
             verdict = evaluate_rescue_pair(str(case["source_text"]), target)
             emphasis = compare_emphasis_markup_preservation(str(case["source_text"]), target)
             admissible = verdict.get("strictly_eligible") is True and emphasis.get("passed") is True
@@ -185,7 +225,7 @@ def main() -> int:
     tree = _tree_identity(ct2_model_dir)
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "research-only parity and torch-free-runtime feasibility for pinned TC-big converted to CTranslate2 float32",
+        "purpose": "research-only parity and torch-free-runtime feasibility for pinned TC-big converted to CTranslate2 float32 using exact MarianTokenizer semantics",
         "promotion_allowed": False,
         "automatic_product_default_allowed": False,
         "semantic_review_required": True,
@@ -203,11 +243,16 @@ def main() -> int:
         },
         "runtime": {
             "ctranslate2_version": str(ctranslate2.__version__),
-            "sentencepiece_version": str(getattr(spm, "__version__", "unknown")),
+            "transformers_version": str(transformers.__version__),
+            "tokenizer_class": tokenizer.__class__.__name__,
+            "tokenizer_semantics": "MarianTokenizer.encode+convert_ids_to_tokens / convert_tokens_to_ids+decode",
             "device": "cpu",
+            "torch_available": False,
             "torch_imported_by_script": False,
         },
         "case_count": len(cases_out),
+        "input_token_parity_count": input_token_parity_count,
+        "input_token_parity_rows": input_token_rows,
         "exact_rank0_match_count": exact_rank0_matches,
         "case_count_with_any_exact_hypothesis_overlap": cases_with_any_exact_hypothesis_overlap,
         "mechanically_admissible_case_count": mechanically_admissible_cases,
@@ -228,6 +273,7 @@ def main() -> int:
         json.dumps(
             {
                 "schema": SCHEMA,
+                "input_token_parity_count": input_token_parity_count,
                 "exact_rank0_match_count": exact_rank0_matches,
                 "case_count_with_any_exact_hypothesis_overlap": cases_with_any_exact_hypothesis_overlap,
                 "mechanically_admissible_case_count": mechanically_admissible_cases,
