@@ -192,9 +192,24 @@ def run_stage10(
     *,
     nlp_run_id: int,
     parameters: dict[str, Any] | None = None,
-    implementation: str = "structural-entity-term-discourse-pronoun-v1",
+    implementation: str = "structural-entity-term-discourse-pronoun-v2",
 ) -> dict[str, Any]:
+    from .context_sentence_boundaries import (
+        STAGE10_BOUNDARY_POLICY,
+        STAGE10_CONTEXT_IMPLEMENTATION_V1,
+        STAGE10_CONTEXT_IMPLEMENTATION_V2,
+        coalesce_spacy_sentence_groups,
+        parser_sentence_groups,
+    )
+
     database = Path(database).expanduser().resolve()
+    if implementation not in {
+        STAGE10_CONTEXT_IMPLEMENTATION_V1,
+        STAGE10_CONTEXT_IMPLEMENTATION_V2,
+    }:
+        raise StageExecutionError(
+            f"Unsupported Stage10 context implementation: {implementation}"
+        )
     parameters = dict(parameters or {})
     with connect(database, readonly=True) as connection:
         nlp_run = get_run(connection, int(nlp_run_id))
@@ -222,23 +237,39 @@ def run_stage10(
             sentence = int((token.get("payload") or {}).get("sentence_index") or 0)
             grouped.setdefault(sentence, []).append(token)
         content = str(document["content_text"])
+        if implementation == STAGE10_CONTEXT_IMPLEMENTATION_V1:
+            context_groups = parser_sentence_groups(grouped)
+        else:
+            context_groups = coalesce_spacy_sentence_groups(grouped, content)
+
         items: list[dict[str, Any]] = []
         entity_mentions = 0
         pronouns = 0
         covered_tokens = 0
-        for sequence, sentence_number in enumerate(sorted(grouped)):
-            sentence_tokens = grouped[sentence_number]
-            if not sentence_tokens:
+        coalesced_boundary_count = sum(
+            len(group["coalesced_boundaries"]) for group in context_groups
+        )
+        coalesced_context_count = sum(
+            bool(group["coalesced_boundaries"]) for group in context_groups
+        )
+        for sequence, group in enumerate(context_groups):
+            sentence_tokens = list(group["tokens"])
+            sentence_indices = list(group["sentence_indices"])
+            if not sentence_tokens or not sentence_indices:
                 continue
+            sentence_number = int(sentence_indices[0])
             start = min(int(row["source_start"]) for row in sentence_tokens)
-            end = max(int(row["source_end"]) for row in sentence_tokens)
-            # Include trailing whitespace up to the next sentence start so the
-            # ordered sentence spans can be audited against the immutable text.
-            next_rows = grouped.get(sentence_number + 1) or []
-            if next_rows:
-                end = min(int(next_rows[0]["source_start"]), len(content))
+            # Include trailing whitespace up to the next context start so the
+            # ordered spans remain auditable against immutable source bytes.
+            if sequence + 1 < len(context_groups):
+                next_tokens = list(context_groups[sequence + 1]["tokens"])
+                end = min(int(next_tokens[0]["source_start"]), len(content))
             else:
                 end = len(content)
+            if end <= start or content[start:end] == "":
+                raise StageExecutionError(
+                    f"Stage10 produced invalid source geometry at context {sequence}"
+                )
             entities = []
             sentence_pronouns = []
             for row in sentence_tokens:
@@ -262,6 +293,24 @@ def run_stage10(
                         }
                     )
             covered_tokens += len(sentence_tokens)
+            payload = {
+                "sentence_index": sentence_number,
+                "token_count": len(sentence_tokens),
+                "first_token_index": (sentence_tokens[0].get("payload") or {}).get("token_index"),
+                "last_token_index": (sentence_tokens[-1].get("payload") or {}).get("token_index"),
+                "entities": entities,
+                "pronouns": sentence_pronouns,
+            }
+            if implementation == STAGE10_CONTEXT_IMPLEMENTATION_V2:
+                payload.update(
+                    {
+                        "spacy_sentence_indices": sentence_indices,
+                        "spacy_sentence_count": len(sentence_indices),
+                        "coalesced_boundary_count": len(group["coalesced_boundaries"]),
+                        "coalesced_boundaries": list(group["coalesced_boundaries"]),
+                        "boundary_policy": STAGE10_BOUNDARY_POLICY,
+                    }
+                )
             items.append(
                 {
                     "sequence_number": sequence,
@@ -270,36 +319,46 @@ def run_stage10(
                     "source_end": end,
                     "source_text": content[start:end],
                     "target_text": None,
-                    "payload": {
-                        "sentence_index": sentence_number,
-                        "token_count": len(sentence_tokens),
-                        "first_token_index": (sentence_tokens[0].get("payload") or {}).get("token_index"),
-                        "last_token_index": (sentence_tokens[-1].get("payload") or {}).get("token_index"),
-                        "entities": entities,
-                        "pronouns": sentence_pronouns,
-                    },
+                    "payload": payload,
                 }
             )
         if covered_tokens != len(tokens):
             raise StageExecutionError(
                 f"Stage10 token coverage mismatch: {covered_tokens} != {len(tokens)}"
             )
-        output = {
-            "schema": "rocketdict-product-stage10/1",
-            "context_run_id": run_id,
-            "nlp_run_id": int(nlp_run_id),
-            "document_version_id": int(nlp_output["document_version_id"]),
-            "sentence_count": len(items),
-            "token_count": len(tokens),
-            "entity_mention_count": entity_mentions,
-            "pronoun_token_count": pronouns,
-            "coverage_complete": covered_tokens == len(tokens),
-        }
+        if implementation == STAGE10_CONTEXT_IMPLEMENTATION_V1:
+            output = {
+                "schema": "rocketdict-product-stage10/1",
+                "context_run_id": run_id,
+                "nlp_run_id": int(nlp_run_id),
+                "document_version_id": int(nlp_output["document_version_id"]),
+                "sentence_count": len(items),
+                "token_count": len(tokens),
+                "entity_mention_count": entity_mentions,
+                "pronoun_token_count": pronouns,
+                "coverage_complete": covered_tokens == len(tokens),
+            }
+        else:
+            output = {
+                "schema": "rocketdict-product-stage10/2",
+                "context_run_id": run_id,
+                "nlp_run_id": int(nlp_run_id),
+                "document_version_id": int(nlp_output["document_version_id"]),
+                "implementation": implementation,
+                "boundary_policy": STAGE10_BOUNDARY_POLICY,
+                "spacy_sentence_count": len(grouped),
+                "sentence_count": len(items),
+                "coalesced_boundary_count": coalesced_boundary_count,
+                "coalesced_context_count": coalesced_context_count,
+                "token_count": len(tokens),
+                "entity_mention_count": entity_mentions,
+                "pronoun_token_count": pronouns,
+                "coverage_complete": covered_tokens == len(tokens),
+            }
         return _complete(database, run_id, output, items=items)
     except Exception as exc:
         _fail(database, run_id, exc)
         raise
-
 
 def _segment_units(
     content: str,
