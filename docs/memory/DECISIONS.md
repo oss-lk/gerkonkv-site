@@ -12,108 +12,99 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 ## Product assets and downstream evidence are pinned and fail-closed
 
-**Decision.** Use official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian and `float32` acceptance compute. Preserve immutable source/config/model/result identities and replayable evidence.
+**Decision.** Production baseline uses official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian and `float32` acceptance compute. Preserve immutable source/config/model/result identities and replayable evidence.
+
+A second real MT may be researched, but it does not become Product merely because it passes hard gates on residual failures. Any Product role requires pinned identity/license, deterministic selection, semantic review, full-corpus regression and an offline installation/runtime plan.
 
 ## Translation-quality promotion requires contiguous evidence and semantic review
 
-**Decision.** A maintained quality change may be promoted only after classifying the defect, preserving immutable source ownership, and validating boundary-sensitive behavior on contiguous evidence. Mechanical gate success alone is insufficient.
+**Decision.** A maintained quality change may be promoted only after classifying the defect, preserving immutable source ownership and validating boundary-sensitive behavior on contiguous evidence. Mechanical gate success alone is insufficient.
 
-Raw OPUS hypotheses are legitimate research candidates. Post-hoc insertion of missing literals/structure, corpus-specific target patches, arbitrary punctuation splitting, generic structural islands, source rewriting, broad fallback and evaluator weakening are not Product policies.
+Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of missing literals/structure, corpus-specific target patches, arbitrary punctuation deletion, generic structural islands, source rewriting, broad fallback and evaluator weakening are not Product policies.
 
 ## Complete gate scope must not be inferred from stress subsets
 
-**Decision.** Historical `product_numeric_failure_count` is a literal-bearing stress subset, not the complete gate. Complete maintained numeric/symbol evaluation is `rocketdict-maintained-numeric-integrity/5` over every selected Stage12 row.
+**Decision.** Complete maintained numeric/symbol evaluation is `rocketdict-maintained-numeric-integrity/5` over every selected Stage12 row. Historical narrower stress counters do not define release quality.
 
 ## Source-owned structure is narrow and source-defined
 
-**Decision.** Pre-MT structural treatment is allowed only when the class is exhaustively identifiable from immutable source structure, spans remain byte-exact, inline linguistic uses remain outside the rule, and any translated structural lexical content still comes from real raw MT candidates rather than identity/patch output.
-
-This principle covers established block structural labels and the current standalone illustration-label research/product wrapper. It does **not** authorize arbitrary bracket or punctuation preservation.
+**Decision.** Pre-MT structural treatment is allowed only when the class is exhaustively identifiable from immutable source structure, spans remain byte-exact, inline linguistic uses remain outside the rule, and translated lexical content still comes from real raw MT candidates rather than identity/patch output.
 
 ## Bare Roman fragments are not headings
 
-**Decision.** Standalone `II.`, `IV.` etc. produced by sentence segmentation are not automatically source-owned structure. Known failures are inline `Sect. IV.` / `Sect. II.` citation boundaries.
+**Decision.** Standalone `II.`, `IV.` etc. produced by sentence segmentation are not automatically source-owned structure. Known failures are inline citation boundaries.
 
-## Roman-after-Sect citation rescue is pair-level and opt-in
+## Existing opt-in rescue decisions remain
 
-**Decision.** Use `rocketdict-stage12-citation-boundary-pair-rescue/1`, not a broad context merge and not a heading rule. Trigger: contiguous ordinary previous row ending `Sect.` + uppercase Roman fragment already failing length. Candidate: exact raw rank-0 OPUS pair output. Acceptance: Product hard clean, repaired length, no new strict-debt category. Default OFF.
+- `rocketdict-stage12-length-failure-whole-context-rescue/1` remains default OFF.
+- `rocketdict-stage12-citation-boundary-pair-rescue/1` remains default OFF.
+- `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains default OFF/not public-wired. Context `2725` remains the semantic-loss counterexample proving generic mechanical cleanliness is insufficient.
+- `rocketdict-stage12-illustration-label-rescue/1` is accepted only as a narrow default-OFF/not-public-wired wrapper. Persisted run `9` is **24 numeric / 30 punctuation / 0 length, 52 unique**.
+- `rocketdict-maintained-emphasis-markup-preservation/1` remains a separate research veto rather than a retroactive Product hard gate.
 
-## Length-failure whole-context rescue remains opt-in
+## Punctuation residuals must remain defect-family-specific
 
-**Decision.** `rocketdict-stage12-length-failure-whole-context-rescue/1` remains default OFF. Mechanical full-corpus gain alone is insufficient Product-default evidence.
+**Decision.** Do not introduce a universal punctuation fixer. Current run-9 failures mix block footnotes, square-bracket payload loss, target-only delimiter hallucination, long-context question migration and other families with different root causes.
 
-## Generic whole-context strictness is not semantic proof
+## Marker-only footnote split is rejected
 
-**Decision.** Do not promote generic whole-context fallback merely because the strict mechanical selector accepts it.
+**Decision.** Do not Productize marker-only `[G]/[H]/[J]/[K]/[M]` retranslation despite the attractive **24/25/0, 47 unique** counterfactual.
 
-**Why.** Context `2725` removes an invented `=` yet silently drops source phrase `_per deliquium_`. Existing strict cleanliness therefore cannot substitute for semantic-preservation evidence.
+**Why.** Semantic inspection exposes fragment mistranslations (`shewn`→`сшито`, `_See our_`→`Посмотри на нас.`). Mechanical punctuation repair hides worse translation.
 
-## Ordinary Gutenberg underscore emphasis is a separate preservation signal
+## Exact-source OPUS whole-footnote n-best is exhausted for the current formulation
 
-**Decision.** Keep `rocketdict-maintained-emphasis-markup-preservation/1` as a separate research diagnostic/veto rather than retroactively changing historical strict contracts.
+**Decision.** Do not continue increasing beam/n-best on the same exact linguistic footnote bodies without a materially new representation/model hypothesis.
 
-## Numeric-hard split-context whole-context rescue remains narrow/default-OFF
+**Evidence.** Corrected whole-context workflow `34615540238` gives **0/30** strict+emphasis-safe candidates. Depth DOE `34615819431` evaluates beam/n-best `6/6`, `12/12`, `24/24`: **210 raw hypotheses, 0 mechanically admissible**.
 
-**Decision.** `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains a separate opt-in wrapper, not yet public-wired. Trigger and acceptance remain source/context defined; emphasis preservation is mandatory for its raw candidate.
+The failure is dominated by Gutenberg underscore/emphasis corruption and, in H, persistent archaic-word semantic error. This is model/representation evidence, not a reason to weaken emphasis preservation.
 
-**Evidence.** Full-*Opticks* run `34601313026` creates Stage12 run `8`: **29/34/0 → 25/33/0**, unique **59→55**, accepting contexts `550,669,1024,2238` and vetoing context `2725` for emphasis loss.
+## Context 2730 must not be rescued by the current whole/pair formulations
 
-## Punctuation residuals must be split by defect family
+**Decision.** Do not raise the maintained whole-context cap merely to absorb context `2730`, and do not Productize the tested 138/132-token pair windows.
 
-**Decision.** Do not introduce a universal punctuation repair/selector. Residuals mix source-owned markers, illustration payloads, footnote-reference fragments, parentheticals, question punctuation and other delimiter/context failures.
+**Why.** The whole Stage10 context is 339 NLP tokens; workflow `34616386780` produces 0 admissible candidates and clear long-context degradation. The <=160 pair experiment `34616665018` gives a mechanically clean opening window but semantic repetition/distortion, while the closing window loses context and has no admissible candidate. This is another direct case where gate cleanliness is not semantic proof.
 
-## Illustration rescue may use a source-specific deterministic raw n-best selector
+## Current square-bracket-loss OPUS n-best branch is negative
 
-**Decision.** `rocketdict-stage12-illustration-label-rescue/1` is accepted as a **default-OFF, not-public-wired Product wrapper** for the closed hard-failing standalone illustration-label family.
+**Decision.** Do not treat raw OPUS n-best as a solution for the current `[in Fig.]`, inline `[G]`, and `[Greek:a]` loss family.
 
-Trigger requirements:
-- row begins with standalone `[Illustration: ...]` plus blank-line separator;
-- row already has a maintained hard failure;
-- source structure is preserved byte-exactly;
-- ordinary suffix uses exact source and rank0 OPUS;
-- exact immutable `_Illustration._` may use canonical model input `Illustration.` with deterministic beam6/n6 and the first raw candidate satisfying hard/strict + structural target-form checks.
+**Evidence.** Workflow `34617363701` evaluates 24 raw hypotheses across the four current rows and finds zero admissible candidates. A future attempt needs a different source representation or model, not a deeper identical beam.
 
-No target rewrite, placeholder, literal injection or arbitrary bracket generalization is allowed.
+## Target-only delimiter hallucinations expose a baseline-model basin
 
-**Evidence.** Research v3 workflow `34609890716`, artifact `10267328730`, accepts exact source starts `72401,90105,203786` at raw ranks `3,3,0` and reaches **24/30/0, 52 unique**. Product Core CI `34610493157` is green. Persisted audit workflow `34610787826`, artifact `10268850347`, creates run `9`, output SHA `c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be`, DB SHA `9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad`, with byte-exact source coverage and exact raw applied targets.
+**Decision.** For the seven current source-no-delimiter / target-invented-delimiter rows, ordinary OPUS n-best is not a general rescue mechanism.
 
-**Default decision.** Evidence supports the wrapper as opt-in only. It does not yet support automatic/default Product promotion.
+**Evidence.** Workflow `34616844554`: only metadata seq `3` has strict-clean OPUS alternatives; six substantive rows remain without a strict-clean candidate. Some baseline outputs contain obvious unrelated domain/religious hallucinations that persist across the beam.
 
-## Run 9 is the current residual basis
+Do not implement target punctuation deletion. The correct research direction is model differential on the same immutable source bytes.
 
-**Decision.** After persisted illustration composition, residual research must use Stage12 run `9` identities/source spans, not run-8 sequence positions. Current gates are **24 numeric / 30 punctuation / 0 length, 52 unique**.
+## Pinned TC-big is the active independent model differential, not yet a Product fallback
 
-## Block-start footnote marker-only split is rejected as Product policy
+**Decision.** Use pinned `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, as the current independent real-MT research comparator.
 
-**Decision.** Do not productize marker-only `[G]/[H]/[J]/[K]/[M]` body retranslation despite the mechanical counterfactual **24/30/0,52 unique → 24/25/0,47 unique**.
+**Evidence.** Delimiter differential workflow `34617224048` finds strict-clean raw alternatives for **6/7** current cases (`3,1864,1878,2219,2382,2862`). Rank0 candidates in the severe hallucination rows restore source-domain meaning rather than just altering punctuation. Seq `3220` remains unresolved mechanically.
 
-**Why.** The first-row bodies are sentence fragments of larger bibliographic footnote paragraphs. L3 semantic inspection catches `_How to do this, is shewn in our_` → `Как это сделать, сшито в нашем...` and `_See our_` → `Посмотри на нас.`. Mechanical punctuation repair therefore masks translation-quality defects.
+**Interpretation.** A material portion of the remaining frontier is likely OPUS-baseline-model-specific rather than purely planner/evaluator failure.
 
-**Evidence.** Workflow `34611175668`, artifact `10268975960`, evidence SHA `14ecc93fe080a218dd9c62de35c7e6dff534867849e6c42cd677b905ef8d76fa`.
+**Non-promotion rule.** TC-big is research-only until an all-current-failures screen, semantic family review, deterministic source/failure trigger, persisted full-corpus regression, clean-row guardrail, license attribution, asset/runtime size/performance assessment and offline release strategy are complete.
 
-## Whole-footnote-context research must separate semantic and storage boundaries
+## Run 9 is the current persisted residual basis
 
-**Decision.** The next admissible footnote experiment is complete linguistic footnote-body translation with the marker and separators kept as source-owned bytes, deterministic raw n-best, strict Product checks and emphasis preservation.
+**Decision.** Residual research uses run `9` source spans/current identities. Current persisted gates are **24 numeric / 30 punctuation / 0 length, 52 unique**. Research counterfactuals do not replace that basis until a new persisted Product audit is created.
 
-Do not equate the first `\n\n` paragraph boundary with the end of the current Stage12 row group. In run `9`, `[H]` and `[M]` have current final rows that extend three bytes beyond the semantic paragraph end because they own additional blank-line bytes. A replacement harness must therefore model separately:
-1. marker bytes;
-2. linguistic body bytes;
-3. paragraph separator/trailing whitespace bytes;
-4. the enclosing set of current rows replaced for exact source coverage.
+## Prime/formula negative evidence remains binding
 
-**Evidence.** Initial workflow `34611517906` failed before MT evaluation on a fail-closed fixture assertion (`H` semantic end `151652` vs expected row-coverage end `151655`). This is a harness defect, not negative model evidence.
-
-## Prime and formula negative evidence remains binding
-
-**Decision.** Do not promote prime-fragment structural decomposition (`53 deg.`→`53 балла`, `hundred Feet`→`сто ног`), thousands grouping / narrow `x→×` preprocessing, or compact-formula spacing based on prior experiments; those branches either regressed semantics/successful cases or failed to rescue the target family.
+**Decision.** Do not promote prime-fragment structural decomposition, thousands grouping / narrow `x→×` preprocessing, compact-formula spacing, or broad citation/group coalescing based on prior experiments; those branches regressed semantics/successful cases or failed to rescue the class.
 
 ## MetricX is research-only
 
-**Decision.** MetricX-24 QE may rank immutable raw candidates, but neither its score nor preference is sufficient for Product selection without mechanical gates and semantic review.
+**Decision.** MetricX/QE may rank immutable raw candidates, but neither its score nor preference is sufficient for Product selection without mechanical gates and semantic review.
 
 ## Acceptance order remains smoke → full corpus → distributable Product
 
-**Decision.** User-facing real source→Stage25/replay must be green before full-corpus acceptance; full public-domain quality evidence must be stable before Windows distribution becomes the release frontier. `PRODUCT_TARGET.md` still requires unresolved hard translation failures to reach zero before approved final heavy evidence.
+**Decision.** User-facing real source→Stage25/replay must be green before full-corpus acceptance; final full public-domain quality evidence must reach zero unresolved hard failures before Windows distribution becomes the release frontier.
 
 ## Project memory uses progressive disclosure and mandatory synchronization
 
