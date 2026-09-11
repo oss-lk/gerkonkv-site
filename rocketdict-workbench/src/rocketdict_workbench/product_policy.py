@@ -154,9 +154,12 @@ def product_parameter_overrides(stage_number: int, implementation_key: str, *, s
             "run_assemble": True,
             # Mechanical full-Opticks gates accepted the semicolon resegmentation
             # rescue, but contiguous semantic review found meaning degradation.
-            # Keep Product Mode on immutable planner-v8 output until a replacement
-            # rescue is proven mechanically and semantically safe.
             "enable_selective_resegmentation_rescue": False,
+            # The unchanged whole-Stage10-context path already has a mechanically
+            # clean persisted Opticks rescue for the known 25/30/40 omission, but
+            # the broader corpus shadow is still under semantic review. Keep this
+            # research axis explicit and fail-closed until that review completes.
+            "enable_whole_context_rescue": False,
         }
         if source_kind == "subtitle":
             # Real product smoke showed a wider multi-sentence MT unit could
