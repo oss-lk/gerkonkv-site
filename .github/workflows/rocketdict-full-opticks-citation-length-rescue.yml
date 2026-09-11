@@ -11,6 +11,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_citation_length_rescue.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_citation_length_nbest_stable.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_marker_feasibility.py'
       - '.github/workflows/rocketdict-full-opticks-citation-length-rescue.yml'
   workflow_dispatch:
 
@@ -84,6 +85,8 @@ jobs:
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_citation_length_rescue.py
       - name: Probe staged raw n-best for isolated citation failures
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_citation_length_nbest_stable.py
+      - name: Evaluate source-owned block footnote markers across full Opticks
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_marker_feasibility.py
       - name: Re-verify immutable Product database
         if: always()
         shell: bash
@@ -110,6 +113,7 @@ jobs:
             work/opus-asset-build.json
             work/citation-input/full-opticks-citation-length-rescue-feasibility.json
             work/citation-input/full-opticks-citation-length-nbest.json
+            work/citation-input/full-opticks-block-footnote-marker-feasibility.json
             work/citation-length-runtime-evidence/**
           if-no-files-found: warn
           retention-days: 90
