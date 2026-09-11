@@ -1,0 +1,138 @@
+name: RocketDict Full Opticks Target Delimiter Addition NBest Run9
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/emphasis_markup.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_target_delimiter_addition_nbest_run9.py'
+      - '.github/workflows/rocketdict-full-opticks-target-delimiter-addition-nbest-run9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  target-delimiter-addition-nbest-run9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE_RUN_ID: '34610787826'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      BASE_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT: ${{ github.workspace }}/work/target-delimiter-addition-nbest-run9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product and Workbench runtimes
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+      - name: Download immutable illustration run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Assemble and verify persisted run-9 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT"
+          cp work/base/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify pinned OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Run target-only delimiter raw n-best screening
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_target_delimiter_addition_nbest_run9.py
+      - name: Verify read-only n-best screening invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT/full-opticks-target-delimiter-addition-nbest-run9.json"
+          test -s "$evidence"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT'])
+          evidence = json.loads((root / 'full-opticks-target-delimiter-addition-nbest-run9.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-target-delimiter-addition-nbest-run9/1':
+              raise SystemExit(f"schema drift: {evidence['schema']!r}")
+          if evidence['attempted_sequences'] != [3,1864,1878,2219,2382,2862,3220]:
+              raise SystemExit(f"delimiter cohort sequence drift: {evidence['attempted_sequences']!r}")
+          if evidence['attempted_source_starts'] != [488,326217,329423,388656,417917,501398,569170]:
+              raise SystemExit(f"delimiter cohort span drift: {evidence['attempted_source_starts']!r}")
+          if evidence['attempt_count'] != 7:
+              raise SystemExit('delimiter cohort size drift')
+          for case in evidence['cases']:
+              if len(case['candidates']) != 6:
+                  raise SystemExit(f"n-best cardinality drift for seq {case['sequence_number']}")
+              for candidate in case['candidates']:
+                  if candidate['mechanically_admissible'] and candidate['emphasis_markup']['passed'] is not True:
+                      raise SystemExit(f"emphasis veto bypassed for seq {case['sequence_number']}")
+          base=evidence['base_hard_gate_counts']; counter=evidence['counterfactual_hard_gate_counts']
+          if any(counter[k] > base[k] for k in ('numeric_symbol','punctuation','length','unique')):
+              raise SystemExit(f"counterfactual regression: {counter!r}")
+          if evidence['source_coverage_byte_exact'] is not True or evidence['database_unchanged'] is not True:
+              raise SystemExit('read-only/source coverage proof missing')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection'):
+              if evidence[flag] is not False:
+                  raise SystemExit(f"unsafe flag drift: {flag}={evidence[flag]!r}")
+          if evidence['promotion_allowed'] is not False or evidence['automatic_product_default_allowed'] is not False:
+              raise SystemExit('research unexpectedly authorizes promotion')
+          print('Run-9 target-only delimiter n-best evidence verified.')
+          PY
+      - name: Record runtime identities
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/target-delimiter-runtime
+          python -VV > work/target-delimiter-runtime/python.txt || true
+          python -m pip freeze | sort > work/target-delimiter-runtime/pip-freeze.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/target-delimiter-runtime/opus.sha256 || true
+          if [ -s "$ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT/full-opticks-target-delimiter-addition-nbest-run9.json" ]; then
+            sha256sum "$ROCKETDICT_TARGET_DELIMITER_NBEST_ROOT/full-opticks-target-delimiter-addition-nbest-run9.json" > work/target-delimiter-runtime/evidence.sha256
+          fi
+      - name: Upload target-delimiter n-best evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-target-delimiter-addition-nbest-run9
+          path: |
+            work/opus-asset-build.json
+            work/target-delimiter-addition-nbest-run9/full-opticks-target-delimiter-addition-nbest-run9.json
+            work/target-delimiter-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
