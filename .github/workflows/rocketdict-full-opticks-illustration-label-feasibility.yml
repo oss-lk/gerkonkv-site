@@ -78,7 +78,7 @@ jobs:
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
       - name: Run illustration-label structural split feasibility
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_illustration_label_feasibility.py
-      - name: Verify feasibility invariants
+      - name: Verify fail-closed v2 feasibility invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -89,19 +89,30 @@ jobs:
           from pathlib import Path
           root = Path(os.environ['ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT'])
           evidence = json.loads((root / 'full-opticks-illustration-label-feasibility.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-illustration-label-feasibility/2':
+              raise SystemExit(f"schema drift: {evidence['schema']!r}")
           if evidence['standalone_illustration_label_count'] != 57:
               raise SystemExit(f"illustration label count drift: {evidence['standalone_illustration_label_count']!r}")
           if evidence['attempted_source_starts'] != [72401, 90105, 203786]:
               raise SystemExit(f"illustration failure cohort drift: {evidence['attempted_source_starts']!r}")
-          if evidence['accepted_source_starts'] != [72401, 90105, 203786]:
-              raise SystemExit(f"illustration candidate acceptance drift: {evidence['accepted_source_starts']!r}")
+          if evidence['normalized_model_input_source_starts'] != [72401, 90105]:
+              raise SystemExit(f"normalized-input cohort drift: {evidence['normalized_model_input_source_starts']!r}")
+          if evidence['accepted_source_starts'] != [203786]:
+              raise SystemExit(f"fail-closed acceptance drift: {evidence['accepted_source_starts']!r}")
+          normalized = [case for case in evidence['cases'] if case['source_model_input_normalized']]
+          if [case['remainder_rank0_target'] for case in normalized] != ['Пример.', 'Пример.']:
+              raise SystemExit(f"normalized OPUS target drift: {[case['remainder_rank0_target'] for case in normalized]!r}")
+          if any(case['illustration_word_target_shape']['passed'] for case in normalized):
+              raise SystemExit('ambiguous Illustration model input unexpectedly passed semantic target form')
+          if evidence['v1_negative_evidence']['observed_raw_rank0_target'] != '*Иллюстрация._':
+              raise SystemExit('v1 markup-corruption evidence drift')
           if evidence['base_hard_gate_counts'] != {'numeric_symbol': 25, 'punctuation': 33, 'length': 0, 'unique': 55}:
               raise SystemExit(f"base hard gates drift: {evidence['base_hard_gate_counts']!r}")
-          if evidence['counterfactual_hard_gate_counts'] != {'numeric_symbol': 24, 'punctuation': 30, 'length': 0, 'unique': 52}:
+          if evidence['counterfactual_hard_gate_counts'] != {'numeric_symbol': 24, 'punctuation': 32, 'length': 0, 'unique': 54}:
               raise SystemExit(f"counterfactual hard gates drift: {evidence['counterfactual_hard_gate_counts']!r}")
           if evidence['source_coverage_byte_exact'] is not True or evidence['database_unchanged'] is not True:
               raise SystemExit('read-only/source-coverage proof missing')
-          print('Illustration-label feasibility invariants verified.')
+          print('Illustration-label fail-closed v2 evidence verified.')
           PY
       - name: Record runtime identities
         if: always()
