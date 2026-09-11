@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-"""Research-only n-best full-footnote-context feasibility over persisted run 9."""
+"""Research-only n-best full-footnote-context feasibility over persisted run 9.
+
+The current Stage12 rows do not always end exactly at the semantic footnote
+paragraph boundary: H and M own three additional newline bytes in their final
+row.  This harness therefore separates source-defined marker/body/paragraph
+separator bytes from the enclosing run-9 row-coverage envelope.  Only the
+linguistic body is sent to OPUS; marker, paragraph separator, and any additional
+trailing blank-line bytes are preserved byte-exactly as source-owned structure.
+"""
 
 import hashlib
 import json
@@ -14,7 +22,7 @@ from rocketdict.emphasis_markup import compare_emphasis_markup_preservation
 from rocketdict.runtime import OpusTranslator
 from rocketdict.translation_rescue import evaluate_rescue_pair
 
-SCHEMA = "rocketdict-full-opticks-block-footnote-context-feasibility-run9/1"
+SCHEMA = "rocketdict-full-opticks-block-footnote-context-feasibility-run9/2"
 DB_SHA = "9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad"
 RUN_ID = 9
 OUTPUT_SHA = "c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be"
@@ -22,7 +30,8 @@ TEXT_SHA = "436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a"
 BASE = {"numeric_symbol": 24, "punctuation": 30, "length": 0, "unique": 52}
 STARTS = [151466, 151557, 253849, 253919, 254102]
 LETTERS = list("GHJKM")
-ENDS = [151557, 151655, 253919, 254026, 254205]
+PARAGRAPH_ENDS = [151557, 151652, 253919, 254026, 254202]
+ROW_COVERAGE_ENDS = [151557, 151655, 253919, 254026, 254205]
 MARKER = re.compile(r"^\[(?P<letter>[A-Z])\](?P<space>[ \t]+)")
 
 
@@ -86,16 +95,33 @@ def _counterfactual(
             result.append(dict(row))
             continue
         result.extend(replacement["rows"])
-        group_end = int(replacement["group_end"])
+        coverage_end = int(replacement["row_coverage_end"])
         skipped.update(
             int(candidate["source_start"])
             for candidate in rows
-            if start < int(candidate["source_start"]) < group_end
+            if start < int(candidate["source_start"]) < coverage_end
         )
     result.sort(key=lambda row: int(row["source_start"]))
     for sequence, row in enumerate(result):
         row["sequence_number"] = sequence
     return result
+
+
+def _source_owned_row(
+    *, start: int, end: int, source: str, role: str
+) -> dict[str, Any]:
+    return {
+        "sequence_number": 0,
+        "kind": "translation_segment",
+        "source_start": start,
+        "source_end": end,
+        "source_text": source,
+        "target_text": source,
+        "payload": {
+            "research_source_owned_block_footnote_structure": True,
+            "source_owned_role": role,
+        },
+    }
 
 
 def main() -> int:
@@ -127,38 +153,78 @@ def main() -> int:
 
     by_start = {int(row["source_start"]): row for row in rows}
     groups: list[dict[str, Any]] = []
-    for start, letter, expected_end in zip(STARTS, LETTERS, ENDS, strict=True):
+    for start, letter, expected_paragraph_end, expected_coverage_end in zip(
+        STARTS, LETTERS, PARAGRAPH_ENDS, ROW_COVERAGE_ENDS, strict=True
+    ):
         first = by_start[start]
-        match = MARKER.match(str(first.get("source_text") or ""))
+        first_source = str(first.get("source_text") or "")
+        match = MARKER.match(first_source)
         if match is None or match.group("letter") != letter:
             raise RuntimeError(f"footnote marker trigger drift {letter}")
-        if _verdict(first.get("source_text"), first.get("target_text")).get("product_hard_passed") is True:
+        if _verdict(first_source, first.get("target_text")).get("product_hard_passed") is True:
             raise RuntimeError(f"footnote hard-failure trigger drift {letter}")
-        marker = str(first["source_text"])[: match.end()]
-        end = content.find("\n\n", start)
-        if end < 0:
-            raise RuntimeError(f"footnote paragraph end missing {letter}")
-        end += 2
-        if end != expected_end:
-            raise RuntimeError(f"footnote paragraph end drift {letter}: {end}")
-        source = content[start:end]
-        body = source[len(marker) :]
-        members = [
-            row
-            for row in rows
-            if start <= int(row["source_start"]) and int(row["source_end"]) <= end
-        ]
-        if "".join(str(row.get("source_text") or "") for row in members) != source:
-            raise RuntimeError(f"footnote group coverage drift {letter}")
+
+        marker = first_source[: match.end()]
+        marker_end = start + len(marker)
+        separator_start = content.find("\n\n", start)
+        if separator_start < 0:
+            raise RuntimeError(f"footnote paragraph separator missing {letter}")
+        paragraph_end = separator_start + 2
+        if paragraph_end != expected_paragraph_end:
+            raise RuntimeError(
+                f"footnote semantic paragraph end drift {letter}: {paragraph_end}"
+            )
+
+        members: list[dict[str, Any]] = []
+        cursor = start
+        for row in rows:
+            row_start = int(row["source_start"])
+            row_end = int(row["source_end"])
+            if row_end <= start:
+                continue
+            if row_start >= expected_coverage_end:
+                break
+            if row_start != cursor:
+                raise RuntimeError(f"footnote row coverage gap {letter} at {cursor}")
+            members.append(row)
+            cursor = row_end
+            if cursor >= expected_coverage_end:
+                break
+        if cursor != expected_coverage_end:
+            raise RuntimeError(
+                f"footnote row coverage end drift {letter}: {cursor}"
+            )
+        envelope_source = content[start:expected_coverage_end]
+        if "".join(str(row.get("source_text") or "") for row in members) != envelope_source:
+            raise RuntimeError(f"footnote row coverage bytes drift {letter}")
+        if paragraph_end > expected_coverage_end:
+            raise RuntimeError(f"footnote semantic boundary exceeds row coverage {letter}")
+
+        body = content[marker_end:separator_start]
+        paragraph_separator = content[separator_start:paragraph_end]
+        trailing = content[paragraph_end:expected_coverage_end]
+        if not body.strip():
+            raise RuntimeError(f"footnote linguistic body unexpectedly empty {letter}")
+        if paragraph_separator != "\n\n":
+            raise RuntimeError(f"footnote paragraph separator drift {letter}")
+        if trailing.strip():
+            raise RuntimeError(f"footnote trailing row bytes are not whitespace {letter}")
+
         groups.append(
             {
                 "letter": letter,
                 "start": start,
-                "end": end,
+                "marker_end": marker_end,
+                "body_end": separator_start,
+                "paragraph_end": paragraph_end,
+                "row_coverage_end": expected_coverage_end,
                 "marker": marker,
                 "body": body,
+                "paragraph_separator": paragraph_separator,
+                "trailing": trailing,
                 "members": members,
-                "source": source,
+                "semantic_source": content[start:paragraph_end],
+                "envelope_source": envelope_source,
             }
         )
 
@@ -199,43 +265,67 @@ def main() -> int:
             )
             if first_admissible is None and admissible:
                 first_admissible = rank
+
         if first_admissible is not None:
-            boundary = group["start"] + len(group["marker"])
-            target = evaluated[first_admissible]["target_text"]
-            replacements[group["start"]] = {
-                "group_end": group["end"],
-                "rows": [
-                    {
-                        "sequence_number": 0,
-                        "kind": "translation_segment",
-                        "source_start": group["start"],
-                        "source_end": boundary,
-                        "source_text": group["marker"],
-                        "target_text": group["marker"],
-                        "payload": {"research_source_owned_block_footnote_marker": True},
+            target = str(evaluated[first_admissible]["target_text"])
+            replacement_rows = [
+                _source_owned_row(
+                    start=int(group["start"]),
+                    end=int(group["marker_end"]),
+                    source=str(group["marker"]),
+                    role="marker",
+                ),
+                {
+                    "sequence_number": 0,
+                    "kind": "translation_segment",
+                    "source_start": int(group["marker_end"]),
+                    "source_end": int(group["body_end"]),
+                    "source_text": str(group["body"]),
+                    "target_text": target,
+                    "payload": {
+                        "research_raw_nbest_whole_footnote_body": True,
+                        "selected_rank": first_admissible,
                     },
-                    {
-                        "sequence_number": 0,
-                        "kind": "translation_segment",
-                        "source_start": boundary,
-                        "source_end": group["end"],
-                        "source_text": group["body"],
-                        "target_text": target,
-                        "payload": {
-                            "research_raw_nbest_whole_footnote_body": True,
-                            "selected_rank": first_admissible,
-                        },
-                    },
-                ],
+                },
+                _source_owned_row(
+                    start=int(group["body_end"]),
+                    end=int(group["paragraph_end"]),
+                    source=str(group["paragraph_separator"]),
+                    role="paragraph_separator",
+                ),
+            ]
+            if group["trailing"]:
+                replacement_rows.append(
+                    _source_owned_row(
+                        start=int(group["paragraph_end"]),
+                        end=int(group["row_coverage_end"]),
+                        source=str(group["trailing"]),
+                        role="row_trailing_whitespace",
+                    )
+                )
+            if "".join(str(row["source_text"]) for row in replacement_rows) != str(
+                group["envelope_source"]
+            ):
+                raise RuntimeError(
+                    f"footnote replacement source envelope drift {group['letter']}"
+                )
+            replacements[int(group["start"])] = {
+                "row_coverage_end": int(group["row_coverage_end"]),
+                "rows": replacement_rows,
             }
+
         cases.append(
             {
                 "letter": group["letter"],
                 "source_start": group["start"],
-                "source_end": group["end"],
-                "source_text": group["source"],
+                "semantic_paragraph_end": group["paragraph_end"],
+                "row_coverage_end": group["row_coverage_end"],
+                "semantic_source": group["semantic_source"],
+                "envelope_source": group["envelope_source"],
                 "marker_source": group["marker"],
                 "body_source": group["body"],
+                "paragraph_separator_source": group["paragraph_separator"],
+                "row_trailing_whitespace_source": group["trailing"],
                 "primary_member_spans": [
                     [int(row["source_start"]), int(row["source_end"])]
                     for row in group["members"]
@@ -243,7 +333,9 @@ def main() -> int:
                 "hypotheses": evaluated,
                 "first_mechanically_admissible_rank": first_admissible,
                 "first_mechanically_admissible_target": (
-                    None if first_admissible is None else evaluated[first_admissible]["target_text"]
+                    None
+                    if first_admissible is None
+                    else evaluated[first_admissible]["target_text"]
                 ),
             }
         )
@@ -259,7 +351,10 @@ def main() -> int:
 
     payload: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "research-only source-owned marker plus whole contiguous footnote body n-best; emphasis preservation is mandatory mechanical veto",
+        "purpose": (
+            "research-only source-owned marker/separators plus complete linguistic "
+            "footnote body n-best; emphasis preservation is mandatory mechanical veto"
+        ),
         "promotion_allowed": False,
         "automatic_product_default_allowed": False,
         "semantic_review_required": True,
@@ -268,7 +363,8 @@ def main() -> int:
         "base_translation_output_sha256": OUTPUT_SHA,
         "attempted_source_starts": STARTS,
         "attempted_letters": LETTERS,
-        "group_ends": ENDS,
+        "semantic_paragraph_ends": PARAGRAPH_ENDS,
+        "row_coverage_ends": ROW_COVERAGE_ENDS,
         "base_hard_gate_counts": BASE,
         "counterfactual_hard_gate_counts": counts,
         "base_segment_count": len(rows),
@@ -288,12 +384,16 @@ def main() -> int:
     }
     payload["evidence_sha256"] = _canonical_sha(payload)
     output = root / "full-opticks-block-footnote-context-feasibility-run9.json"
-    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(
         json.dumps(
             {
                 "schema": SCHEMA,
-                "mechanically_admissible_letters": payload["mechanically_admissible_letters"],
+                "mechanically_admissible_letters": payload[
+                    "mechanically_admissible_letters"
+                ],
                 "selected": [
                     (
                         case["letter"],
