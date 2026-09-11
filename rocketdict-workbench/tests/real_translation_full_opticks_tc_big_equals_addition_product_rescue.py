@@ -228,7 +228,6 @@ def main() -> int:
         if (
             rescue.get("contract") != TC_BIG_EQUALS_RESCUE_CONTRACT
             or rescue.get("selector_contract") != TC_BIG_EQUALS_SELECTOR_CONTRACT
-            or rescue.get("trigger_contract") != TC_BIG_EQUALS_TRIGGER_CONTRACT
         ):
             raise RuntimeError("equals row provenance contract drift")
         for flag in (
@@ -249,6 +248,8 @@ def main() -> int:
             untouched += 1
             continue
 
+        if rescue.get("trigger_contract") != TC_BIG_EQUALS_TRIGGER_CONTRACT:
+            raise RuntimeError("equals applied trigger-contract provenance drift")
         selected_rank = int(payload["selected_rank"])
         target = str(row.get("target_text") or "")
         matches = [
