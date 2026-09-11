@@ -14,79 +14,111 @@ This file stores durable conclusions from maintained Product translation-quality
 - Numeric-hard whole-context rescue: `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1`, default OFF/not public-wired.
 - Illustration-label rescue: `rocketdict-stage12-illustration-label-rescue/1`, default OFF/not public-wired.
 - Gutenberg emphasis diagnostic: `rocketdict-maintained-emphasis-markup-preservation/1`, research veto rather than Product hard gate.
-- Independent research MT: pinned `Helsinki-NLP/opus-mt-tc-big-en-zle`, revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, `model.safetensors` SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0; research-only unless separate Product evidence promotes it.
+- Independent research MT: pinned `Helsinki-NLP/opus-mt-tc-big-en-zle`, revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, `model.safetensors` SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0. It remains research-only.
 
 ## Canonical contiguous Opticks evidence
 
 Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters.
 
-Progressive persisted frontier:
+Persisted progression:
 - structural-label `/2` baseline run `4`: **30 numeric / 34 punctuation / 5 length**, **64 unique**;
 - length+pair-citation run `7`: **29/34/0**, **59 unique**;
 - numeric-hard run `8`: **25/33/0**, **55 unique**;
 - illustration composition run `9`: **24/30/0**, **52 unique**.
 
-Run `9` is the current residual basis. Workflow `34610787826`, artifact `10268850347`; output SHA `c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be`, SQLite SHA `9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad`, `3346` segments. Source coverage is byte-exact, untouched rows base-exact, applied illustration targets exact raw hypotheses, SQLite integrity clean and unsafe rewrite/placeholder flags false.
+Run `9` remains the current Product residual basis. Workflow `34610787826`, artifact `10268850347`; output SHA `c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be`, SQLite SHA `9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad`, `3346` segments. Source coverage is byte-exact, untouched rows base-exact, SQLite integrity is clean, and rewrite/placeholder/literal-injection flags are false.
 
-## Post-run9 OPUS findings
+Research counterfactuals below do not replace run `9` until a new persisted Product audit is created.
 
-### Footnote-definition paragraphs
+## Exhausted / rejected OPUS residual branches
 
-The five current block-start marker failures `[G]/[H]/[J]/[K]/[M]` cannot be safely solved by the local marker/body split. Marker-only workflow `34611175668` mechanically suggests **24/25/0, 47 unique**, but semantic inspection catches `shewn`→`сшито` and `_See our_`→`Посмотри на нас.`.
+Current residual families are not safely solved by a generic OPUS fallback:
 
-The corrected complete-footnote-body formulation separates source-owned marker, linguistic body and trailing blank-line bytes. Workflow `34615540238`, artifact `10269324277`, artifact digest `8320b32015600e90ea06a1aba781e928cb0efc8e365bd6539cebddd249e0d264`; evidence file SHA `87474bdc7177b701c03bf9f0dc860d79db297daa1dc4b24a00935f10cb9d7c1a`, internal evidence SHA `6226b469de51b68dcbbb7a90473ee6aa618903104b9098b722d34fefeb5db652`. Result: **0/30** beam6/n6 candidates satisfy strict checks plus emphasis preservation, so the counterfactual remains exactly **24/30/0, 52 unique**.
+- Block footnotes `[G]/[H]/[J]/[K]/[M]`: marker-only rescue looked mechanically attractive but contains semantic errors; corrected whole-footnote beam/n-best through `24/24` produced **210 raw hypotheses, 0 mechanically admissible** (`34615540238`, `34615819431`).
+- Context `2730`: exact Stage10 context is 339 NLP tokens; whole-context and tested 138/132-token windows either have no admissible candidate or semantic repetition/distortion (`34616386780`, `34616665018`).
+- Current square-bracket losses (`[in Fig.]`, inline `[G]`, `[Greek:a]` family): **0/24** admissible OPUS hypotheses (`34617363701`).
+- Target-only delimiter additions: ordinary OPUS beam6/n6 gives a strict-clean alternative only for metadata seq `3`; six substantive cases remain trapped in the same bad model basin (`34616844554`).
+- Earlier prime-fragment decomposition, thousands-grouping / narrow `x→×`, compact-formula spacing and broad citation/group coalescing remain rejected because they regressed semantics or failed to rescue the class.
 
-A depth DOE then tested beam/n-best `6/6`, `12/12`, `24/24`. Workflow `34615819431`, artifact `10269174895`, digest `d710734a482d9172020a183f86e979d35900793c6418f5e5511d59f523acfaf2`, evidence file SHA `a0a234d46f5e01078bb908eca6a8b2a40697445b953795c629489c4b326a0190`, internal evidence SHA `e6ea6ded3f9443f2e3d4cce2798095e2c5a910cf5f252b260e3ca141f9f9003e`: **210 raw hypotheses, 0 mechanically admissible**. The same exact-source OPUS n-best direction is exhausted absent a materially new source representation/model hypothesis.
+Do not spend more effort on an unchanged OPUS formulation without a materially new source representation/model hypothesis.
 
-### Context 2730 question-mark migration
+## Independent TC-big: all-current-failures differential
 
-The exact Stage10 context is 339 NLP tokens, well above the maintained 160-token rescue cap. Whole-context workflow `34616386780`, artifact `10270386478`, evidence file SHA `21742d26c7227d6485e09295fcef68509baf021a8fbcaba90cfd8c7ca760aefc`, internal evidence SHA `e2e5263ae9a2d0e2eedb570312e9e6551c663a248e229f3c2546ca0e1408fbc0`: **0/6** admissible candidates and no gate gain; outputs show long-context semantic degradation.
+The delimiter pilot first established that TC-big can escape obvious OPUS hallucination basins. The full run-9 screen then evaluated every one of the **52** current hard-failing rows with six raw TC-big hypotheses.
 
-Two disjoint windows of 138 and 132 NLP tokens were tested in workflow `34616665018`, artifact `10270681641`, digest `f09217edc12af92cd53796eeba7c7433aa34dc494f7303fac8320801f0eb2a27`, evidence file SHA `329128ebd2fece684302ac485175b31a687fc247f1318ab133a5fa72249a1ce7`, internal evidence SHA `5e6ded9ad3e95b78478a93e565820a94939f169234da5441988edcd2f5b70a20`. The opening window has mechanically admissible rank0 and would yield **24/29/0, 51 unique**, but semantic inspection shows repetition/distortion; the closing window has no admissible candidate and loses earlier context. Mechanical strictness therefore does not justify Product rescue here.
+Workflow `34621706640`; artifact `10272283502`, digest `sha256:907f34473ed4a6482b505fca68006880f0a8819a1b399ca85a85f467511301fc`.
+Evidence file SHA-256 `5c87500453f9443f5aff42d4bfea1bc055b48fa3a2ec747e13ec99581fe16f69`; internal evidence SHA-256 `1e3ce22828f72b2409e1a4093646ef0a74a4dcf9b224b3f59d286011acbebca7`.
+Schema: `rocketdict-full-opticks-alternative-mt-current-hard-failures-run9/1`.
 
-### Square-bracket losses
+Results:
+- `52` hard-failing run-9 rows examined read-only;
+- `32/52` have at least one raw TC-big hypothesis that is mechanically admissible under maintained strict checks plus emphasis preservation;
+- there are `172` mechanically admissible hypotheses across those 32 cases;
+- the purely mechanical upper bound would move **24/30/0, 52 unique → 13/8/0, 20 unique**;
+- immutable run-9 DB SHA is unchanged and source coverage remains byte-exact;
+- no source/target rewrite, placeholders, literal injection or corpus-specific target patches are used.
 
-Four current rows lose source square-bracket structure/payload (`[in Fig.]`, inline `[G]`, `[Greek:a]` family). Raw OPUS beam6/n6 screening workflow `34617363701`, artifact `10270323366`, digest `73f939111f70e60ef677eee55f0898fee88d6646c81c49d4eaa9a1b5dab28780`, evidence file SHA `0aff04887c1b96099e907848441422f79973d7aa6bec8ec56ca0927d1bfa3c9f`, internal evidence SHA `76d578c3de6db93a0ebc3a3658077beff402e11c4b4530c532a4b1bc03f738a8`: **0/24** admissible candidates. This is a stable baseline-model behavior, not a rank0 accident.
+This is strong evidence that much of the residual frontier is baseline-model-specific. It is **not** Product selection. Manual inspection found cases where a mechanically clean TC-big row completes or punctuates a fragment that continues in the neighboring Stage12 row, and other cases with terminology/semantic concerns. Row-local hard-gate cleanliness therefore remains insufficient.
 
-### Target-only delimiter additions / hallucinations
+## MetricX-24 reference-free QE audit
 
-Seven current run-9 rows have source without paired delimiters while the OPUS target invents them. OPUS n-best workflow `34616844554`, artifact `10271426528`, digest `5d9d1829d7d316b458378fa45acb5e8bda468c04a9078ed0bc641491b8d06fd8`, evidence file SHA `af17c5e88ccf33ae96d7d1aeb95cc84783b9890476dc2a3335dc119d25274721`, internal evidence SHA `465d2fca5e0787ad23210858dc1db3e37c004be141b7f56d010f3d5c5b1f0abd`:
-- only metadata seq `3` has strict-clean raw alternatives (first strict rank2);
-- six substantive rows have **0** strict-clean candidates in beam6/n6;
-- the single metadata substitution would mechanically give **24/29/0, 51 unique**, but is too narrow to justify a general Product policy.
+Pinned MetricX-24 was run only as an independent research ranking surface over the mechanically admissible TC-big hypotheses; it is not an acceptance gate.
 
-Several substantive baseline outputs contain obvious domain hallucinations such as religious terms unrelated to the source. Their persistence across the OPUS beam shows a model-basin problem rather than a bad single rank.
+Workflow `34622530818` completed green. Artifact `10273439286`, digest `sha256:9eabcf24353fc46e285eff432373048ca06d9b96d14029153fbe7f95ccead34d`.
+Evidence file SHA-256 `8272526960ee7c1a40bd4c76e84a1b878e396393ab967db73186d171c690c336`; internal evidence SHA-256 `949ffd1fc034a8d1aa5701b93eff1ff3507b5a58fda83dd1bdc08c3782018ad2`.
+Schema: `rocketdict-full-opticks-metricx-qe-current-hard-failures-run9/1`.
 
-## Independent TC-big differential
+Pinned QE identity:
+- `google/metricx-24-hybrid-large-v2p6-bfloat16`, revision `febb720e29a059df2e8af3ffd71dcdc9e0a24910`;
+- weights SHA-256 `b1f2c03ab5ec5318a55b90b42eefa22431daa7b1a8e28a97a6aef23d18a24278`;
+- tokenizer `google/mt5-large`, revision `50b7223e98fcd124b0cabb1ec81bc6324c7df107`.
 
-The pinned independent TC-big model was rerun on those seven delimiter-addition rows in workflow `34617224048`, artifact `10271482215`, digest `1c1e5cda7283171acd732431133b13acbe4a27e9406fb1da1b085325123db7a5`; evidence file SHA `77afbcd5e406f54fd71c66e493d6636ab3788f342ab075f924622d7e7176fe8c`, internal evidence SHA `e39bcd40219edc642f8e8179669ff0ece3f024b8260cd443abf2b8ef431db798`.
+Results:
+- `32` cases / `172` admissible TC-big candidates scored;
+- MetricX prefers at least one admissible TC-big candidate over OPUS in `30/32` cases;
+- it prefers the first mechanically admissible TC-big candidate over OPUS in `29/32` cases;
+- best-QE admissible candidate ranks are distributed across all six beam ranks, so rank0 alone is not a justified selector.
 
-Strict-clean raw TC-big alternatives exist for **6/7** rows: `3,1864,1878,2219,2382,2862`; seq `3220` remains without a strict-clean alternative. In the most important hallucination cases, TC-big rank0 restores source-domain meaning instead of merely avoiding delimiters. This is strong evidence that a material part of the residual frontier is baseline-model-specific.
+Interpretation: QE supports the hypothesis that TC-big often improves the residual rows, but it does not supply a safe automatic Product threshold or remove the need for boundary-aware semantic evidence.
 
-This result does **not** yet make TC-big a Product fallback. It establishes the next research question: how much of all 52 run-9 hard failures has a mechanically and semantically superior raw candidate from the independently pinned model, and can a source-defined failure trigger select it without degrading clean Product rows or creating a large runtime/release burden?
+## CTranslate2 feasibility is proven; parity is not
 
-## Active all-52 differential
+The pinned TC-big Marian snapshot was converted to CTranslate2 4.8.2 float32 and successfully executed in a separate runtime where the audit script did not import Torch. This proves a possible torch-free inference architecture, but the first parity formulation did **not** reproduce Transformers hypotheses.
 
-`rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_current_hard_failures_run9.py` defines a read-only screen over all 52 current hard-failing rows using the same pinned TC-big identity and six raw hypotheses. The immediate next step is a reproducible GitHub Actions workflow against immutable run-9 DB, followed by survivor-family classification and semantic review. No automatic fallback/promotion is authorized before that evidence exists.
+Workflow `34622860381` completed green. Artifact `10273014315`, digest `sha256:2f3033ed90b3397e638d5183b271a59a63c9002369a4fa16c2128813bd0c75d0`.
+Evidence file SHA-256 `fe84f70a104d3906a4d426b7c6dd79ed7d410faac093dd97c6f930ada0f1c43c`; internal evidence SHA-256 `73f6640e1acf78d774872b6b75149e8344640bda6f2dac817667d797e6bb1ce3`.
+Schema: `rocketdict-full-opticks-tc-big-ct2-parity-run9/1`.
 
-## Durable negative evidence / promotion rules
+First-pass results:
+- exact rank0 matches to Transformers: `0/52`;
+- cases with any exact hypothesis overlap: `0/52`;
+- mechanically admissible CT2 cases: `15/52`, `84` hypotheses;
+- CT2-only mechanical upper bound: **19/20/0, 37 unique**.
 
-Do not repeat unchanged without a new hypothesis:
-- generic whole-context strictness can hide semantic loss (context `2725`);
-- marker-only footnote splitting is semantically insufficient;
-- exact-source whole-footnote OPUS n-best through 24 hypotheses yields 0 safe candidates;
-- whole 339-token context 2730 and its current <=160 pair formulation are semantically unsafe;
-- OPUS n-best does not solve current square-bracket-loss cases;
-- OPUS n-best remains trapped for six substantive target-only delimiter hallucination rows;
-- prime-fragment decomposition, thousands grouping / narrow `x→×`, compact-formula spacing and broad citation/group coalescing remain rejected from earlier evidence;
-- target repair, literal injection, placeholders, source rewriting and evaluator weakening remain forbidden.
+Therefore conversion success must not be equated with generation parity. The current harness used raw SentencePiece-side multilingual-prefix handling rather than a demonstrated reproduction of MarianTokenizer + Transformers generation semantics. Root cause must be proven by a corrected tokenizer/generation parity experiment before any release/runtime conclusion is promoted.
 
-Promotion principles:
+## Stage10-context boundary finding
+
+A safer second-model fallback cannot simply replace isolated Stage12 rows because some rows are fragments of a larger source sentence/context. A research harness therefore grouped the 52 hard rows into their **50** original Stage10 contexts.
+
+Initial workflow `34623402220` failed fail-closed before translation on context `2480:2480` with `run9 member coverage drift`; this is an orchestration/boundary finding, not model-quality evidence.
+
+L3 inspection shows:
+- Stage10 context 2480 source span is `[480217,480300)` and ends with `_Qu._ 19. ` including one trailing space;
+- run-9 row 2729 covers `_Qu._ 19.` as `[480290,480299)`;
+- row 2730 starts at byte `480299` and owns the following leading space plus the next question body.
+
+Thus the exact Stage10 boundary cuts through a current Stage12 row. A context candidate cannot safely replace that exact span by whole existing Stage12 rows without either slicing an existing translated row or expanding the source span. Both actions need an explicit source-defined policy and fresh evidence. Future context fallback must be row-boundary-aware and fail closed when a source context is not exactly representable by whole replacement rows.
+
+## Promotion rules
+
 1. Never weaken maintained evaluators to make a real loss green.
-2. Classify planner/evaluator/source/document/model/resource defects first.
-3. Preserve immutable source/model/config/result identities.
-4. Select only unmodified raw model candidates; no target surgery.
-5. Mechanical integrity is necessary but not sufficient; semantic review is mandatory.
-6. Research gains do not authorize Product defaults automatically.
-7. Any second-model Product role needs a narrow source/failure trigger, deterministic selector, full-corpus regression, offline asset/runtime plan, license/attribution handling and release-size/performance assessment.
-8. MetricX/QE may rank research candidates but is not by itself an acceptance threshold.
+2. Preserve immutable source/model/config/result identities.
+3. Select only unmodified raw model candidates; no target surgery.
+4. Mechanical integrity is necessary but not sufficient; semantic and boundary-aware review is mandatory.
+5. A second MT may be invoked only by a narrow failure trigger; clean Product rows must remain untouched unless separate evidence justifies otherwise.
+6. Row-local fallback is not automatically safe when source semantics continue across Stage12 boundaries.
+7. MetricX/QE may rank research candidates but is not itself an acceptance threshold.
+8. Any Product TC-big role still requires deterministic selection, persisted full-corpus regression, offline asset/runtime design, license/attribution handling and release-size/performance assessment.
+9. CTranslate2 may be used only after tokenizer/generation parity or intentionally different behavior is explicitly characterized; backend conversion alone is not parity evidence.
+10. Final approved heavy evidence still requires zero unresolved hard failures.
