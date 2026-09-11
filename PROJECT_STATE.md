@@ -6,12 +6,12 @@
 
 - Repository: `oss-lk/gerkonkv-site`
 - Engineering branch: `chatgpt/product-core-forward`
-- L3 checkpoint incorporated by this refresh: `2910072e63b3eed0dbd25cc837bbb94b949d368d`
+- L3 checkpoint incorporated by this refresh: `0d29d62b0caf4d3c8eac686a81ea000e558824d9`
 - Maintained Product Core + Workbench remain the forward implementation.
-- Authoritative Product target: `rocketdict/PRODUCT_TARGET.md`; unresolved hard translation failures must reach zero before approved final heavy evidence.
+- Authoritative Product target: `rocketdict/PRODUCT_TARGET.md`; final approved heavy evidence still requires zero unresolved hard translation failures.
 - Current frontier is full-corpus translation-quality hardening on complete pinned Project Gutenberg *Opticks*.
-- Default Product behavior has **not** been broadened by the latest research. Length and citation rescues remain public opt-in/default-OFF. Numeric-hard whole-context rescue is implemented/validated as a separate opt-in wrapper but is not yet wired into public `product.stage12.run`.
-- Previous interrupted v3 staging debt is cleared: the three `.v3_staging_note*` files and placeholder `real_translation_full_opticks_illustration_label_feasibility_v3.py` were removed. No Product code was changed by that cleanup.
+- Latest proven persisted research basis is Stage12 run `9`: **24 numeric/symbol / 30 punctuation / 0 length**, **52 unique failures**.
+- Default Product behavior has not been broadened by the latest research. Length/citation rescues remain public opt-in/default-OFF; numeric-hard and illustration rescues are separate opt-in wrappers and are not yet public-wired/defaulted.
 
 ## Recovery protocol
 
@@ -27,43 +27,59 @@ Follow `AGENTS.md`: compare current HEAD with the checkpoint above, route throug
 - Length rescue: `rocketdict-stage12-length-failure-whole-context-rescue/1`, default OFF.
 - Citation-pair rescue: `rocketdict-stage12-citation-boundary-pair-rescue/1`, default OFF.
 - Numeric-hard split-context rescue: `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1`, selector `/1`, default OFF and not public-wired.
+- Illustration-label rescue: `rocketdict-stage12-illustration-label-rescue/1`, selector `/1`, target-form `/1`, default OFF and not public-wired.
 - Gutenberg emphasis preservation: `rocketdict-maintained-emphasis-markup-preservation/1`, research veto rather than Product hard gate.
 
 ## Canonical full-Opticks evidence
 
 Pinned source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; source length `586543` characters.
 
-Structural-label `/2` Product baseline:
+Structural-label `/2` baseline:
 - workflow `34575909618`, artifact `10190059238`;
 - Stage12 run `4`, output SHA `b5c42141767a9760495c84023349402bf637b6591f3fa60d723d42c7d5760e22`;
 - SQLite SHA `eaff048389e8cdabfd9dc47af0bc841e77657122883ee1bf10b26de7575d4b8c`;
-- `3353` segments; hard gates **30 numeric/symbol / 34 punctuation / 5 length**; **64 unique failures**.
+- `3353` segments; **30 numeric / 34 punctuation / 5 length**, **64 unique**.
 
-Validated length+pair-citation composition:
+Length+pair-citation composition:
 - workflow `34597648856`, artifact `10263095872`;
 - Stage12 run `7`, output SHA `b9e61f1f381ac9cd32e450e66c36a1f16d380eb2ef8b20c18ed7fc5bfc2c38e8`;
 - `3348` segments; **29/34/0**, **59 unique**.
 
-Validated numeric-hard opt-in composition:
-- workflow `34601313026`, artifact `10264132732`, artifact digest `3020f5bb9e6c59b312bb8e09a26d1fea4e29deac29ace3bbeca0cfd695b4bd76`;
+Numeric-hard opt-in composition:
+- workflow `34601313026`, artifact `10264132732`;
 - Stage12 run `8`, output SHA `d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346`;
 - SQLite SHA `a84b2118f00bc386953fe11db48bdc29fcfe8db62735f9acf86178e1dbacf9a2`;
-- `3343` segments; hard gates **25 numeric / 33 punctuation / 0 length**; **55 unique failures**;
-- accepted Stage10 contexts `550,669,1024,2238`; rejected `1460,2132,2176,2190,2634,2725`;
-- source coverage byte-exact, untouched rows base-exact, applied targets exact raw rank-0, safety flags false;
-- Product Core CI `34601005247` green.
+- `3343` segments; **25/33/0**, **55 unique**;
+- accepted Stage10 contexts `550,669,1024,2238`; emphasis veto blocks context `2725`.
 
-Run `8` is the current residual basis. It has three numeric/punctuation-overlap rows (`25 + 33 - 55 = 3`). Use immutable source spans/current Stage10 context IDs, not old shifted sequence numbers.
+## Validated illustration-label rescue and run 9
 
-## Current illustration-label research
+Research v3 over exact run `8` succeeded in workflow `34609890716`, artifact `10267328730`, digest `2c5a8b0d11c5924e370076cf4dc5d00b26ad8c4e580f8ca14e2faf642bf7b6e2`. It accepted all three hard-failing standalone illustration rows at source starts `72401,90105,203786` with selected raw ranks `3,3,0` and exact targets `Иллюстрация.`, `Иллюстрация.`, `С центром O`. Counterfactual: **24/30/0**, **52 unique**. Source coverage is byte-exact; no target rewrite/placeholders/literal injection.
 
-Run-8 classification identified three current hard-failing rows beginning with standalone Gutenberg `[Illustration: ...]` lines. The source contains 57 such standalone lines.
+Product wrapper `rocketdict-stage12-illustration-label-rescue/1` is implemented default-OFF with narrow trigger `standalone_illustration_label_existing_hard_failure`. Product Core CI `34610493157` is green including real Stage8→25 smoke.
 
-- v1 source-owned split looked mechanically excellent (**24 numeric / 30 punctuation / 0 length, 52 unique**) but is **rejected**: exact `_Illustration._` yielded malformed raw OPUS `*Иллюстрация._`, proving the hard gates alone miss this semantic/markup defect.
-- v2 contract `rocketdict-full-opticks-illustration-label-feasibility/2` preserves the source label+separator byte-exactly; exact `_Illustration._` uses canonical model input `Illustration.` and an explicit semantic structural-word target check. Workflow `34603765083` succeeded; artifact `10265862004`, digest `85231d8a9eca686deb6cf72240fc395aecfd0fc3d85de116ba3b0d7132026a4e`. Starts `72401` and `90105` produce rank-0 `Пример.` and are correctly rejected; ordinary suffix start `203786` is accepted. Counterfactual: **24/32/0**, **54 unique**. Evidence file SHA `0043d0a912a0ff35001d55fcea0b792ca534fe43b434f015c8f7ceec7d866653`.
-- Illustration-word DOE workflow `34603700499` succeeded; artifact `10265013225`, digest `3e92ac761908175f25d0a66c0942e1772809f402fedb9c637c2f8ad8f1bf50c0`. It evaluated 144 raw hypotheses and found 25 admissible structural-word candidates. Deterministic selected candidate: model input `Illustration.`, beam `6`, `num_hypotheses=6`, raw rank `3`, target `Иллюстрация.`. Evidence file SHA `54e23fd53c2a4015e030aee5699aa92bb6c051471ae6b4f367cc16957f683025`.
+Persisted full-*Opticks* Product audit workflow `34610787826` succeeded; artifact `10268850347`, digest `1818c3cb67746d9ff1c8a49968e11584018264954f6204f014292344e37dbaee`:
+- Stage12 run `9`, output SHA `c32d7522f8e5365f6d1ca2b581532139bdfc716530993e1a720e8b4a313079be`;
+- SQLite SHA `9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad`;
+- `3346` segments; **24 numeric / 30 punctuation / 0 length**, **52 unique**;
+- all 3340 untouched rows base-exact, applied targets exact raw hypotheses, source coverage byte-exact, SQLite integrity/foreign keys clean, safety flags false.
 
-This authorizes a **research v3 only**: immutable `_Illustration._` source bytes + canonical model input + strict raw n-best structural-word selector. It does not authorize Product promotion/default behavior.
+Run `9` is now the residual basis. Key future work by immutable source spans/current contexts rather than shifted sequence IDs.
+
+## Footnote-marker research
+
+A closed block-start marker cohort `[G]`, `[H]`, `[J]`, `[K]`, `[M]` remains among run-9 punctuation failures at source starts `151466,151557,253849,253919,254102`.
+
+Marker-only body retranslation workflow `34611175668`, artifact `10268975960`, evidence SHA `14ecc93fe080a218dd9c62de35c7e6dff534867849e6c42cd677b905ef8d76fa`, mechanically accepted all five and counterfactually reached **24/25/0**, **47 unique**. This branch is **not Product-ready**: semantic inspection catches at least `[H]` `_How to do this, is shewn in our_` → `Как это сделать, сшито в нашем...` and `[J]` `_See our_` → `Посмотри на нас.`. Mechanical gate improvement is therefore insufficient.
+
+Whole-footnote-context research is the current active direction: preserve the block marker/source separators as source-owned bytes and translate the complete linguistic footnote context with raw n-best plus strict/emphasis vetoes. Initial workflow `34611517906` failed before model evaluation because its fixture confused paragraph boundary with current Stage12-row boundary. Immutable source proves:
+- `[G]` paragraph end `151557`;
+- `[H]` paragraph end `151652`, while its existing last Stage12 row extends to `151655` with extra blank-line bytes;
+- `[J]` paragraph end `253919`;
+- `[K]` paragraph end `254026`;
+- `[M]` paragraph end `254202`, while its existing last Stage12 row extends to `254205`.
+
+This is a harness-boundary defect, not evidence against whole-context translation. The next patch must model marker, linguistic paragraph body, paragraph separator/trailing whitespace, and replacement row coverage separately rather than changing expected facts to make the test green.
 
 ## Important guardrails
 
@@ -76,22 +92,20 @@ This authorizes a **research v3 only**: immutable `_Illustration._` source bytes
 
 ## Next useful actions
 
-1. Implement research-only illustration feasibility v3 over run `8`: preserve `[Illustration: ...]` + separator bytes, use canonical `Illustration.` only for exact `_Illustration._`, generate deterministic beam6/n6, select an unmodified raw hypothesis only if hard+strict checks and structural target-shape pass.
-2. Run v3 on the exact three current hard-failing source starts and recompute the full run-8 counterfactual. Require byte-exact source coverage, read-only DB, no rewrites/placeholders/injection, and explicit accepted ranks/targets.
-3. Only if v3 proves all three cases cleanly, design a **default-OFF** Product wrapper restricted to already-hard-failing standalone illustration-label rows; do not disturb the other 54 currently successful illustration labels without independent evidence.
-4. Revalidate the existing block-start footnote-marker feasibility against run `8`; it is the next promising punctuation family after illustration v3.
-5. Keep public/default promotion separate from research success until full persisted heavy evidence and semantic review justify it.
+1. Fix the whole-footnote-context research harness to distinguish semantic paragraph end from enclosing Stage12 row end and preserve separator/trailing whitespace byte-exactly.
+2. Rerun on exact run `9`; inspect all raw n-best candidates semantically, especially H/J, and require strict hard gates + emphasis preservation before any mechanical acceptance.
+3. If a narrow subset is demonstrably safe, productize only that source-defined subset as default-OFF with persisted full-corpus audit; otherwise record negative evidence and move to the next residual family.
+4. Recompute the residual inventory after any persisted change; keep illustration/numeric/footnote mechanisms independently attributable.
+5. Public/default promotion remains separate from opt-in research success.
 
 ## Hot paths
 
 - `rocketdict-product-core/src/rocketdict/translation_stage.py`
-- `rocketdict-product-core/src/rocketdict/translation_length_rescue_stage.py`
-- `rocketdict-product-core/src/rocketdict/translation_citation_rescue_stage.py`
 - `rocketdict-product-core/src/rocketdict/translation_numeric_hard_rescue_stage.py`
+- `rocketdict-product-core/src/rocketdict/translation_illustration_rescue_stage.py`
 - `rocketdict-product-core/src/rocketdict/emphasis_markup.py`
 - `rocketdict-product-core/src/rocketdict/translation_rescue.py`
 - `rocketdict-product-core/src/rocketdict/api/operations.py`
-- `rocketdict-workbench/tests/real_translation_full_opticks_illustration_label_feasibility.py`
-- `rocketdict-workbench/tests/real_translation_full_opticks_illustration_word_doe.py`
-- `rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_marker_feasibility.py`
-- `.github/workflows/rocketdict-full-opticks-*`
+- `rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_marker_feasibility_run9.py`
+- `rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_context_feasibility_run9.py`
+- `.github/workflows/rocketdict-full-opticks-block-footnote-*-run9.yml`
