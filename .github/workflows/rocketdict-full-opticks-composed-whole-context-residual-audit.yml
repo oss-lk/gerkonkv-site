@@ -4,6 +4,7 @@ on:
   push:
     branches: [chatgpt/product-core-forward]
     paths:
+      - 'rocketdict-product-core/src/rocketdict/emphasis_markup.py'
       - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
       - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
@@ -13,6 +14,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/translation_citation_rescue_stage.py'
       - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
       - 'rocketdict-workbench/tests/audit_full_opticks_composed_whole_context_residuals.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_numeric_whole_context_candidates.py'
       - '.github/workflows/rocketdict-full-opticks-composed-whole-context-residual-audit.yml'
   workflow_dispatch:
 
@@ -78,11 +80,14 @@ jobs:
           echo "$SHADOW_JSON_SHA256  $ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-whole-context-shadow.json" | sha256sum -c -
       - name: Recompute composed residuals and shadow lineage
         run: python -u rocketdict-workbench/tests/audit_full_opticks_composed_whole_context_residuals.py
+      - name: Narrow numeric candidates with emphasis-markup preservation
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_numeric_whole_context_candidates.py
       - name: Verify read-only evidence
         shell: bash
         run: |
           set -euo pipefail
           test -s "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-composed-whole-context-residual-audit.json"
+          test -s "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-numeric-whole-context-candidate-audit.json"
           echo "$COMBINED_DB_SHA256  $ROCKETDICT_COMPOSED_RESIDUAL_ROOT/rocketdict.sqlite" | sha256sum -c -
           python - <<'PY'
           import json
@@ -90,30 +95,65 @@ jobs:
           from pathlib import Path
 
           root = Path(os.environ['ROCKETDICT_COMPOSED_RESIDUAL_ROOT'])
-          evidence = json.loads(
+          residual = json.loads(
               (root / 'full-opticks-composed-whole-context-residual-audit.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          numeric = json.loads(
+              (root / 'full-opticks-numeric-whole-context-candidate-audit.json').read_text(
                   encoding='utf-8'
               )
           )
           expected_current = {'numeric': 29, 'punctuation': 34, 'length': 0, 'unique': 59}
           expected_contexts = [550, 669, 1024, 1393, 2238, 2462, 2725, 2726]
           expected_counterfactual = {'numeric': 24, 'punctuation': 30, 'length': 0, 'unique': 51}
-          if evidence['current_hard_gate_counts'] != expected_current:
-              raise SystemExit(f"current hard gates drift: {evidence['current_hard_gate_counts']!r}")
-          if evidence['lineage_exact_mechanically_accepted_context_sequences'] != expected_contexts:
+          if residual['current_hard_gate_counts'] != expected_current:
+              raise SystemExit(f"current hard gates drift: {residual['current_hard_gate_counts']!r}")
+          if residual['lineage_exact_mechanically_accepted_context_sequences'] != expected_contexts:
               raise SystemExit(
                   'accepted context identity drift: '
-                  f"{evidence['lineage_exact_mechanically_accepted_context_sequences']!r}"
+                  f"{residual['lineage_exact_mechanically_accepted_context_sequences']!r}"
               )
-          if evidence['counterfactual_hard_gate_counts'] != expected_counterfactual:
+          if residual['counterfactual_hard_gate_counts'] != expected_counterfactual:
               raise SystemExit(
-                  f"counterfactual hard gates drift: {evidence['counterfactual_hard_gate_counts']!r}"
+                  f"mechanical counterfactual hard gates drift: {residual['counterfactual_hard_gate_counts']!r}"
               )
-          if evidence['source_coverage_byte_exact'] is not True:
+          if residual['source_coverage_byte_exact'] is not True:
               raise SystemExit('source coverage proof missing')
-          if evidence['database_unchanged'] is not True:
+          if residual['database_unchanged'] is not True:
               raise SystemExit('database read-only proof missing')
-          print('Composed residual lineage audit invariants verified.')
+
+          expected_numeric_mechanical = [550, 669, 1024, 2238, 2725]
+          expected_emphasis_rejected = [2725]
+          expected_conservative = [550, 669, 1024, 2238]
+          expected_conservative_counts = {
+              'numeric': 25,
+              'punctuation': 33,
+              'length': 0,
+              'unique': 55,
+          }
+          if numeric['mechanically_accepted_numeric_context_sequences'] != expected_numeric_mechanical:
+              raise SystemExit(
+                  'numeric mechanical cohort drift: '
+                  f"{numeric['mechanically_accepted_numeric_context_sequences']!r}"
+              )
+          if numeric['emphasis_markup_rejected_context_sequences'] != expected_emphasis_rejected:
+              raise SystemExit(
+                  'emphasis veto drift: '
+                  f"{numeric['emphasis_markup_rejected_context_sequences']!r}"
+              )
+          if numeric['conservative_numeric_candidate_context_sequences'] != expected_conservative:
+              raise SystemExit(
+                  'conservative numeric cohort drift: '
+                  f"{numeric['conservative_numeric_candidate_context_sequences']!r}"
+              )
+          if numeric['conservative_counterfactual_hard_gate_counts'] != expected_conservative_counts:
+              raise SystemExit(
+                  'conservative counterfactual hard gates drift: '
+                  f"{numeric['conservative_counterfactual_hard_gate_counts']!r}"
+              )
+          print('Composed residual and conservative numeric candidate invariants verified.')
           PY
       - name: Record runtime identities
         if: always()
@@ -127,7 +167,12 @@ jobs:
           if [ -s "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-composed-whole-context-residual-audit.json" ]; then
             sha256sum \
               "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-composed-whole-context-residual-audit.json" \
-              > work/composed-residual-runtime/audit-json.sha256
+              > work/composed-residual-runtime/residual-audit-json.sha256
+          fi
+          if [ -s "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-numeric-whole-context-candidate-audit.json" ]; then
+            sha256sum \
+              "$ROCKETDICT_COMPOSED_RESIDUAL_ROOT/full-opticks-numeric-whole-context-candidate-audit.json" \
+              > work/composed-residual-runtime/numeric-candidate-audit-json.sha256
           fi
       - name: Upload composed residual lineage evidence
         if: always()
@@ -136,6 +181,7 @@ jobs:
           name: rocketdict-full-opticks-composed-whole-context-residual-audit
           path: |
             work/composed-residual/full-opticks-composed-whole-context-residual-audit.json
+            work/composed-residual/full-opticks-numeric-whole-context-candidate-audit.json
             work/composed-residual-runtime/**
           if-no-files-found: warn
           retention-days: 90
