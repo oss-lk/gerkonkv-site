@@ -36,6 +36,16 @@ Raw OPUS hypotheses are legitimate research candidates; post-hoc insertion of mi
 
 **Evidence.** `docs/memory/TRANSLATION_QUALITY.md`; maintained Stage12 and full-*Opticks* artifacts.
 
+## Full Product gate scope must not be inferred from a stress-subset metric
+
+**Decision.** The historical `product_numeric_failure_count` in `rocketdict-full-opticks-numeric-stress/3` is a **literal-bearing stress subset**, because that harness filters to source rows where `extract_numeric_literals(source)` is non-empty. It must not be cited as the complete Product numeric/symbol gate.
+
+The complete maintained gate is `rocketdict-maintained-numeric-integrity/5` applied to every selected Stage12 row. `rocketdict-full-opticks-hard-gate-inventory/3` therefore preserves and verifies the legacy literal-bearing subset while separately inventorying the complete gate.
+
+**Why.** Direct recomputation on the immutable structural-label `/2` Product artifact yields 30 complete numeric/symbol failures, not 27. The additional rows are `617` (invented `=`), `1798` (unsafe generated `100 000` from `ten hundred thousand`) and `3013` (invented `=` before `_per deliquium_`). These are genuine hard-gate findings that the old cohort filter never inspected; they are not new model regressions.
+
+**Evidence.** `real_translation_full_opticks_numeric_stress.py`; `numeric_integrity.py`; `audit_full_opticks_hard_gates.py`; immutable run `34575909618` database/artifact.
+
 ## Numeric prime notation is a Product hard-gate invariant
 
 **Decision.** Stage15 numeric/symbol integrity uses `rocketdict-maintained-numeric-integrity/5`; prime/unit notation is fail-closed and must not be collapsed into apostrophe-decimal semantics.
@@ -58,7 +68,7 @@ It includes only source-proven block structure:
 
 All are isolated byte-exact; only documented English abbreviations/headings may be expanded in model input; accepted targets must be unmodified real-OPUS hypotheses satisfying strict family/identifier forms. Inline linguistic references remain ordinary prose.
 
-**Why.** `/2` removes the intended legacy-heading length-loss class: full-corpus length failures fall from 24 to 5 while numeric remains 27 and punctuation remains 34. The change is class-specific rather than a generic bypass.
+**Why.** `/2` removes the intended legacy-heading length-loss class: full-corpus length failures fall from 24 to 5. The literal-bearing numeric stress remains 27 and punctuation remains 34; the separate complete numeric/symbol inventory is 30 because it also sees three previously out-of-cohort failures. The structural change is therefore class-specific rather than a generic bypass.
 
 **Evidence.** `structural_labels.py`; `legacy_block_headings.py`; `/2` full-*Opticks* run `34575909618`, artifact `10190059238`.
 
@@ -68,7 +78,7 @@ All are isolated byte-exact; only documented English abbreviations/headings may 
 
 **Why.** Current residual examples are inline footnote references such as `Sect. IV.` / `Sect. II.`, not block headings. Treating them as structure would turn a context-boundary defect into false document classification.
 
-**Next valid direction.** Investigate abbreviation/sentence-boundary context preservation or another source-derived context mechanism.
+**Next valid direction.** Investigate abbreviation/sentence-boundary context preservation or another source-derived context mechanism. Reuse the existing protected-boundary coalescing design where the source provides a narrow defensible span.
 
 ## Source-owned block section identifiers are a closed maintained class
 
@@ -86,17 +96,17 @@ All are isolated byte-exact; only documented English abbreviations/headings may 
 
 **Decision.** Do not promote generic whole-context translation from corpus-wide alpha gain or mechanical cleanliness. The existing Product-exposed whole-context path remains opt-in and narrowly numeric-triggered.
 
-For further research, restrict attention to split contexts that already contain a maintained Product hard-gate failure. On the current `/2` full-*Opticks* evidence this yields 23 contexts; 22 are within the 160-NLP-token cap and the existing strict selector accepts eight (`550, 669, 919, 1024, 1393, 2238, 2462, 2726`).
+For further research, restrict attention to split contexts that already contain a maintained Product hard-gate failure. With the complete numeric/symbol gate this yields `24` contexts; `23` are within the 160-NLP-token cap and the existing strict selector accepts nine (`550, 669, 919, 1024, 1393, 2238, 2462, 2725, 2726`). Context `2730` remains over cap.
 
-**Why.** This trigger is causally tied to an already-proven Product defect and is much safer than selecting among 234 mechanically clean whole-context candidates or 213 positive-alpha candidates corpus-wide. Even so, eight accepted cases still require independent semantic/QE evidence before any Product policy change.
+**Why.** This trigger is causally tied to an already-proven Product defect and is much safer than selecting among 234 mechanically clean whole-context candidates or 213 positive-alpha candidates corpus-wide. The newly surfaced context `2725` is especially informative: the primary split target invents `=`, while unchanged raw whole-context rank0 removes it and restores a coherent complete question. Even so, all nine cases require independent semantic/QE evidence before any Product policy change.
 
-**Evidence.** `audit_full_opticks_hard_gates.py`; `audit_full_opticks_whole_context_hard_failures.py`; whole-context run `34575909649`, artifact `10190367866`.
+**Evidence.** `audit_full_opticks_hard_gates.py`; `audit_full_opticks_whole_context_hard_failures.py`; whole-context run `34575909649`, artifact `10190367866`; direct immutable-artifact recomputation. Replacement `/3` CI evidence is pending.
 
 ## MetricX is an independent research ranker, not an acceptance threshold
 
 **Decision.** MetricX-24 reference-free QE may compare immutable raw candidates, but neither a score nor “MetricX prefers candidate” is sufficient for Product selection. Scores must be version-pinned, preserved as evidence, and paired with mechanical gates plus semantic review.
 
-**Why.** Previous TC-big evidence shows MetricX can rank useful strict hypotheses, but learned QE is not a proof of faithfulness. The new whole-context MetricX audit is intentionally limited to the eight already-hard-failing strict candidates.
+**Why.** Previous TC-big evidence shows MetricX can rank useful strict hypotheses, but learned QE is not a proof of faithfulness. The new whole-context MetricX audit is intentionally limited to the nine already-hard-failing strict candidates. Its workflow consumes only a successful whole-context cohort artifact and remains non-promoting.
 
 ## Punctuation residuals must be split by defect family
 
