@@ -1,0 +1,154 @@
+name: RocketDict Full Opticks Alternative MT Current Hard Failures Run9
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_current_hard_failures_run9.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_feasibility.py'
+      - '.github/workflows/rocketdict-full-opticks-alternative-mt-current-hard-failures-run9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  alternative-mt-current-hard-failures-run9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BASE_RUN_ID: '34610787826'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      BASE_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      ALT_MODEL_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      ALT_MODEL_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      ALT_MODEL_SAFETENSORS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      ROCKETDICT_ALT_MT_MODEL_DIR: ${{ github.workspace }}/work/alt-mt-model
+      ROCKETDICT_ALT_MT_RUN9_ROOT: ${{ github.workspace }}/work/alternative-mt-current-hard-failures-run9
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained evaluator and pinned alternative-MT runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python -m pip install \
+            'transformers==4.56.2' \
+            'huggingface_hub==0.34.4' \
+            'safetensors==0.6.2' \
+            'sentencepiece==0.2.1' \
+            'sacremoses==0.1.1'
+      - name: Download immutable illustration run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Assemble and verify persisted run-9 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_ALT_MT_RUN9_ROOT"
+          cp work/base/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_ALT_MT_RUN9_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_ALT_MT_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Restore pinned alternative model cache
+        uses: actions/cache@v4
+        with:
+          path: work/alt-mt-model
+          key: rocketdict-alt-mt-tc-big-en-zle-708be1d-e68caa9
+      - name: Obtain exact alternative MT snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['ALT_MODEL_REPO'],
+              revision=os.environ['ALT_MODEL_REVISION'],
+              local_dir=os.environ['ROCKETDICT_ALT_MT_MODEL_DIR'],
+              allow_patterns=[
+                  'README.md', 'config.json', 'generation_config.json',
+                  'model.safetensors', 'source.spm', 'special_tokens_map.json',
+                  'target.spm', 'tokenizer_config.json', 'vocab.json',
+              ],
+          )
+          PY
+          test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors"
+          echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
+      - name: Run pinned TC-big over all current run-9 hard failures
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_alternative_mt_current_hard_failures_run9.py
+      - name: Verify read-only all-current-failures evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_ALT_MT_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json"
+          test -s "$evidence"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_ALT_MT_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_ALT_MT_RUN9_ROOT'])
+          evidence = json.loads((root / 'full-opticks-alternative-mt-current-hard-failures-run9.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-alternative-mt-current-hard-failures-run9/1':
+              raise SystemExit(f"schema drift: {evidence['schema']!r}")
+          if evidence['case_count'] != 52:
+              raise SystemExit(f"run9 hard-failure cohort drift: {evidence['case_count']!r}")
+          if evidence['base_hard_gate_counts'] != {'numeric_symbol':24,'punctuation':30,'length':0,'unique':52}:
+              raise SystemExit(f"base gate drift: {evidence['base_hard_gate_counts']!r}")
+          model=evidence['model']
+          if model['repository'] != os.environ['ALT_MODEL_REPO'] or model['requested_revision'] != os.environ['ALT_MODEL_REVISION']:
+              raise SystemExit('alternative-MT identity drift')
+          if model['model_safetensors_sha256'] != os.environ['ALT_MODEL_SAFETENSORS_SHA256']:
+              raise SystemExit('alternative-MT weights drift')
+          for case in evidence['cases']:
+              if len(case['hypotheses']) != 6:
+                  raise SystemExit(f"alternative-MT n-best drift for {case['case_id']}")
+              for hypothesis in case['hypotheses']:
+                  if hypothesis['mechanically_admissible'] and hypothesis['emphasis_markup']['passed'] is not True:
+                      raise SystemExit(f"emphasis veto bypassed for {case['case_id']}")
+          b=evidence['base_hard_gate_counts']; u=evidence['mechanical_upper_bound_hard_gate_counts']
+          if any(u[k] > b[k] for k in ('numeric_symbol','punctuation','length','unique')):
+              raise SystemExit(f"mechanical upper-bound regression: {u!r}")
+          if evidence['database_mutated'] is not False or evidence['database_sha256_before'] != evidence['database_sha256_after']:
+              raise SystemExit('alternative-MT research mutated run9 database')
+          if evidence['source_coverage_byte_exact'] is not True:
+              raise SystemExit('source coverage proof missing')
+          for flag in ('source_rewriting','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
+              if evidence[flag] is not False:
+                  raise SystemExit(f"unsafe alternative-MT flag drift: {flag}={evidence[flag]!r}")
+          if evidence['promotion_allowed'] is not False or evidence['automatic_product_default_allowed'] is not False or evidence['automatic_semantic_selector'] is not False:
+              raise SystemExit('research unexpectedly authorizes automatic Product use')
+          if evidence['mechanical_upper_bound_is_not_product_selection'] is not True:
+              raise SystemExit('upper-bound non-promotion guard missing')
+          print('Run-9 all-current-hard-failures TC-big evidence verified.')
+          PY
+      - name: Record runtime identities and resources
+        if: always()
+        run: |
+          mkdir -p work/alternative-mt-current-hard-failures-runtime
+          python -VV > work/alternative-mt-current-hard-failures-runtime/python.txt || true
+          python -m pip freeze | sort > work/alternative-mt-current-hard-failures-runtime/pip-freeze.txt || true
+          df -h > work/alternative-mt-current-hard-failures-runtime/disk.txt || true
+          free -h > work/alternative-mt-current-hard-failures-runtime/memory.txt || true
+          sha256sum "$ROCKETDICT_ALT_MT_MODEL_DIR"/* > work/alternative-mt-current-hard-failures-runtime/model-files.sha256 || true
+          if [ -s "$ROCKETDICT_ALT_MT_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json" ]; then
+            sha256sum "$ROCKETDICT_ALT_MT_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json" > work/alternative-mt-current-hard-failures-runtime/evidence.sha256
+          fi
+      - name: Upload all-current-hard-failures alternative-MT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-alternative-mt-current-hard-failures-run9
+          path: |
+            work/alternative-mt-current-hard-failures-run9/full-opticks-alternative-mt-current-hard-failures-run9.json
+            work/alternative-mt-current-hard-failures-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
