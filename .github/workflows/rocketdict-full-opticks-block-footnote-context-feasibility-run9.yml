@@ -88,18 +88,27 @@ jobs:
           from pathlib import Path
           root = Path(os.environ['ROCKETDICT_FOOTNOTE_CONTEXT_RUN9_ROOT'])
           evidence = json.loads((root / 'full-opticks-block-footnote-context-feasibility-run9.json').read_text(encoding='utf-8'))
-          if evidence['schema'] != 'rocketdict-full-opticks-block-footnote-context-feasibility-run9/1':
+          if evidence['schema'] != 'rocketdict-full-opticks-block-footnote-context-feasibility-run9/2':
               raise SystemExit(f"schema drift: {evidence['schema']!r}")
           if evidence['attempted_letters'] != list('GHJKM') or evidence['attempted_source_starts'] != [151466,151557,253849,253919,254102]:
               raise SystemExit('footnote context cohort drift')
-          if evidence['group_ends'] != [151557,151655,253919,254026,254205]:
-              raise SystemExit(f"footnote context end drift: {evidence['group_ends']!r}")
+          if evidence['semantic_paragraph_ends'] != [151557,151652,253919,254026,254202]:
+              raise SystemExit(f"semantic paragraph end drift: {evidence['semantic_paragraph_ends']!r}")
+          if evidence['row_coverage_ends'] != [151557,151655,253919,254026,254205]:
+              raise SystemExit(f"row coverage end drift: {evidence['row_coverage_ends']!r}")
           if evidence['base_hard_gate_counts'] != {'numeric_symbol':24,'punctuation':30,'length':0,'unique':52}:
               raise SystemExit(f"base gate drift: {evidence['base_hard_gate_counts']!r}")
           b=evidence['base_hard_gate_counts']; c=evidence['counterfactual_hard_gate_counts']
           if any(c[k] > b[k] for k in ('numeric_symbol','punctuation','length','unique')):
               raise SystemExit(f"mechanical context regression: {c!r}")
           for case in evidence['cases']:
+              if case['paragraph_separator_source'] != '\n\n':
+                  raise SystemExit(f"paragraph separator drift for {case['letter']}")
+              if case['letter'] in {'H','M'}:
+                  if case['row_trailing_whitespace_source'] != '\n\n\n':
+                      raise SystemExit(f"trailing whitespace drift for {case['letter']}")
+              elif case['row_trailing_whitespace_source'] != '':
+                  raise SystemExit(f"unexpected trailing bytes for {case['letter']}")
               if len(case['hypotheses']) != 6:
                   raise SystemExit(f"n-best cardinality drift for {case['letter']}")
               for hypothesis in case['hypotheses']:
