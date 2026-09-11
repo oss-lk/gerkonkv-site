@@ -1,0 +1,191 @@
+name: RocketDict Full Opticks MetricX QE Current Hard Failures Run9
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_metricx_qe_current_hard_failures_run9.py'
+      - '.github/workflows/rocketdict-full-opticks-metricx-qe-current-hard-failures-run9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  metricx-qe-current-hard-failures-run9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      RUN9_RUN_ID: '34610787826'
+      RUN9_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      RUN9_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      ALT52_RUN_ID: '34621706640'
+      ALT52_ARTIFACT_NAME: rocketdict-full-opticks-alternative-mt-current-hard-failures-run9
+      ALT52_FILE_SHA256: 5c87500453f9443f5aff42d4bfea1bc055b48fa3a2ec747e13ec99581fe16f69
+      METRICX_REPO: google/metricx-24-hybrid-large-v2p6-bfloat16
+      METRICX_REVISION: febb720e29a059df2e8af3ffd71dcdc9e0a24910
+      METRICX_WEIGHTS_SHA256: b1f2c03ab5ec5318a55b90b42eefa22431daa7b1a8e28a97a6aef23d18a24278
+      METRICX_CODE_REVISION: fc4978eb064670f7cc33e93ea4f52d38396b8ae6
+      TOKENIZER_REPO: google/mt5-large
+      TOKENIZER_REVISION: 50b7223e98fcd124b0cabb1ec81bc6324c7df107
+      ROCKETDICT_METRICX_MODEL_DIR: ${{ github.workspace }}/work/metricx-model
+      ROCKETDICT_METRICX_TOKENIZER_DIR: ${{ github.workspace }}/work/metricx-tokenizer
+      ROCKETDICT_QE_RUN9_ROOT: ${{ github.workspace }}/work/qe-run9
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned MetricX runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python -m pip install \
+            'transformers==4.30.2' \
+            'tokenizers==0.13.3' \
+            'huggingface_hub==0.34.4' \
+            'sentencepiece==0.2.1' \
+            'protobuf==3.20.3'
+      - name: Download immutable run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN9_ARTIFACT_NAME }}
+          path: work/run9
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN9_RUN_ID }}
+      - name: Download immutable all-52 TC-big evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ALT52_ARTIFACT_NAME }}
+          path: work/alt52
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ALT52_RUN_ID }}
+      - name: Assemble and verify immutable QE inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_QE_RUN9_ROOT"
+          cp work/run9/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_QE_RUN9_ROOT/rocketdict.sqlite"
+          cp work/alt52/alternative-mt-current-hard-failures-run9/full-opticks-alternative-mt-current-hard-failures-run9.json \
+            "$ROCKETDICT_QE_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_QE_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          echo "$ALT52_FILE_SHA256  $ROCKETDICT_QE_RUN9_ROOT/full-opticks-alternative-mt-current-hard-failures-run9.json" | sha256sum -c -
+      - name: Restore exact MetricX model cache
+        uses: actions/cache@v4
+        with:
+          path: work/metricx-model
+          key: rocketdict-metricx24-large-bf16-febb720-b1f2c03a
+      - name: Obtain exact pinned MetricX model
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(README.md config.json pytorch_model.bin)
+          cache_ok=1
+          for relative in "${required[@]}"; do
+            if [ ! -s "$ROCKETDICT_METRICX_MODEL_DIR/$relative" ]; then cache_ok=0; break; fi
+          done
+          if [ "$cache_ok" = 1 ] && echo "$METRICX_WEIGHTS_SHA256  $ROCKETDICT_METRICX_MODEL_DIR/pytorch_model.bin" | sha256sum -c - >/dev/null; then
+            echo 'Using exact cached MetricX snapshot.'
+          else
+            rm -rf "$ROCKETDICT_METRICX_MODEL_DIR"
+            python - <<'PY'
+          import os, time
+          from huggingface_hub import snapshot_download
+          kwargs=dict(repo_id=os.environ['METRICX_REPO'], revision=os.environ['METRICX_REVISION'], local_dir=os.environ['ROCKETDICT_METRICX_MODEL_DIR'], allow_patterns=['README.md','config.json','pytorch_model.bin'])
+          for attempt in range(5):
+              try:
+                  snapshot_download(**kwargs); break
+              except Exception:
+                  if attempt == 4: raise
+                  time.sleep(15 * (attempt + 1))
+          PY
+          fi
+          for relative in "${required[@]}"; do test -s "$ROCKETDICT_METRICX_MODEL_DIR/$relative"; done
+          echo "$METRICX_WEIGHTS_SHA256  $ROCKETDICT_METRICX_MODEL_DIR/pytorch_model.bin" | sha256sum -c -
+          grep -qi 'license: apache-2.0' "$ROCKETDICT_METRICX_MODEL_DIR/README.md"
+      - name: Restore exact mT5 tokenizer cache
+        uses: actions/cache@v4
+        with:
+          path: work/metricx-tokenizer
+          key: rocketdict-mt5-large-tokenizer-50b7223
+      - name: Obtain exact pinned mT5 tokenizer
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(config.json special_tokens_map.json spiece.model tokenizer_config.json)
+          cache_ok=1
+          for relative in "${required[@]}"; do
+            if [ ! -s "$ROCKETDICT_METRICX_TOKENIZER_DIR/$relative" ]; then cache_ok=0; break; fi
+          done
+          if [ "$cache_ok" != 1 ]; then
+            rm -rf "$ROCKETDICT_METRICX_TOKENIZER_DIR"
+            python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(repo_id=os.environ['TOKENIZER_REPO'], revision=os.environ['TOKENIZER_REVISION'], local_dir=os.environ['ROCKETDICT_METRICX_TOKENIZER_DIR'], allow_patterns=['config.json','special_tokens_map.json','spiece.model','tokenizer_config.json'])
+          PY
+          fi
+          for relative in "${required[@]}"; do test -s "$ROCKETDICT_METRICX_TOKENIZER_DIR/$relative"; done
+      - name: Obtain exact MetricX inference code
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/google-research/metricx.git work/metricx-code
+          git -C work/metricx-code checkout --detach "$METRICX_CODE_REVISION"
+          test "$(git -C work/metricx-code rev-parse HEAD)" = "$METRICX_CODE_REVISION"
+      - name: Run MetricX QE audit over run-9 TC-big survivors
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="${{ github.workspace }}/work/metricx-code${PYTHONPATH:+:$PYTHONPATH}"
+          python -u rocketdict-workbench/tests/real_translation_full_opticks_metricx_qe_current_hard_failures_run9.py
+      - name: Verify research-only QE evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_QE_RUN9_ROOT/full-opticks-metricx-qe-current-hard-failures-run9.json"
+          test -s "$evidence"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_QE_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_QE_RUN9_ROOT'])/'full-opticks-metricx-qe-current-hard-failures-run9.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-metricx-qe-current-hard-failures-run9/1': raise SystemExit('schema drift')
+          if e['case_count'] != 52 or e['admissible_candidate_count'] != 172 or e['case_count_with_admissible_alternative'] != 32: raise SystemExit('QE inventory drift')
+          if e['model']['repository'] != os.environ['METRICX_REPO'] or e['model']['revision'] != os.environ['METRICX_REVISION']: raise SystemExit('MetricX identity drift')
+          if e['metricx_is_not_acceptance_threshold'] is not True or e['automatic_semantic_selector'] is not False: raise SystemExit('QE promotion guard drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False or e['semantic_review_required'] is not True: raise SystemExit('QE promotion state drift')
+          for flag in ('database_mutated','source_rewriting','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
+              if e[flag] is not False: raise SystemExit(f'unsafe QE flag drift: {flag}')
+          print('Run-9 MetricX QE research evidence verified.')
+          PY
+      - name: Record runtime identities and resources
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/metricx-qe-run9-runtime
+          python -VV > work/metricx-qe-run9-runtime/python.txt || true
+          python -m pip freeze | sort > work/metricx-qe-run9-runtime/pip-freeze.txt || true
+          df -h > work/metricx-qe-run9-runtime/disk.txt || true
+          free -h > work/metricx-qe-run9-runtime/memory.txt || true
+          sha256sum "$ROCKETDICT_METRICX_MODEL_DIR"/* > work/metricx-qe-run9-runtime/model-files.sha256 || true
+          sha256sum "$ROCKETDICT_METRICX_TOKENIZER_DIR"/* > work/metricx-qe-run9-runtime/tokenizer-files.sha256 || true
+          git -C work/metricx-code rev-parse HEAD > work/metricx-qe-run9-runtime/metricx-code-revision.txt || true
+          if [ -s "$ROCKETDICT_QE_RUN9_ROOT/full-opticks-metricx-qe-current-hard-failures-run9.json" ]; then
+            sha256sum "$ROCKETDICT_QE_RUN9_ROOT/full-opticks-metricx-qe-current-hard-failures-run9.json" > work/metricx-qe-run9-runtime/evidence.sha256
+          fi
+      - name: Upload run-9 MetricX QE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-metricx-qe-current-hard-failures-run9
+          path: |
+            work/qe-run9/full-opticks-metricx-qe-current-hard-failures-run9.json
+            work/metricx-qe-run9-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
