@@ -22,11 +22,13 @@ on:
       - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_rescue.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_product_rescue.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_shadow.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_whole_context_metricx_qe_audit.py'
       - '.github/workflows/rocketdict-full-opticks-whole-context-rescue.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   full-opticks-whole-context-rescue:
@@ -118,5 +120,172 @@ jobs:
             work/full-opticks-numeric-stress/full-opticks-whole-context-shadow.json
             work/full-opticks-numeric-stress/full-opticks-whole-context-hard-failure-cohort.json
             work/full-opticks-numeric-stress/runtime-evidence-whole-context/**
+          if-no-files-found: warn
+          retention-days: 90
+
+  whole-context-metricx-qe:
+    needs: full-opticks-whole-context-rescue
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      METRICX_REPO: google/metricx-24-hybrid-large-v2p6-bfloat16
+      METRICX_REVISION: febb720e29a059df2e8af3ffd71dcdc9e0a24910
+      METRICX_WEIGHTS_SHA256: b1f2c03ab5ec5318a55b90b42eefa22431daa7b1a8e28a97a6aef23d18a24278
+      METRICX_CODE_REVISION: fc4978eb064670f7cc33e93ea4f52d38396b8ae6
+      TOKENIZER_REPO: google/mt5-large
+      TOKENIZER_REVISION: 50b7223e98fcd124b0cabb1ec81bc6324c7df107
+      ROCKETDICT_METRICX_MODEL_DIR: ${{ github.workspace }}/work/metricx-model
+      ROCKETDICT_METRICX_TOKENIZER_DIR: ${{ github.workspace }}/work/metricx-tokenizer
+      ROCKETDICT_QE_ROOT: ${{ github.workspace }}/work/qe-input
+      ROCKETDICT_SOURCE_RUN_ID: ${{ github.run_id }}
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned MetricX runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+          python -m pip install \
+            'transformers==4.30.2' \
+            'tokenizers==0.13.3' \
+            'huggingface_hub==0.34.4' \
+            'sentencepiece==0.2.1' \
+            'protobuf==3.20.3'
+      - name: Download successful whole-context evidence from this run
+        uses: actions/download-artifact@v4
+        with:
+          name: rocketdict-full-opticks-whole-context-rescue
+          path: work/source
+      - name: Assemble QE cohort input
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_QE_ROOT"
+          cohort=work/source/full-opticks-numeric-stress/full-opticks-whole-context-hard-failure-cohort.json
+          test -s "$cohort"
+          cp "$cohort" "$ROCKETDICT_QE_ROOT/full-opticks-whole-context-hard-failure-cohort.json"
+      - name: Restore exact MetricX model cache
+        uses: actions/cache@v4
+        with:
+          path: work/metricx-model
+          key: rocketdict-metricx24-large-bf16-febb720-b1f2c03a
+      - name: Obtain exact pinned MetricX model
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(README.md config.json pytorch_model.bin)
+          cache_ok=1
+          for relative in "${required[@]}"; do
+            if [ ! -s "$ROCKETDICT_METRICX_MODEL_DIR/$relative" ]; then
+              cache_ok=0
+              break
+            fi
+          done
+          if [ "$cache_ok" = 1 ] && echo "$METRICX_WEIGHTS_SHA256  $ROCKETDICT_METRICX_MODEL_DIR/pytorch_model.bin" | sha256sum -c - >/dev/null; then
+            echo "Using exact cached MetricX snapshot."
+          else
+            rm -rf "$ROCKETDICT_METRICX_MODEL_DIR"
+            python - <<'PY'
+          import os
+          import time
+          from huggingface_hub import snapshot_download
+
+          kwargs = dict(
+              repo_id=os.environ['METRICX_REPO'],
+              revision=os.environ['METRICX_REVISION'],
+              local_dir=os.environ['ROCKETDICT_METRICX_MODEL_DIR'],
+              allow_patterns=['README.md', 'config.json', 'pytorch_model.bin'],
+          )
+          for attempt in range(5):
+              try:
+                  snapshot_download(**kwargs)
+                  break
+              except Exception:
+                  if attempt == 4:
+                      raise
+                  time.sleep(15 * (attempt + 1))
+          PY
+          fi
+          for relative in "${required[@]}"; do
+            test -s "$ROCKETDICT_METRICX_MODEL_DIR/$relative"
+          done
+          echo "$METRICX_WEIGHTS_SHA256  $ROCKETDICT_METRICX_MODEL_DIR/pytorch_model.bin" | sha256sum -c -
+          grep -qi 'license: apache-2.0' "$ROCKETDICT_METRICX_MODEL_DIR/README.md"
+      - name: Restore exact mT5 tokenizer cache
+        uses: actions/cache@v4
+        with:
+          path: work/metricx-tokenizer
+          key: rocketdict-mt5-large-tokenizer-50b7223
+      - name: Obtain exact mT5 tokenizer
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(config.json special_tokens_map.json spiece.model tokenizer_config.json)
+          cache_ok=1
+          for relative in "${required[@]}"; do
+            if [ ! -s "$ROCKETDICT_METRICX_TOKENIZER_DIR/$relative" ]; then
+              cache_ok=0
+              break
+            fi
+          done
+          if [ "$cache_ok" != 1 ]; then
+            rm -rf "$ROCKETDICT_METRICX_TOKENIZER_DIR"
+            python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TOKENIZER_REPO'],
+              revision=os.environ['TOKENIZER_REVISION'],
+              local_dir=os.environ['ROCKETDICT_METRICX_TOKENIZER_DIR'],
+              allow_patterns=[
+                  'config.json',
+                  'special_tokens_map.json',
+                  'spiece.model',
+                  'tokenizer_config.json',
+              ],
+          )
+          PY
+          fi
+          for relative in "${required[@]}"; do
+            test -s "$ROCKETDICT_METRICX_TOKENIZER_DIR/$relative"
+          done
+      - name: Obtain exact MetricX inference code
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/google-research/metricx.git work/metricx-code
+          git -C work/metricx-code checkout --detach "$METRICX_CODE_REVISION"
+          test "$(git -C work/metricx-code rev-parse HEAD)" = "$METRICX_CODE_REVISION"
+      - name: Run hard-failure whole-context MetricX QE audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="${{ github.workspace }}/work/metricx-code${PYTHONPATH:+:$PYTHONPATH}"
+          python -u rocketdict-workbench/tests/real_translation_full_opticks_whole_context_metricx_qe_audit.py
+      - name: Record MetricX runtime identities and resources
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/whole-context-metricx-runtime-evidence
+          python -VV > work/whole-context-metricx-runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/whole-context-metricx-runtime-evidence/pip-freeze.txt || true
+          df -h > work/whole-context-metricx-runtime-evidence/disk.txt || true
+          free -h > work/whole-context-metricx-runtime-evidence/memory.txt || true
+          sha256sum "$ROCKETDICT_METRICX_MODEL_DIR"/* > work/whole-context-metricx-runtime-evidence/model-files.sha256 || true
+          sha256sum "$ROCKETDICT_METRICX_TOKENIZER_DIR"/* > work/whole-context-metricx-runtime-evidence/tokenizer-files.sha256 || true
+          git -C work/metricx-code rev-parse HEAD > work/whole-context-metricx-runtime-evidence/metricx-code-revision.txt || true
+          printf '%s\n' "$ROCKETDICT_SOURCE_RUN_ID" > work/whole-context-metricx-runtime-evidence/source-run-id.txt
+      - name: Upload whole-context MetricX QE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-whole-context-metricx-qe
+          path: |
+            work/qe-input/full-opticks-whole-context-hard-failure-cohort.json
+            work/qe-input/full-opticks-whole-context-metricx-qe.json
+            work/whole-context-metricx-runtime-evidence/**
           if-no-files-found: warn
           retention-days: 90
