@@ -7,25 +7,17 @@ This file stores durable conclusions from maintained Product translation-quality
 - Production baseline MT: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian `float32`.
 - Stage12 planner: `rocketdict-stage12-protected-split/8`.
 - Structural labels: `rocketdict-stage12-block-structural-label-opus/2`; bare Roman sentence fragments are not headings.
-- Block section identifier: `rocketdict-stage12-block-section-identifier/1`.
 - Numeric/symbol hard gate: `rocketdict-maintained-numeric-integrity/5` over every selected Stage12 row.
 - Gutenberg emphasis diagnostic: `rocketdict-maintained-emphasis-markup-preservation/1`, a rescue veto rather than a Product hard gate.
-- Independent MT: pinned `Helsinki-NLP/opus-mt-tc-big-en-zle`, revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, `model.safetensors` SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0.
+- Independent MT: pinned `Helsinki-NLP/opus-mt-tc-big-en-zle`, revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0.
 - Optional TC-big asset: `rocketdict-tc-big-en-ru-asset/1`; manifest SHA `85cf11ceb2eb401c83d1820672baaf745267e8b5edd71015a5a18e5bb49b752b`, payload-tree SHA `b725060c5d95ccc1f0082c0152e5ec79dd7815684ce89d6f658e5b97aeb2cba1`, 11 files / 968529922 bytes. Inference is offline and Torch-free.
-- Narrow TC-big wrappers remain default OFF/not public-wired unless explicitly stated otherwise:
-  - target-delimiter `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1`;
-  - footnote-reference lead `rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1`;
-  - figure-reference lead `rocketdict-stage12-tc-big-figure-reference-lead-rescue/1`;
-  - semicolon→question substitution `rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1`;
-  - target-only equals addition `rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1`;
-  - angular-minute prime `rocketdict-stage12-tc-big-angular-minute-prime-rescue/1`;
-  - short angular DMS `rocketdict-stage12-tc-big-short-angular-dms-rescue/1`.
+- Narrow TC-big wrappers remain default OFF/not public-wired: target-delimiter, footnote-reference lead, figure-reference lead, semicolon→question substitution, target-only equals addition, angular-minute prime and short angular DMS.
 
 ## Canonical contiguous Opticks evidence
 
 Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters, `3344` Stage12 rows.
 
-Persisted progression through the current accepted research basis:
+Persisted research progression:
 - run `4`: **30 numeric / 34 punctuation / 5 length**, 64 unique;
 - run `7`: **29/34/0**, 59 unique;
 - run `8`: **25/33/0**, 55 unique;
@@ -34,68 +26,65 @@ Persisted progression through the current accepted research basis:
 - run `11`: **24/20/0**, 42 unique;
 - run `12`: **23/19/0**, 41 unique;
 - run `13`: **23/18/0**, 40 unique;
-- run `14`: **22/18/0**, 39 unique.
+- run `14`: **22/18/0**, 39 unique;
+- run `15`: **21/18/0**, 38 unique;
+- run `16`: **20/18/0**, 37 unique.
 
-### Current persisted residual basis: run 14
+## Current best persisted research basis: run 16
 
-Heavy workflow `34643230375` is green; artifact `10280349240`.
+Composed angular-minute + short-DMS workflow `34645769684` is green; artifact `10282227627`.
 
-- run `14` output SHA `12e1fe77ab8df3959b4bb9265292cdc5b9db279797d94e2f15df6482429e2c44`;
-- persisted SQLite SHA `dfce68a8f7cae08b90380630ae29e31418b4d6e8987d3e7001fe72fa1d781304`;
-- base gate **23/18/0,40 → 22/18/0,39 unique**;
-- 1 attempt / 1 raw rank0 accept / 0 rejects at source start `107711`;
-- 3343 untouched rows exact; source coverage byte-exact; SQLite integrity/foreign keys clean;
-- evidence remains non-promoting/default-OFF.
+- exact base is run `14` (`12e1fe77ab8df3959b4bb9265292cdc5b9db279797d94e2f15df6482429e2c44`, DB `dfce68a8f7cae08b90380630ae29e31418b4d6e8987d3e7001fe72fa1d781304`);
+- angular intermediate run `15` output SHA `0e0ebb851e43079b3029a2a2638d0dc0ff5eb45bebd6c91895cb04483349fb45`;
+- final run `16` output SHA `6580654826710367569682fdd44805163d8f23a1ec3ede1c0d74c62b16ec06e`;
+- persisted run-16 SQLite SHA `2f7fb592777a9ca18c86ff393954f9032dbe48e4b10d626a322596d5ed56a862`;
+- audit evidence SHA `34598d7a05df08d01c610c83e9db8e2433e7537e31c9196fdc80eacc5b3f839`;
+- gates compose as **22/18/0,39 → 21/18/0,38 → 20/18/0,37 unique**;
+- angular layer changes only source start `431358` to raw rank0 `В то же время появляется гало на расстоянии около 22 градусов 35' от центра Луны.`;
+- DMS layer changes only source start `110881` to raw rank2 `Откуда этот угол 2 град. 0'. 7''.` and preserves all other 3343 rows exactly relative to run `15`;
+- byte-exact source coverage, SQLite `integrity_check=ok`, 0 foreign-key violations;
+- angular + DMS unit regressions **14/14 passed**;
+- no source/target rewriting, placeholders, literal injection, corpus-specific target patching or evaluator weakening;
+- evidence explicitly keeps promotion/default/public wiring false.
 
-The selected source is the algebraic sentence beginning `And by squaring these Equals...`. The OPUS target introduced a source-absent `=`. The selected raw TC-big candidate removes that hallucinated sign while preserving emphasized algebraic variables/ratios and the semantic relation `equal to`. The earlier concern about an unrelated `Square of the Sine` hypothesis does not describe the persisted row and is no longer a blocker for this exact run-14 audit. No target surgery or corpus patch is involved.
+### Why the short-DMS selector is evidence-backed
 
-## Additional persisted research evidence above run 14
+The run-14 residual is `Whence this Angle is 2 deg. 0'. 7''. ` → `Откуда угол 2 градуса. 0 футов 7 футов.`: the MT system interprets angular prime notation as feet.
 
-### Angular-minute prime rescue — research run 15
+Read-only workflow `34645335141` generated six raw TC-big hypotheses on the immutable run-14 DB. Only rank `2` passes both maintained strict mechanics and the DMS semantic selector:
+- rank0 collapses seconds `7''` to `7'`;
+- rank1 also leaves English `deg.` and collapses seconds;
+- rank2 is `Откуда этот угол 2 град. 0'. 7''.` and passes both classes;
+- rank3 preserves prime mechanics but leaves English `deg.`;
+- rank4 leaves `дег.` and collapses seconds;
+- rank5 has angle/degree semantics but turns minute `0'` into `0''`.
 
-Workflow `34643812392` is green; artifact `10281555120`.
+This separation is important: a mechanical-only or semantic-only selector would have admitted known bad outputs. The trigger remains narrow: exact single Stage10 row, exactly one `D deg. M'. S''` expression, source word `Angle`, <=12 alphabetic words, existing hard failure and broken prime signature. Longer `Chord` context is deliberately excluded because symbol preservation alone cannot establish technical semantic correctness.
 
-- exact base is run `14`;
-- output SHA `0e0ebb851e43079b3029a2a2638d0dc0ff5eb45bebd6c91895cb04483349fb45`;
-- persisted SQLite SHA `bfb131c43c37276a906044cc23908251e1526b9943d2c54eac5bf409b6b64630`;
-- hard counts **22/18/0,39 → 21/18/0,38 unique**;
-- exactly one attempt/accept at source start `431358`, rank0 target `В то же время появляется гало на расстоянии около 22 градусов 35' от центра Луны.`;
-- 3343 untouched rows exact, byte-exact source coverage, SQLite clean and all no-rewrite/no-injection safety flags false.
+## Earlier persisted rescue evidence still binding
 
-This establishes a real corpus improvement for the source-defined single angular-minute prime case. It does **not** authorize automatic/default/public promotion: the evidence itself records `promotion_allowed=false`, `automatic_product_default_allowed=false`, `public_stage12_surface_allowed=false`.
+- run `10`: target-only delimiter hallucination, **24/30/0,52 → 24/25/0,47**;
+- run `11`: footnote-reference leads, **24/25/0,47 → 24/20/0,42**;
+- run `12`: leading figure reference, **24/20/0,42 → 23/19/0,41**;
+- run `13`: semicolon→question migration, **23/19/0,41 → 23/18/0,40**;
+- run `14`: target-only equals addition, **23/18/0,40 → 22/18/0,39**;
+- run `15`: single angular-minute prime, **22/18/0,39 → 21/18/0,38**;
+- run `16`: short DMS composed over run15, **21/18/0,38 → 20/18/0,37**.
 
-## Current short-DMS frontier
+Persisted success is research evidence, not automatic Product-default authorization.
 
-Run `14` contains the genuine residual at source start `110881`:
+## Boundary/context frontier
 
-- source: `Whence this Angle is 2 deg. 0'. 7''. `;
-- target: `Откуда угол 2 градуса. 0 футов 7 футов.`.
+Read-only workflow `34644023517` showed that the exact pair `And whence is it | but from ... ?` yields six strict + semantic TC-big hypotheses when translated as one contiguous source span. L3 then located the deeper cause: the immutable source has no terminal punctuation at the split, but Stage8 marks token `it` as sentence end and lowercase `but` as sentence start; Stage10 preserves that false boundary. The run-16 punctuation residual is therefore partly an upstream sentence-segmentation problem, not merely a translation-model problem.
 
-The prime evaluator is correctly exposing a translation defect: minute/second notation is being interpreted as feet rather than angular minutes/seconds.
-
-The implemented short-DMS wrapper is deliberately narrower than a generic prime fixer. Eligibility requires exact single-row Stage10 geometry, exactly one `D deg. M'. S''` source expression, the word `Angle`, <=12 alphabetic source words, an existing Product hard failure and failed prime preservation. A raw TC-big candidate must then pass maintained strict checks, exact prime signature, emphasis preservation, conservative source-relative alpha bounds, and Russian angle/degree semantic anchors. The longer neighboring optics sentence containing `Chord` is excluded by the source-length gate because a mechanically clean DMS candidate can still corrupt its technical semantics.
-
-A dedicated read-only feasibility workflow over the exact run-14 database is the current evidence gate. Until its raw hypotheses are inspected and a persisted composed audit succeeds, this wrapper is experimental/default-OFF only.
-
-## Boundary/context evidence
-
-Read-only workflow `34644023517` tested the exact contiguous pair `whence is it | but from ... ?`. All six TC-big n-best hypotheses passed the strict mechanics and the experiment's semantic anchors when the pair was translated together. This proves feasibility of the combined span, but `promotion_allowed=false` and no wrapper/default follows automatically. Boundary changes still require exact source geometry, a source-defined trigger and a persisted regression audit.
-
-## Durable conclusions from the persisted rescue layers
-
-- Target-only delimiter hallucination (run `10`) reduced **24/30/0,52 → 24/25/0,47** without generic TC-big fallback.
-- Footnote-reference leads (run `11`) reduced **24/25/0,47 → 24/20/0,42** with 5/5 raw rank0 accepts; an earlier red run was only an audit `0 -> -1` bug.
-- Leading `[in _Fig._ N.]` (run `12`) reduced **24/20/0,42 → 23/19/0,41`; one case accepted and one failed closed under the same source-defined rule.
-- Semicolon→question migration (run `13`) reduced **23/19/0,41 → 23/18/0,40** by restoring source punctuation structure with an unmodified TC-big candidate.
-- Target-only equals addition (run `14`) reduced **23/18/0,40 → 22/18/0,39** on the exact algebraic row.
-- Angular-minute research run `15` demonstrates another one-row numeric improvement but remains intentionally non-promoted.
+A simple full-corpus Stage10 inventory of `previous fragment lacks terminal punctuation` plus `next fragment starts lowercase` yields only five candidate boundaries: four plausible prose continuations (`...in a Prism | nor...`, `Nor do I see but that there is | a general Law...`, `And whence is it | but...`, `...seeing whether | it...`) and one suspicious math/roman structure. This small cohort is promising but not yet sufficient to authorize merging. The next evidence step is to inspect the Stage8/Stage10 implementation and metadata, derive a generic fail-closed rule if possible, and rerun affected maintained stages rather than adding a phrase-specific `Whence` patch.
 
 ## Exhausted / rejected branches still binding
 
 - Generic OPUS/TC-big whole-context fallback: rejected; mechanically clean candidates can hide semantic loss.
 - Broad context `2725`/`2730` formulations: unsafe.
 - Broad square-bracket-loss OPUS formulation: no admissible safe cohort.
-- Generic prime decomposition/normalization: rejected because notation can be semantically corrupted; only source-defined narrow prime/DMS experiments may proceed.
+- Generic prime decomposition/normalization: rejected; only source-defined narrow prime/DMS classes may proceed.
 - Thousands grouping, narrow `x→×`, compact-formula spacing and broad citation/group coalescing remain rejected/ineffective absent materially new evidence.
 - Never use target literal injection, corpus-specific target patching, placeholders, source rewriting, target surgery or evaluator weakening.
 
