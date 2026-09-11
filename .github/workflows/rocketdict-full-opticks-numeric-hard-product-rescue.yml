@@ -1,0 +1,181 @@
+name: RocketDict Full Opticks Numeric Hard Product Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/emphasis_markup.py'
+      - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/research_diagnostics.py'
+      - 'rocketdict-product-core/src/rocketdict/runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_numeric_hard_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_length_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_citation_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_numeric_hard_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-numeric-hard-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  numeric-hard-product-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      COMBINED_RUN_ID: '34597648856'
+      COMBINED_ARTIFACT_NAME: rocketdict-full-opticks-combined-length-citation-product-rescue
+      COMBINED_JSON_SHA256: 71aedf2f55434d770d524cff2977df80efb5cd82e66421e01b22b43ad47b34c9
+      COMBINED_DB_SHA256: afc9eba1177e1ada86ae208d3f175cc34f84cd287145b236f4dad79fd73f7f67
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT: ${{ github.workspace }}/work/numeric-hard-product-rescue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product and Workbench runtimes
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+      - name: Download immutable composed length plus citation Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMBINED_ARTIFACT_NAME }}
+          path: work/combined-source
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.COMBINED_RUN_ID }}
+      - name: Assemble and verify composed Product inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT"
+          root=work/combined-source/combined-rescue
+          cp "$root/full-opticks-combined-length-citation-product-rescue-optin.json" \
+            "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/full-opticks-combined-length-citation-product-rescue-optin.json"
+          cp "$root/rocketdict.sqlite" "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$COMBINED_JSON_SHA256  $ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/full-opticks-combined-length-citation-product-rescue-optin.json" | sha256sum -c -
+          echo "$COMBINED_DB_SHA256  $ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+          cp "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict.sqlite" \
+            "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict-before.sqlite"
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify pinned OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
+              "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" \
+            | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Run persisted numeric-hard Product Stage12 audit
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_numeric_hard_product_rescue.py
+      - name: Verify persisted evidence and database integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/full-opticks-numeric-hard-product-rescue-optin.json"
+          test -s "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$COMBINED_DB_SHA256  $ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict-before.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          root = Path(os.environ['ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT'])
+          evidence = json.loads(
+              (root / 'full-opticks-numeric-hard-product-rescue-optin.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          if evidence['accepted_context_sequences'] != [550, 669, 1024, 2238]:
+              raise SystemExit(f"accepted context drift: {evidence['accepted_context_sequences']!r}")
+          if evidence['emphasis_rejected_context_sequences'] != [2725]:
+              raise SystemExit(
+                  f"emphasis veto drift: {evidence['emphasis_rejected_context_sequences']!r}"
+              )
+          expected = {'numeric_symbol': 25, 'punctuation': 33, 'length': 0}
+          if evidence['enabled_hard_gate_counts'] != expected:
+              raise SystemExit(
+                  f"enabled hard-gate drift: {evidence['enabled_hard_gate_counts']!r}"
+              )
+          if evidence['enabled_unique_hard_failure_count'] != 55:
+              raise SystemExit(
+                  f"enabled unique hard failures drift: {evidence['enabled_unique_hard_failure_count']!r}"
+              )
+          if evidence['base_stage_cache_reused'] is not True:
+              raise SystemExit('composed run7 base was not reused exactly')
+          if evidence['source_coverage_byte_exact'] is not True:
+              raise SystemExit('source coverage proof missing')
+          if evidence['untouched_rows_base_exact'] is not True:
+              raise SystemExit('untouched-row proof missing')
+          if evidence['applied_targets_exact_raw_rank0'] is not True:
+              raise SystemExit('raw-rank0 proof missing')
+
+          with sqlite3.connect(root / 'rocketdict.sqlite') as connection:
+              integrity = connection.execute('PRAGMA integrity_check').fetchone()[0]
+              foreign_keys = connection.execute('PRAGMA foreign_key_check').fetchall()
+          if integrity != 'ok':
+              raise SystemExit(f'SQLite integrity_check failed: {integrity!r}')
+          if foreign_keys:
+              raise SystemExit(f'SQLite foreign_key_check failed: {foreign_keys[:10]!r}')
+          print('Numeric-hard evidence verified; SQLite integrity_check=ok; foreign_key_check=0')
+          PY
+      - name: Record runtime and persisted identities
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/numeric-hard-product-runtime-evidence
+          python -VV > work/numeric-hard-product-runtime-evidence/python.txt || true
+          python -m pip freeze | sort > work/numeric-hard-product-runtime-evidence/pip-freeze.txt || true
+          df -h > work/numeric-hard-product-runtime-evidence/disk.txt || true
+          free -h > work/numeric-hard-product-runtime-evidence/memory.txt || true
+          sha256sum work/opus-2020-02-11.zip \
+            > work/numeric-hard-product-runtime-evidence/opus.sha256 || true
+          printf '%s\n' "$COMBINED_RUN_ID" \
+            > work/numeric-hard-product-runtime-evidence/combined-run-id.txt
+          if [ -s "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict.sqlite" ]; then
+            sha256sum "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/rocketdict.sqlite" \
+              > work/numeric-hard-product-runtime-evidence/persisted-db.sha256
+          fi
+          if [ -s "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/full-opticks-numeric-hard-product-rescue-optin.json" ]; then
+            sha256sum \
+              "$ROCKETDICT_NUMERIC_HARD_PRODUCT_ROOT/full-opticks-numeric-hard-product-rescue-optin.json" \
+              > work/numeric-hard-product-runtime-evidence/product-rescue-json.sha256
+          fi
+      - name: Upload persisted numeric-hard Product rescue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-numeric-hard-product-rescue
+          path: |
+            work/opus-asset-build.json
+            work/numeric-hard-product-rescue/full-opticks-numeric-hard-product-rescue-optin.json
+            work/numeric-hard-product-rescue/rocketdict.sqlite
+            work/numeric-hard-product-runtime-evidence/**
+          if-no-files-found: warn
+          retention-days: 90
