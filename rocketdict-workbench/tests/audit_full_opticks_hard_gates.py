@@ -3,11 +3,17 @@ from __future__ import annotations
 """Read-only full-Opticks inventory for all maintained Product hard gates.
 
 The historical full-Opticks stress harness was deliberately centered on numeric
-integrity.  Product release acceptance, however, requires numeric/symbol,
-punctuation and length-ratio gates to be clean at the same time.  This audit
+integrity. Product release acceptance, however, requires numeric/symbol,
+punctuation and length-ratio gates to be clean at the same time. This audit
 reads the persisted selected Stage12 baseline, evaluates every translation row
 with the current maintained gate implementations and records which failures
 belong to planner-split Stage10 contexts.
+
+The audit is contract-relative rather than tied to a historical failure count:
+the baseline JSON is authoritative for its own reported numeric result, while
+this script independently recomputes that result from the persisted rows and
+fails closed on disagreement. That keeps the inventory usable when a maintained
+planner/structural contract legitimately changes the corpus result.
 
 It is evidence only: no database writes, no target repair, no threshold changes
 and no automatic Product promotion are performed here.
@@ -24,12 +30,12 @@ from rocketdict.database import connect, get_document, get_run, get_run_items
 from rocketdict.numeric_integrity import CONTRACT as NUMERIC_CONTRACT
 from rocketdict.numeric_integrity import evaluate_numeric_symbol_pair
 from rocketdict.stages import _length_issues, _punctuation_issues
+from rocketdict.structural_labels import STRUCTURAL_LABEL_CONTRACT
 from rocketdict.translation_stage import PLANNER_CONTRACT
 
-SCHEMA = "rocketdict-full-opticks-hard-gate-inventory/1"
+SCHEMA = "rocketdict-full-opticks-hard-gate-inventory/2"
 BASE_SCHEMA = "rocketdict-full-opticks-numeric-stress/3"
 OPTICKS_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
-EXPECTED_BASELINE_NUMERIC_FAILURES = 27
 
 
 def _sha_file(path: Path) -> str:
@@ -121,9 +127,16 @@ def main() -> int:
     if baseline.get("source_sha256") != OPTICKS_SHA256:
         raise RuntimeError("Pinned Opticks source identity drift")
     if baseline.get("stage12_planner_contract") != PLANNER_CONTRACT:
-        raise RuntimeError("Hard-gate inventory requires current planner-v8 baseline")
-    if int(baseline.get("product_numeric_failure_count") or -1) != EXPECTED_BASELINE_NUMERIC_FAILURES:
-        raise RuntimeError("Pinned baseline numeric failure count drift")
+        raise RuntimeError("Hard-gate inventory requires current planner baseline")
+    if baseline.get("structural_label_contract") != STRUCTURAL_LABEL_CONTRACT:
+        raise RuntimeError("Hard-gate inventory requires current structural-label contract")
+    reported_numeric_failure_count = int(
+        baseline.get("product_numeric_failure_count")
+        if baseline.get("product_numeric_failure_count") is not None
+        else -1
+    )
+    if reported_numeric_failure_count < 0:
+        raise RuntimeError("Full Opticks baseline lacks a reported numeric failure count")
 
     selected_run_id = int((baseline.get("stage12") or {})["translation_run_id"])
     document_version_id = int(baseline["document_version_id"])
@@ -138,6 +151,12 @@ def main() -> int:
         selected_run = get_run(connection, selected_run_id)
         rows = get_run_items(connection, selected_run_id, kind="translation_segment")
         document = get_document(connection, document_version_id)
+    selected_output = dict(selected_run.get("output") or {})
+    if selected_output.get("planner_contract") != PLANNER_CONTRACT:
+        raise RuntimeError("Persisted selected Stage12 planner contract drift")
+    if selected_output.get("structural_label_contract") != STRUCTURAL_LABEL_CONTRACT:
+        raise RuntimeError("Persisted selected Stage12 structural-label contract drift")
+
     content = str(document["content_text"])
     ordered = sorted(rows, key=lambda row: int(row["sequence_number"]))
     if "".join(str(row.get("source_text") or "") for row in ordered) != content:
@@ -181,10 +200,10 @@ def main() -> int:
         if length_issue is not None:
             length.append(length_issue)
 
-    if len(numeric) != EXPECTED_BASELINE_NUMERIC_FAILURES:
+    if len(numeric) != reported_numeric_failure_count:
         raise RuntimeError(
-            "Recomputed maintained numeric failure count drift: "
-            f"{len(numeric)} != {EXPECTED_BASELINE_NUMERIC_FAILURES}"
+            "Recomputed maintained numeric failure count disagrees with baseline: "
+            f"{len(numeric)} != {reported_numeric_failure_count}"
         )
 
     def split_count(issues: list[dict[str, Any]]) -> int:
@@ -210,7 +229,12 @@ def main() -> int:
         "selected_translation_run_id": selected_run_id,
         "selected_translation_output_sha256": str(selected_run.get("output_sha256") or ""),
         "planner_contract": PLANNER_CONTRACT,
+        "structural_label_contract": STRUCTURAL_LABEL_CONTRACT,
+        "structural_label_family_counts": dict(
+            baseline.get("structural_label_family_counts") or {}
+        ),
         "numeric_contract": NUMERIC_CONTRACT,
+        "baseline_reported_numeric_failure_count": reported_numeric_failure_count,
         "segment_count": len(ordered),
         "split_context_count": len(split_contexts),
         "split_segment_count": len(split_segment_sequences),
