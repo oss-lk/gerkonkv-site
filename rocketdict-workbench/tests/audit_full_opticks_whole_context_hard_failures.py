@@ -25,7 +25,7 @@ from rocketdict.translation_rescue_stage import (
 from rocketdict.translation_stage import PLANNER_CONTRACT
 
 SCHEMA = "rocketdict-full-opticks-whole-context-hard-failure-cohort/1"
-HARD_GATE_SCHEMA = "rocketdict-full-opticks-hard-gate-inventory/2"
+HARD_GATE_SCHEMA = "rocketdict-full-opticks-hard-gate-inventory/3"
 SHADOW_SCHEMA = "rocketdict-full-opticks-whole-context-shadow/2"
 OPTICKS_SHA256 = "1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217"
 
