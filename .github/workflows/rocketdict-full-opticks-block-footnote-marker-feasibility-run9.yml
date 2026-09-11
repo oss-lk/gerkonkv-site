@@ -1,0 +1,133 @@
+name: RocketDict Full Opticks Block Footnote Marker Feasibility Run9
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_rescue.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_marker_feasibility_run9.py'
+      - '.github/workflows/rocketdict-full-opticks-block-footnote-marker-feasibility-run9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  block-footnote-run9-feasibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE_RUN_ID: '34610787826'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      BASE_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_FOOTNOTE_RUN9_ROOT: ${{ github.workspace }}/work/footnote-run9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product and Workbench runtimes
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]'
+          python -m pip install -e ./rocketdict-workbench
+      - name: Download immutable illustration run-9 Product evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Assemble and verify persisted run-9 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_FOOTNOTE_RUN9_ROOT"
+          cp work/base/illustration-product-rescue/rocketdict.sqlite "$ROCKETDICT_FOOTNOTE_RUN9_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_FOOTNOTE_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain and verify pinned OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline CTranslate2 float32 asset
+        run: |
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+      - name: Run run-9 block-footnote marker feasibility
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_block_footnote_marker_feasibility_run9.py
+      - name: Verify read-only and cohort invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_FOOTNOTE_RUN9_ROOT/full-opticks-block-footnote-marker-feasibility-run9.json"
+          test -s "$evidence"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_FOOTNOTE_RUN9_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_FOOTNOTE_RUN9_ROOT'])
+          evidence = json.loads((root / 'full-opticks-block-footnote-marker-feasibility-run9.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-block-footnote-marker-feasibility-run9/1':
+              raise SystemExit(f"schema drift: {evidence['schema']!r}")
+          if evidence['all_block_marker_letters'] != list('ABCDEFGHIJKLM'):
+              raise SystemExit(f"marker inventory drift: {evidence['all_block_marker_letters']!r}")
+          if evidence['attempted_letters'] != list('GHJKM'):
+              raise SystemExit(f"hard-failing marker cohort drift: {evidence['attempted_letters']!r}")
+          if evidence['attempted_source_starts'] != [151466,151557,253849,253919,254102]:
+              raise SystemExit(f"hard-failing source cohort drift: {evidence['attempted_source_starts']!r}")
+          if evidence['base_hard_gate_counts'] != {'numeric_symbol':24,'punctuation':30,'length':0,'unique':52}:
+              raise SystemExit(f"base gate drift: {evidence['base_hard_gate_counts']!r}")
+          b=evidence['base_hard_gate_counts']; c=evidence['counterfactual_hard_gate_counts']
+          if any(c[k] > b[k] for k in ('numeric_symbol','punctuation','length','unique')):
+              raise SystemExit(f"counterfactual regression: {c!r}")
+          if evidence['source_coverage_byte_exact'] is not True or evidence['database_unchanged'] is not True:
+              raise SystemExit('read-only/source coverage proof missing')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection'):
+              if evidence[flag] is not False:
+                  raise SystemExit(f"unsafe flag drift: {flag}={evidence[flag]!r}")
+          if evidence['promotion_allowed'] is not False or evidence['automatic_product_default_allowed'] is not False:
+              raise SystemExit('research unexpectedly authorizes Product promotion')
+          print('Run-9 block-footnote feasibility evidence verified.')
+          PY
+      - name: Record runtime identities
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/footnote-runtime
+          python -VV > work/footnote-runtime/python.txt || true
+          python -m pip freeze | sort > work/footnote-runtime/pip-freeze.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/footnote-runtime/opus.sha256 || true
+          if [ -s "$ROCKETDICT_FOOTNOTE_RUN9_ROOT/full-opticks-block-footnote-marker-feasibility-run9.json" ]; then
+            sha256sum "$ROCKETDICT_FOOTNOTE_RUN9_ROOT/full-opticks-block-footnote-marker-feasibility-run9.json" > work/footnote-runtime/evidence.sha256
+          fi
+      - name: Upload run-9 block-footnote feasibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-block-footnote-marker-feasibility-run9
+          path: |
+            work/opus-asset-build.json
+            work/footnote-run9/full-opticks-block-footnote-marker-feasibility-run9.json
+            work/footnote-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
