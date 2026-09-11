@@ -5,6 +5,7 @@ This file stores durable conclusions from maintained Product translation-quality
 ## Maintained contracts
 
 - Production baseline MT: pinned official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian `float32`.
+- Stage10 context default: `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, source-boundary policy `rocketdict-stage10-lowercase-continuation-coalescer/1`. Raw Stage8 spaCy assignments are retained as evidence.
 - Stage12 planner: `rocketdict-stage12-protected-split/8`.
 - Structural labels: `rocketdict-stage12-block-structural-label-opus/2`; bare Roman sentence fragments are not headings.
 - Numeric/symbol hard gate: `rocketdict-maintained-numeric-integrity/5` over every selected Stage12 row.
@@ -15,51 +16,28 @@ This file stores durable conclusions from maintained Product translation-quality
 
 ## Canonical contiguous Opticks evidence
 
-Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters, `3344` Stage12 rows.
+Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters, `3344` Stage12 rows in the current run-16 basis.
 
-Persisted research progression:
-- run `4`: **30 numeric / 34 punctuation / 5 length**, 64 unique;
-- run `7`: **29/34/0**, 59 unique;
-- run `8`: **25/33/0**, 55 unique;
-- run `9`: **24/30/0**, 52 unique;
-- run `10`: **24/25/0**, 47 unique;
-- run `11`: **24/20/0**, 42 unique;
-- run `12`: **23/19/0**, 41 unique;
-- run `13`: **23/18/0**, 40 unique;
-- run `14`: **22/18/0**, 39 unique;
-- run `15`: **21/18/0**, 38 unique;
-- run `16`: **20/18/0**, 37 unique.
+Persisted research progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → `16` **20/18/0,37**.
 
 ## Current best persisted research basis: run 16
 
 Composed angular-minute + short-DMS workflow `34645769684` is green; artifact `10282227627`; artifact ZIP SHA-256 `92b2ad3fa98af1d12c27eeb4ee749071d5152464b34c4ac1f3bf40ed7cc02e14`.
 
-- exact base is run `14` (`12e1fe77ab8df3959b4bb9265292cdc5b9db279797d94e2f15df6482429e2c44`, DB `dfce68a8f7cae08b90380630ae29e31418b4d6e8987d3e7001fe72fa1d781304`);
-- angular intermediate run `15` output SHA `0e0ebb851e43079b3029a2a2638d0dc0ff5eb45bebd6c91895cb04483349fb45`;
-- final run `16` output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`;
-- persisted run-16 SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`;
-- audit evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`;
+- exact base run `14`; angular intermediate run `15`; final run `16` output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`;
+- persisted run-16 SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`; audit evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`;
 - gates compose as **22/18/0,39 → 21/18/0,38 → 20/18/0,37 unique**;
-- angular layer changes only source start `431358` to raw rank0 `В то же время появляется гало на расстоянии около 22 градусов 35' от центра Луны.`;
-- DMS layer changes only source start `110881` to raw rank2 `Откуда этот угол 2 град. 0'. 7''.` and preserves all other 3343 rows exactly relative to run `15`;
-- byte-exact source coverage, SQLite `integrity_check=ok`, 0 foreign-key violations;
-- angular + DMS unit regressions **14/14 passed**;
-- no source/target rewriting, placeholders, literal injection, corpus-specific target patching or evaluator weakening;
-- evidence explicitly keeps promotion/default/public wiring false.
+- angular layer changes only source start `431358`; DMS layer changes only source start `110881` to raw TC-big rank2 `Откуда этот угол 2 град. 0'. 7''.`;
+- byte-exact source coverage, SQLite `integrity_check=ok`, 0 foreign-key violations, angular+DMS unit regressions **14/14**;
+- no source/target rewriting, placeholders, literal injection, corpus-specific target patching or evaluator weakening; promotion/default/public wiring remains false.
 
-### Why the short-DMS selector is evidence-backed
+## Stage10 boundary repair
 
-The run-14 residual is `Whence this Angle is 2 deg. 0'. 7''. ` → `Откуда угол 2 градуса. 0 футов 7 футов.`: the MT system interprets angular prime notation as feet.
+The run-16 punctuation residual `And whence is it | but from ... ?` exposed an upstream false spaCy split: immutable source has no terminal punctuation at the boundary. A complete census found exactly five boundaries matching `left has no terminal sentence punctuation + right starts lowercase`; source/token review established all five as genuine false parser splits, including `_ B | any where...` inside one sentence.
 
-Read-only workflow `34645335141` generated six raw TC-big hypotheses on the immutable run-14 DB. Only rank `2` passes both maintained strict mechanics and the DMS semantic selector:
-- rank0 collapses seconds `7''` to `7'`;
-- rank1 also leaves English `deg.` and collapses seconds;
-- rank2 is `Откуда этот угол 2 град. 0'. 7''.` and passes both classes;
-- rank3 preserves prime mechanics but leaves English `deg.`;
-- rank4 leaves `дег.` and collapses seconds;
-- rank5 has angle/degree semantics but turns minute `0'` into `0''`.
+This is now implemented generically at Stage10. Default implementation `structural-entity-term-discourse-pronoun-v2` coalesces only consecutive parser sentences when source geometry is contiguous through whitespace, the gap has no paragraph break, the source before the boundary has no terminal `.?!` after closers, and the next lexical character is lowercase. Every merge persists its source offset/reason and original spaCy sentence indices. V1 remains an explicit compatibility implementation; changed default/cache identity and schema prevent old V1 cached output from masquerading as repaired V2 output.
 
-This separation is important: a mechanical-only or semantic-only selector would have admitted known bad outputs. The trigger remains narrow: exact single Stage10 row, exactly one `D deg. M'. S''` expression, source word `Angle`, <=12 alphabetic words, existing hard failure and broken prime signature. Longer `Chord` context is deliberately excluded because symbol preservation alone cannot establish technical semantic correctness.
+Integration commit `b97825c5cbf1b1fab7f35133feca3f76cdd4b456` passed a dedicated **12/12** Stage10 regression suite before commit. That workflow pushed `b97825c5` with `GITHUB_TOKEN`; no ordinary Product workflow was automatically generated for the resulting HEAD. Therefore no new full-corpus counts may be claimed yet. The next evidence task is terminal-HEAD GT5/GT8 plus exact complete-*Opticks* Stage10→Stage12 rerun, comparing the five boundary changes, all untouched rows, hard gates and semantic review against run16.
 
 ## Earlier persisted rescue evidence still binding
 
@@ -72,14 +50,6 @@ This separation is important: a mechanical-only or semantic-only selector would 
 - run `16`: short DMS composed over run15, **21/18/0,38 → 20/18/0,37**.
 
 Persisted success is research evidence, not automatic Product-default authorization.
-
-## Boundary/context frontier
-
-Read-only workflow `34644023517` showed that the exact pair `And whence is it | but from ... ?` yields six strict + semantic TC-big hypotheses when translated as one contiguous source span. L3 then located the deeper cause: the immutable source has no terminal punctuation at the split, but Stage8 assigns separate spaCy sentence indices and Stage10 preserves that false boundary. The run-16 punctuation residual is therefore partly an upstream sentence-segmentation problem, not merely a translation-model problem.
-
-A complete Stage10 census of `previous fragment lacks terminal sentence punctuation` plus `next fragment starts lowercase` yields exactly five boundaries. Full immutable-source and token review confirms **all five are genuine false spaCy sentence splits**, including the superficially structural `_ B | any where...` boundary, which is actually one sentence: `Line C _prt_ B any where between the Ends...`.
-
-`run_stage10` currently groups directly by spaCy `sentence_index`. Therefore the next evidence-backed engineering step is a generic fail-closed Stage10 coalescer, not a phrase-specific `Whence` rescue. The coalescer must merge only contiguous adjacent parser sentences when the left side has no actual sentence-terminal punctuation, the right side begins with lowercase lexical continuation, and the gap does not cross a paragraph boundary. Raw Stage8 spaCy evidence should remain unchanged; Stage10 must expose merge provenance. Because current caching keys include the implementation name, changed behavior also requires a Stage10 implementation/schema contract bump so old cached run2 cannot masquerade as repaired output.
 
 ## Exhausted / rejected branches still binding
 

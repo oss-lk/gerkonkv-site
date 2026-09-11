@@ -36,33 +36,19 @@ The maintained wrappers include target-delimiter, footnote-reference lead, figur
 
 No internal rescue becomes Product default merely because one corpus-specific heavy run improves hard-gate counts.
 
-## Run 16 is the current best persisted research residual basis
+## Run 16 remains the current best persisted research residual basis
 
-**Decision.** Stage12 run `16` is the current best persisted research basis: **20 numeric / 18 punctuation / 0 length, 37 unique**.
+**Decision.** Until the Stage10-v2 full-corpus rerun is persisted and audited, Stage12 run `16` remains the current best basis: **20 numeric / 18 punctuation / 0 length, 37 unique**. Evidence identities are workflow `34645769684`, artifact `10282227627`, output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`, evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`.
 
-**Evidence.** Composed workflow `34645769684`, artifact `10282227627` (ZIP SHA-256 `92b2ad3fa98af1d12c27eeb4ee749071d5152464b34c4ac1f3bf40ed7cc02e14`), exact base run `14`, angular intermediate run `15`, final run `16`, final output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, persisted SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`, evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`. It composes **22/18/0,39 → 21/18/0,38 → 20/18/0,37**, preserves byte-exact source coverage and SQLite integrity, and passes 14/14 narrow wrapper unit regressions.
+## Repair false NLP sentence boundaries upstream, not with phrase-specific MT patches
 
-The DMS layer changes exactly source start `110881` to raw TC-big rank2 `Откуда этот угол 2 град. 0'. 7''.` and preserves all other 3343 rows exactly relative to the angular intermediate. All no-rewrite/no-injection safety invariants are true and promotion/default/public flags remain false.
+**Decision.** False spaCy sentence splits proven by immutable source structure belong in Stage10, while raw Stage8 parser evidence remains immutable. Do not add a `Whence`-specific translation rescue for `And whence is it | but from ... ?`.
 
-## Short standalone DMS is validated research, not a default
+The implemented default is `structural-entity-term-discourse-pronoun-v2` / schema `rocketdict-product-stage10/2`, using `rocketdict-stage10-lowercase-continuation-coalescer/1`. It merges only consecutive raw parser sentences when the inter-token gap is whitespace-only, does not cross a paragraph break, source before the boundary has no terminal `.?!` after closing punctuation, and the first lexical character on the right is lowercase. It persists original spaCy indices and full merge decisions; V1 remains explicitly selectable for compatibility.
 
-**Decision.** Do not revive generic prime decomposition/normalization. The supported research class remains only the exact short standalone angular pattern `D deg. M'. S''` under strict source geometry and semantics.
+**Reason.** A complete run-16 census found exactly five candidate boundaries and source/token review confirmed all five are genuine false splits. Narrow source-defined coalescing fixes ownership at the earliest maintained layer without target surgery, model-specific guessing, or destruction of Stage8 provenance.
 
-The run-14 failure `Whence this Angle is 2 deg. 0'. 7''. ` → `Откуда угол 2 градуса. 0 футов 7 футов.` is a real model error. Read-only workflow `34645335141` proves selector necessity: among six raw TC-big hypotheses, only rank2 simultaneously passes strict mechanics and DMS semantics. Rank3 is mechanically clean but leaves English `deg.`; rank5 has angle/degree semantics but corrupts the minute prime. Therefore neither mechanical-only nor semantic-only acceptance is sufficient.
-
-**Decision.** The persisted composed run16 proves technical non-regression for this narrow wrapper but still does not authorize Product-default promotion. The longer neighboring `Chord` sentence remains excluded because symbol preservation cannot prove its technical semantics.
-
-## Repair false NLP sentence boundaries upstream, not with a Whence-specific MT patch
-
-**Decision.** The `And whence is it | but from ... ?` residual is rooted upstream: Stage8 records a spaCy sentence split although immutable source has no terminal punctuation; current Stage10 groups directly by that `sentence_index`, so Stage12 receives two translation units.
-
-Read-only workflow `34644023517` proves the exact contiguous pair is translatable, but a phrase-specific `Whence` rescue is not the preferred solution.
-
-A complete run-16 Stage10 census of `left side has no terminal sentence punctuation + right side begins lowercase` finds exactly five boundaries. Full source/token inspection confirms **all five are real false spaCy sentence splits**, including `_ B | any where...`, which belongs to one sentence `Line C _prt_ B any where between the Ends...`.
-
-**Decision.** Implement the correction in Stage10 as a generic fail-closed context coalescer while preserving raw Stage8 spaCy evidence. Merge only adjacent contiguous parser sentences when the immutable source gives no sentence-terminal punctuation at the boundary, the continuation begins with lowercase lexical text, and the gap does not cross a paragraph break. Persist original spaCy sentence indices and merge provenance. Because Stage10 cache identity includes the implementation name, changed behavior requires an implementation/schema contract bump; otherwise an old cached run may silently retain the bad boundary behavior.
-
-After unit/diagnostic validation, rerun complete *Opticks* Stage10→translation evidence and compare against run16. If broader regressions appear, fail closed rather than weakening the rule or patching targets.
+**Evidence state.** Integration commit `b97825c5cbf1b1fab7f35133feca3f76cdd4b456` passed **12/12** focused Stage10 regressions before commit. Its self-patching workflow pushed final HEAD with `GITHUB_TOKEN`, which does not create a follow-on ordinary Product run, so terminal-head GT5/GT8 and complete-*Opticks* evidence are still required. Fail closed on any broader regression; do not weaken the source rule or patch targets.
 
 ## Punctuation and numeric residuals remain defect-family-specific
 
