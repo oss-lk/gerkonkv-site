@@ -6,6 +6,8 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 **Decision.** Speed, storage and convenience may not reduce Product quality/evidence. Real EN→RU MT is mandatory; fake/identity/mock/dictionary substitution is never Product translation. Hard gates may not be weakened merely to pass CI, and corpus/source truncation may never be silent.
 
+The authoritative release contract remains `rocketdict/PRODUCT_TARGET.md`: final approved 90k+ heavy evidence must have zero unresolved numeric/symbol, punctuation and length hard failures and the complete downstream learner-dictionary/export path must succeed.
+
 ## Maintained Product Core is the forward implementation
 
 **Decision.** New Product work targets `rocketdict-product-core` plus Workbench unified orchestration. Historical 0.30.x/checkpoint material remains provenance/compatibility evidence, not the forward path without an evidence-based reason.
@@ -14,102 +16,98 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 **Decision.** Production baseline uses official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian and `float32` acceptance compute. Preserve immutable source/config/model/result identities and replayable evidence.
 
-A second real MT does not become Product merely because it passes hard gates on residual failures. Any Product role requires pinned identity/license, deterministic selection, semantic review, full-corpus regression and an explicit offline installation/runtime plan.
+Pinned TC-big comparator/rescue source is `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0. Correct MarianTokenizer semantics and CTranslate2 float32 are mandatory; accepted inference is offline and Torch-free. TC-big remains a separate optional asset and must not silently enter the baseline `production` extra.
 
 ## Translation-quality promotion requires contiguous evidence and semantic review
 
 **Decision.** A maintained quality change may be promoted only after classifying the defect, preserving immutable source ownership and validating boundary-sensitive behavior on contiguous evidence. Mechanical gate success alone is insufficient.
 
-Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of missing literals/structure, corpus-specific target patches, arbitrary punctuation deletion, generic structural islands, source rewriting, target surgery, broad fallback and evaluator weakening are not Product policies.
+Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of missing literals/structure, corpus-specific target patches, arbitrary punctuation deletion, source rewriting, target surgery, placeholders, broad fallback and evaluator weakening are not Product policies.
 
-## Complete gate scope is the maintained Product gate
-
-**Decision.** Complete numeric/symbol evaluation is `rocketdict-maintained-numeric-integrity/5` over every selected Stage12 row. Historical stress counters do not define release quality.
+MetricX/QE may rank immutable raw candidates but cannot establish acceptance by itself.
 
 ## Source-owned structure must be narrow and source-defined
 
-**Decision.** Structural treatment is allowed only when the class is exhaustively identifiable from immutable source structure, spans remain byte-exact, inline linguistic uses remain outside the rule, and translated lexical content still comes from real raw MT candidates rather than identity/patch output.
+**Decision.** Structural treatment is allowed only when the class is exhaustively identifiable from immutable source structure, spans remain byte-exact, inline linguistic uses remain outside the rule, and translated lexical content still comes from real raw MT candidates.
 
-Bare `II.`, `IV.` and similar fragments created by sentence segmentation are not headings. Exact Stage10 source spans may be replacement units only when representable by complete current Stage12 rows; otherwise skip fail-closed and never slice target strings.
+Exact Stage10 source spans may be replacement units only when representable by complete current Stage12 rows; otherwise skip fail-closed and never slice target strings.
 
 ## Existing opt-in rescue layers remain default OFF
 
-- `rocketdict-stage12-length-failure-whole-context-rescue/1` — public opt-in/default OFF.
-- `rocketdict-stage12-citation-boundary-pair-rescue/1` — public opt-in/default OFF.
-- `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` — default OFF/not public-wired. Context `2725` remains the key semantic-loss counterexample proving mechanical cleanliness is insufficient.
-- `rocketdict-stage12-illustration-label-rescue/1` — default OFF/not public-wired.
-- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` — default OFF/not public-wired; persisted run `10`.
-- `rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1` — default OFF/not public-wired; persisted run `11`.
-- `rocketdict-stage12-tc-big-figure-reference-lead-rescue/1` — default OFF/not public-wired; persisted run `12`.
-- `rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1` — default OFF/not public-wired; persisted run `13`.
-- `rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1` — default OFF/not public-wired; implementation/CI green, no persisted full-corpus promotion yet.
-- `rocketdict-maintained-emphasis-markup-preservation/1` remains a rescue veto, not a retroactive Product hard gate.
+The following maintained wrappers are default OFF/not public-wired unless a stronger release decision explicitly changes that:
 
-No internal rescue becomes Product default merely because a corpus-specific heavy run improves hard-gate counts.
+- `rocketdict-stage12-length-failure-whole-context-rescue/1`;
+- `rocketdict-stage12-citation-boundary-pair-rescue/1`;
+- `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1`;
+- `rocketdict-stage12-illustration-label-rescue/1`;
+- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` — persisted run `10`;
+- `rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1` — persisted run `11`;
+- `rocketdict-stage12-tc-big-figure-reference-lead-rescue/1` — persisted run `12`;
+- `rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1` — persisted run `13`;
+- `rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1` — persisted run `14`;
+- `rocketdict-stage12-tc-big-angular-minute-prime-rescue/1` — persisted research run `15`, explicitly non-promoting;
+- `rocketdict-stage12-tc-big-short-angular-dms-rescue/1` — implementation/unit tests present, feasibility audit required before any persisted DMS result.
+
+`rocketdict-maintained-emphasis-markup-preservation/1` remains a rescue veto, not a retroactive Product hard gate.
+
+No internal rescue becomes Product default merely because one corpus-specific heavy run improves hard-gate counts.
+
+## Run 14 is the current accepted persisted residual basis
+
+**Decision.** Stage12 run `14` supersedes run `13` as the current persisted research residual basis: **22 numeric / 18 punctuation / 0 length, 39 unique**.
+
+**Evidence.** Heavy workflow `34643230375`, artifact `10280349240`, output SHA `12e1fe77ab8df3959b4bb9265292cdc5b9db279797d94e2f15df6482429e2c44`, persisted SQLite SHA `dfce68a8f7cae08b90380630ae29e31418b4d6e8987d3e7001fe72fa1d781304`. It composes over exact run `13`, preserves byte-exact source coverage and 3343 exact untouched rows, selects one raw TC-big rank0 candidate and passes independent hard-gate/SQLite checks.
+
+**Interpretation.** The accepted row is the algebraic sentence beginning `And by squaring these Equals...` at source start `107711`. OPUS added a source-absent `=`; the raw TC-big candidate removes that hallucinated sign while retaining emphasized algebraic terms/ratios and the `equal to` relation. The previously suspected `Square of the Sine` wording is not this persisted row and is not a valid reason to reject run `14`.
+
+This is persisted research quality progress, not Product-default promotion.
+
+## Angular-minute rescue is evidence-backed research, not a default
+
+**Decision.** The narrow single-angular-minute-prime wrapper is technically validated on the complete corpus but remains default OFF/not public-wired.
+
+**Evidence.** Workflow `34643812392`, artifact `10281555120`, exact base run `14`, enabled research run `15`, output SHA `0e0ebb851e43079b3029a2a2638d0dc0ff5eb45bebd6c91895cb04483349fb45`, SQLite SHA `bfb131c43c37276a906044cc23908251e1526b9943d2c54eac5bf409b6b64630`. It changes exactly source start `431358`, reduces **22/18/0,39 → 21/18/0,38 unique**, preserves 3343 untouched rows and all source/safety invariants. The evidence explicitly records `promotion_allowed=false`, `automatic_product_default_allowed=false`, `public_stage12_surface_allowed=false`.
+
+Therefore a full-corpus improvement is necessary but not sufficient for default promotion.
+
+## Short standalone DMS is a distinct prime-notation class
+
+**Decision.** Do not revive generic prime decomposition/normalization. The current candidate class is only the exact short standalone angular pattern `D deg. M'. S''` under strict source geometry and semantics.
+
+The concrete run-14 failure at source start `110881` is `Whence this Angle is 2 deg. 0'. 7''. ` → `Откуда угол 2 градуса. 0 футов 7 футов.`. This is a real model error: angular minute/second marks were interpreted as feet.
+
+The implemented DMS trigger may act only when:
+- the source/current row is an exact single Stage10 context;
+- exactly one DMS expression is present;
+- source contains `Angle`;
+- source has at most 12 alphabetic words;
+- the current row already hard-fails and its prime signature is broken.
+
+A candidate must be an unmodified raw TC-big hypothesis with exact D/M/S prime preservation, strict mechanical pass, emphasis preservation, conservative source-relative alpha ratio and Russian angle/degree semantics. The neighboring longer `Chord` sentence is intentionally excluded because DMS mechanics alone cannot prove its technical meaning is preserved.
+
+**Decision.** DMS implementation/unit success alone is not promotion evidence. First run read-only n-best feasibility on the immutable run-14 DB; only if a raw candidate is both mechanically and semantically admissible may a persisted composed corpus audit be attempted. Any persisted DMS evidence must compose with the already-validated angular-minute layer without new hard failures or source drift.
+
+## Whence boundary-pair feasibility is positive but non-promoting
+
+**Decision.** Read-only workflow `34644023517` shows that translating the exact falsely split pair `whence is it | but from ... ?` as one contiguous unit yields six strict candidates that also preserve the experiment's semantic anchors. This is useful evidence that source-boundary repair can unlock better real-MT behavior.
+
+It does **not** authorize a general pair-merging rule or Product default. A future wrapper still needs a source-defined trigger, exact geometry and persisted corpus regression.
 
 ## Punctuation and numeric residuals are defect-family-specific
 
-**Decision.** Do not introduce universal punctuation/numeric fixers. Current failures mix source-owned labels/references, symbol corruption, target-only additions, prime notation, long-context punctuation migration and other root causes.
+**Decision.** Do not introduce universal punctuation/numeric fixers. Current failures mix source-owned labels/references, symbol corruption, target-only additions, prime/DMS notation, long-context punctuation migration and other root causes.
 
 A failed OPUS formulation does not forbid a materially different model/source-defined formulation. Conversely, success on one source-defined class does not authorize generic second-model fallback.
 
-## Pinned TC-big is an independent comparator and narrow rescue model, not a generic fallback
+## Broad TC-big remains rejected
 
-**Decision.** Use pinned `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, license `CC-BY-4.0`, as the independent real-MT comparator/current narrow-rescue source.
+**Decision.** TC-big is an independent comparator and narrow rescue model, not a generic fallback. Row-local and whole-context research proves substantial baseline-model-specific debt but also semantic false positives. Context `2725` remains a key counterexample: mechanical cleanliness can hide content loss.
 
-Broad TC-big replacement remains rejected. Row-local and whole-context research proves substantial baseline-model-specific debt but also semantic false positives. A second model may only be invoked by a narrow existing-hard-failure/source-defined trigger with exact source geometry and explicit semantic evidence.
-
-## CTranslate2 is the accepted TC-big inference backend
-
-**Decision.** Correct MarianTokenizer semantics are mandatory: `>>rus<<`, HF encode/token conversion, CTranslate2 translation, then HF token/id decode. The earlier 0/52 parity result was a harness defect. Corrected evidence obtains 52/52 input parity, 49/52 rank0 parity and at least one n-best overlap in all 52 residual cases.
-
-TC-big inference may therefore use CTranslate2 float32 without Torch. Search-order differences remain explicit rather than hidden.
-
-## TC-big is a separate optional offline asset
-
-**Decision.** Keep TC-big isolated from the accepted OPUS production asset. `rocketdict-tc-big-en-ru-asset/1` pins repository, revision, source-weight SHA, CC-BY-4.0, target prefix, tokenizer snapshot and CTranslate2 float32 payload. Runtime must record and verify the actual manifest SHA and complete payload-tree SHA/file-count/bytes.
-
-`rocketdict-assets build-tc-big-en-ru` is explicit provisioning. Builder dependencies and runtime dependencies remain separate; accepted inference is Torch-free. The baseline `production` extra must not silently acquire TC-big.
-
-## Run 13 is the current persisted residual basis
-
-**Decision.** Stage12 run `13` supersedes run `12` as the current persisted research residual basis: **23 numeric / 18 punctuation / 0 length, 40 unique**.
-
-**Evidence.** Heavy workflow `34639494681`, artifact `10279502482`, digest `88dcd100745530a67add70faeedf27d5a623f597eaea03044530cfc4f5b923ef`, output SHA `2fda987f054681a6561272d4c802980f498d9a01019a43c2c9bd2c7bbfb7f4c7`. It composes over exact run `12`, preserves byte-exact source coverage and 3343 exact untouched rows, selects one raw TC-big rank0 candidate, passes independent gate recount/SQLite integrity and records exact TC-big asset identities.
-
-**Interpretation.** The candidate repairs an OPUS semicolon→question migration while preserving the complete Newton sentence and its `Ray / Medium / something else` alternatives. Manual semantic review found it materially more faithful. This is persisted quality progress, not Product-default promotion.
-
-## Footnote and figure rescues are source-defined, not corpus whitelists
-
-**Decision.** The footnote wrapper triggers on exact source leads `[A-Z] _..._` with lost ASCII marker, exact Stage10/current-row geometry and existing hard failure. Run `11` verified 5/5 raw rank0 accepts and reduced **24/25/0,47 → 24/20/0,42**. The earlier red run was an audit `0 -> -1` defect; no selector weakening was permitted.
-
-**Decision.** The figure wrapper recognizes a leading `[in _Fig._ N.]` source-defined structure and requires exact number/emphasis preservation plus strict mechanics. Run `12` attempted two current failures, safely accepted only `Fig.15` and fail-closed rejected `Fig.16`, reducing **24/20/0,42 → 23/19/0,41** without any figure-number whitelist.
-
-## Semicolon→question migration is a narrow sentence-level class
-
-**Decision.** The semicolon wrapper is not a generic question-mark fixer. Trigger requires an exact complete Stage10/current row, source terminal period, source semicolon(s), zero source `?`, and a current hard failure that loses semicolon(s) while adding `?`. Raw candidate must restore both punctuation counts, preserve the terminal period and pass strict/emphasis/source-relative checks.
-
-This deliberately excludes incomplete `And whence is it` geometry. Run `13` demonstrates one safe persisted correction.
-
-## Target-only equals addition is admissible mechanically but not yet semantically proven
-
-**Decision.** A target-only-equals wrapper may trigger only on an exact single Stage10/current row that already hard-fails, has zero `=` in immutable source and added `=` in the current target. Candidate must be an unmodified raw TC-big hypothesis, strict-mechanical clean, emphasis-preserving, exact on equals count and within source-relative alpha `0.75..1.50`.
-
-Product Core workflow `34639617628` is green. Geometry excludes the known unsafe `_per deliquium_` context `2725` without any corpus whitelist.
-
-**Critical decision.** Do **not** persist/promote the mechanically admissible remaining equals candidate solely because gates are clean. Its source contains mathematical terminology `Square of the Sine`; a candidate rendering such as `площадь Сина` is semantically suspect. Mathematical terminology is content, not punctuation. Either semantic review proves the raw candidate acceptable, or the equals hypothesis remains rejected/needs a source-defined semantic veto. Never patch the target to `квадрат синуса` after generation.
-
-## Source-relative completeness replaces corrupt-baseline verbosity only for justified alternative-MT selectors
-
-**Decision.** `candidate target alpha >= baseline target alpha` is not a universal alternative-MT rule when the baseline itself is inflated by hallucination. Narrow TC-big selectors may use conservative immutable-source-relative alpha bounds, but this does not weaken legacy OPUS selectors globally.
+Source-relative completeness bounds may be used inside justified alternative-MT selectors; baseline target verbosity is not a universal floor when the baseline itself is corrupted.
 
 ## Audit failures must be classified before changing Product logic
 
-**Decision.** A red heavy workflow does not imply the model/selector is wrong. Inspect persisted output and logs first. If the run has correct selected output and the failure is in evidence code, fix the audit harness without changing Product acceptance semantics. The footnote `0 rejected`/`or -1` defect is the canonical example.
-
-## MetricX is ranking evidence only
-
-**Decision.** MetricX/QE may rank immutable raw candidates but neither its absolute score nor its preference is sufficient for Product selection. It cannot override source-boundary or semantic vetoes.
+**Decision.** A red heavy workflow does not imply the model/selector is wrong. Inspect persisted output and logs first. If the run has correct selected output and the failure is in evidence code, fix the audit harness without changing Product acceptance semantics. The footnote `0 rejected`/`or -1` defect remains the canonical example.
 
 ## Acceptance order remains smoke → full corpus → distributable Product
 
@@ -117,4 +115,4 @@ Product Core workflow `34639617628` is green. Geometry excludes the known unsafe
 
 ## Project memory uses progressive disclosure and mandatory synchronization
 
-**Decision.** Recovery is `PROJECT_STATE.md` → HEAD diff → `docs/memory/INDEX.md`/relevant L2 → unrestricted L3. Before a user-facing development result, synchronize `PROJECT_STATE.md`, `TRANSLATION_QUALITY.md`, and `DECISIONS.md` to actual HEAD/CI/artifacts. Interrupted synchronization is explicit debt cleared at the start of the next development request.
+**Decision.** Recovery is `PROJECT_STATE.md` → HEAD diff → `docs/memory/INDEX.md`/relevant L2 → unrestricted L3. A stale L1 must be repaired from HEAD/L3 before new feature/research work. Before a user-facing development result, synchronize `PROJECT_STATE.md`, `TRANSLATION_QUALITY.md`, and `DECISIONS.md` to actual HEAD/CI/artifacts. Interrupted synchronization is explicit process debt cleared at the start of the next development request.
