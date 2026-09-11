@@ -10,9 +10,11 @@ from rocketdict.translation_rescue import RESCUE_CONTRACT, SELECTOR_CONTRACT
 
 REGISTRY_SCHEMA = "rocketdict-product-core-lab-registry/2"
 STAGE12_PLANNER_CONTRACT = "rocketdict-stage12-protected-split/8"
-STAGE12_STRUCTURAL_LABEL_CONTRACT = "rocketdict-stage12-block-structural-label-opus/1"
+STAGE12_STRUCTURAL_LABEL_CONTRACT = "rocketdict-stage12-block-structural-label-opus/2"
 STAGE12_BLOCK_SECTION_IDENTIFIER_CONTRACT = "rocketdict-stage12-block-section-identifier/1"
 STAGE12_REQUEST_BATCH_CONTRACT = "rocketdict-stage12-bounded-request-batch/1"
+STAGE12_WHOLE_CONTEXT_RESCUE_CONTRACT = "rocketdict-stage12-whole-context-rescue/1"
+STAGE12_WHOLE_CONTEXT_RESCUE_MAX_NLP_TOKENS = 160
 NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/5"
 
 
@@ -81,9 +83,11 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                     "ctranslate2",
                     "structure-aware-planner",
                     "structural-label-aware",
+                    "legacy-block-heading-aware",
                     "block-section-id-aware",
                     "bounded-batch",
                     "selective-resegmentation-rescue-research-only",
+                    "whole-context-rescue-research-only",
                 ],
                 "required_inputs": ["context_run_id"],
                 "controls": [
@@ -102,6 +106,10 @@ _STAGE_DESCRIPTORS: list[dict[str, Any]] = [
                     _control("enable_selective_resegmentation_rescue", False),
                     _control("selective_resegmentation_rescue_contract", RESCUE_CONTRACT),
                     _control("selective_resegmentation_selector_contract", SELECTOR_CONTRACT),
+                    _control("enable_whole_context_rescue", False),
+                    _control("whole_context_rescue_contract", STAGE12_WHOLE_CONTEXT_RESCUE_CONTRACT),
+                    _control("whole_context_rescue_selector_contract", SELECTOR_CONTRACT),
+                    _control("whole_context_rescue_max_nlp_tokens", STAGE12_WHOLE_CONTEXT_RESCUE_MAX_NLP_TOKENS),
                 ],
             }
         ],
