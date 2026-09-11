@@ -1,0 +1,206 @@
+name: RocketDict Full Opticks TC-big Delimiter Product Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/alternative_mt_runtime.py'
+      - 'rocketdict-product-core/src/rocketdict/alternative_mt_assets.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_tc_big_delimiter_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_alternative_mt_runtime.py'
+      - 'rocketdict-product-core/tests/test_translation_tc_big_delimiter_rescue_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_delimiter_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-delimiter-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  tc-big-delimiter-product-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      RUN9_RUN_ID: '34610787826'
+      RUN9_ARTIFACT_NAME: rocketdict-full-opticks-illustration-label-product-rescue
+      RUN9_DB_SHA256: 9e79e95f67188c751cf50a348c5d7e54ffdef73cd423c7c92601f5cb8c6332ad
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT: ${{ github.workspace }}/work/tc-big-delimiter-product-rescue
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install TC-big provisioning runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[alt-mt-build]'
+          python -m pip install 'huggingface_hub==0.34.4'
+
+      - name: Download immutable run-9 Product database
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN9_ARTIFACT_NAME }}
+          path: work/run9
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN9_RUN_ID }}
+
+      - name: Assemble and verify immutable run-9 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT"
+          cp work/run9/illustration-product-rescue/rocketdict.sqlite \
+            "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+          cp "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict.sqlite" \
+            "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict-before.sqlite"
+
+      - name: Restore pinned TC-big source snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big Hugging Face snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          test -s "$TC_BIG_SNAPSHOT/model.safetensors"
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big CTranslate2 float32 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" \
+            | tee work/tc-big-asset-build.json
+          test -s "$ROCKETDICT_TC_BIG_ASSET_DIR/rocketdict-tc-big-asset.json"
+          test -s "$ROCKETDICT_TC_BIG_ASSET_DIR/ct2/model.bin"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_TC_BIG_ASSET_DIR'])/'rocketdict-tc-big-asset.json'
+          m=json.loads(p.read_text(encoding='utf-8'))
+          if m['schema'] != 'rocketdict-tc-big-en-ru-asset/1': raise SystemExit('asset schema drift')
+          if m['repository'] != os.environ['TC_BIG_REPO']: raise SystemExit('asset repo drift')
+          if m['revision'] != os.environ['TC_BIG_REVISION']: raise SystemExit('asset revision drift')
+          if m['model_safetensors_sha256'] != os.environ['TC_BIG_WEIGHTS_SHA256']: raise SystemExit('asset weights drift')
+          if m['license'].lower() != 'cc-by-4.0': raise SystemExit('asset license drift')
+          if m['compute_type'] != 'float32': raise SystemExit('asset compute drift')
+          print('TC-big offline asset manifest verified.')
+          PY
+
+      - name: Build torch-free persisted-audit runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/tc-big-runtime-venv
+          work/tc-big-runtime-venv/bin/python -m pip install --upgrade pip
+          work/tc-big-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench
+          work/tc-big-runtime-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in persisted TC-big inference runtime')
+          import ctranslate2, transformers
+          print('torch-free runtime:', ctranslate2.__version__, transformers.__version__)
+          PY
+
+      - name: Run persisted TC-big delimiter Stage12 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/tc-big-runtime-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_tc_big_delimiter_product_rescue.py
+
+      - name: Verify persisted fail-closed evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/full-opticks-tc-big-delimiter-product-rescue-optin.json"
+          test -s "$evidence"
+          test -s "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$RUN9_DB_SHA256  $ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict-before.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os, sqlite3
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT'])
+          e=json.loads((root/'full-opticks-tc-big-delimiter-product-rescue-optin.json').read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-tc-big-delimiter-product-rescue-optin/1': raise SystemExit('schema drift')
+          if e['base_translation_run_id'] != 9: raise SystemExit('base run drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':24,'punctuation':30,'length':0,'unique':52}: raise SystemExit(f"base gate drift: {e['base_hard_gate_counts']!r}")
+          if e['enabled_hard_gate_counts'] != {'numeric_symbol':24,'punctuation':25,'length':0,'unique':47}: raise SystemExit(f"enabled gate drift: {e['enabled_hard_gate_counts']!r}")
+          if e['base_segment_count'] != 3346 or e['enabled_segment_count'] != 3344: raise SystemExit('segment count drift')
+          if e['attempted_source_starts'] != [488,325892,329077,388656,417625,501398,569170]: raise SystemExit(f"attempt cohort drift: {e['attempted_source_starts']!r}")
+          if e['accepted_source_starts'] != [488,325892,329077,388656,501398]: raise SystemExit(f"accepted cohort drift: {e['accepted_source_starts']!r}")
+          if e['replaced_base_row_count'] != 7 or e['untouched_base_exact_count'] != 3339: raise SystemExit('base-row accounting drift')
+          if e['source_coverage_byte_exact'] is not True: raise SystemExit('source coverage proof missing')
+          if e['runtime']['asset_manifest_sha256'] != e['asset']['manifest_sha256']: raise SystemExit('manifest provenance drift')
+          if e['runtime']['asset_payload_tree_sha256'] != e['asset']['payload_tree_sha256']: raise SystemExit('payload-tree provenance drift')
+          if e['runtime']['torch_required_for_inference'] is not False: raise SystemExit('runtime torch contract drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False or e['public_stage12_surface_allowed'] is not False: raise SystemExit('audit unexpectedly authorizes promotion')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag drift: {flag}')
+          with sqlite3.connect(root/'rocketdict.sqlite') as con:
+              integrity=con.execute('PRAGMA integrity_check').fetchone()[0]
+              foreign=con.execute('PRAGMA foreign_key_check').fetchall()
+          if integrity != 'ok' or foreign: raise SystemExit(f'SQLite integrity drift: {integrity!r} {foreign[:10]!r}')
+          print('Persisted TC-big delimiter evidence verified; SQLite clean.')
+          PY
+
+      - name: Record runtime and persisted identities
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/tc-big-delimiter-runtime
+          python -VV > work/tc-big-delimiter-runtime/builder-python.txt || true
+          python -m pip freeze | sort > work/tc-big-delimiter-runtime/builder-pip-freeze.txt || true
+          work/tc-big-runtime-venv/bin/python -VV > work/tc-big-delimiter-runtime/inference-python.txt || true
+          work/tc-big-runtime-venv/bin/python -m pip freeze | sort > work/tc-big-delimiter-runtime/inference-pip-freeze.txt || true
+          sha256sum "$TC_BIG_SNAPSHOT/model.safetensors" > work/tc-big-delimiter-runtime/source-model.sha256 || true
+          sha256sum "$ROCKETDICT_TC_BIG_ASSET_DIR/rocketdict-tc-big-asset.json" > work/tc-big-delimiter-runtime/asset-manifest.sha256 || true
+          cp "$ROCKETDICT_TC_BIG_ASSET_DIR/rocketdict-tc-big-asset.json" work/tc-big-delimiter-runtime/asset-manifest.json || true
+          cp "$ROCKETDICT_TC_BIG_ASSET_DIR/SOURCE_README.md" work/tc-big-delimiter-runtime/SOURCE_README.md || true
+          df -h > work/tc-big-delimiter-runtime/disk.txt || true
+          free -h > work/tc-big-delimiter-runtime/memory.txt || true
+          if [ -s "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict.sqlite" ]; then
+            sha256sum "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/rocketdict.sqlite" > work/tc-big-delimiter-runtime/persisted-db.sha256
+          fi
+          if [ -s "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/full-opticks-tc-big-delimiter-product-rescue-optin.json" ]; then
+            sha256sum "$ROCKETDICT_TC_BIG_DELIMITER_PRODUCT_ROOT/full-opticks-tc-big-delimiter-product-rescue-optin.json" > work/tc-big-delimiter-runtime/evidence.sha256
+          fi
+
+      - name: Upload persisted TC-big delimiter Product evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-delimiter-product-rescue
+          path: |
+            work/tc-big-asset-build.json
+            work/tc-big-delimiter-product-rescue/full-opticks-tc-big-delimiter-product-rescue-optin.json
+            work/tc-big-delimiter-product-rescue/rocketdict.sqlite
+            work/tc-big-delimiter-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
