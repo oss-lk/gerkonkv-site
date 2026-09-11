@@ -14,7 +14,7 @@ Store only conclusions that are expensive or risky to rediscover. This is not a 
 
 **Decision.** Production baseline uses official OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian and `float32` acceptance compute. Preserve immutable source/config/model/result identities and replayable evidence.
 
-A second real MT may be researched, but it does not become Product merely because it passes hard gates on residual failures. Any Product role requires pinned identity/license, deterministic selection, semantic review, full-corpus regression and an offline installation/runtime plan.
+A second real MT does not become Product merely because it passes hard gates on residual failures. Any Product role requires pinned identity/license, deterministic selection, semantic review, full-corpus regression and an offline installation/runtime plan.
 
 ## Translation-quality promotion requires contiguous evidence and semantic review
 
@@ -41,6 +41,7 @@ Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of miss
 - `rocketdict-stage12-numeric-hard-failure-whole-context-rescue/1` remains default OFF/not public-wired. Context `2725` remains the semantic-loss counterexample proving generic mechanical cleanliness is insufficient.
 - `rocketdict-stage12-illustration-label-rescue/1` remains a narrow default-OFF/not-public-wired wrapper. Persisted run `9` is **24 numeric / 30 punctuation / 0 length, 52 unique**.
 - `rocketdict-maintained-emphasis-markup-preservation/1` remains a separate research veto rather than a retroactive Product hard gate.
+- `rocketdict-stage12-tc-big-target-delimiter-context-rescue/1` is implemented as a separate default-OFF/not-public-wired wrapper. Its current evidence is feasibility only until dedicated unit/runtime/persisted heavy proofs pass.
 
 ## Punctuation residuals remain defect-family-specific
 
@@ -48,51 +49,76 @@ Raw MT hypotheses are legitimate research candidates. Post-hoc insertion of miss
 
 The current exact-source OPUS formulations are exhausted or rejected for whole-footnote, square-bracket, context-2730, prime/formula and broad citation/group branches. A future attempt needs a materially new source representation/model hypothesis rather than deeper identical beam search.
 
-## Pinned TC-big is the active independent model differential, not a Product fallback
+## Pinned TC-big is the active independent model differential, not a generic fallback
 
-**Decision.** Use pinned `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, as the current independent real-MT research comparator.
+**Decision.** Use pinned `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, license `CC-BY-4.0`, as the independent real-MT comparator and current narrow-rescue candidate.
 
-**Evidence.** The all-current-failures workflow `34621706640` evaluates all 52 run-9 hard rows and finds at least one mechanically admissible raw TC-big hypothesis for **32/52** cases, with 172 admissible hypotheses total. The purely mechanical upper bound is **24/30/0, 52 unique → 13/8/0, 20 unique**.
+**Evidence.** The all-52 screen finds at least one mechanically admissible raw hypothesis in **32/52** cases, but the generic whole-Stage10 screen admits only **18/50** contexts and manual review still finds semantic false positives.
 
-**Interpretation.** A material portion of the remaining frontier is baseline-model-specific rather than purely planner/evaluator failure.
-
-**Non-promotion rule.** The 32 mechanically clean cases are not 32 safe Product replacements. Manual review found boundary-fragment completions and semantic/terminology concerns. TC-big remains research-only until a boundary-aware selector, persisted regression and release plan are proven.
+**Interpretation.** A material portion of the residual frontier is baseline-model-specific, but broad second-model replacement is not safe.
 
 ## A second MT may only be failure-triggered and boundary-aware
 
-**Decision.** Do not replace clean OPUS rows merely because another model exists. Any second-model Product path must start from an existing maintained hard failure or a separately justified source-defined trigger, so already-clean Product output remains untouched by default.
+**Decision.** Do not replace clean OPUS rows merely because another model exists. Any second-model Product path must start from an existing maintained hard failure or a separately justified source-defined trigger.
 
-**Decision.** Do not implement isolated Stage12-row TC-big substitution as the general fallback mechanism. A Stage12 row may be only a fragment of a larger sentence/context; a mechanically clean candidate can finish or punctuate a clause that source text continues in the neighboring row.
+**Decision.** Do not implement isolated Stage12-row TC-big substitution as the general fallback mechanism. A Stage12 row may be only a fragment of a larger source sentence/context; a mechanically clean candidate can finish or punctuate a clause that source text continues in the neighboring row.
 
-A future selector must reason on a source-defined contiguous group/context and verify that the candidate is semantically valid for that full source span.
+A future selector must reason on a source-defined contiguous group/context and verify semantic validity for that full source span.
 
 ## Exact Stage10 contexts are not guaranteed to align with current Stage12 row boundaries
 
-**Decision.** A Stage10 context may be used as a research translation unit only when its exact source span can be represented by whole replacement rows, or when the larger covering group is freshly translated and validated as its own source-defined unit. Do not slice an existing target string to force alignment.
+**Decision.** A Stage10 context may be used as a replacement unit only when its exact source span is representable by complete current Stage12 rows. Otherwise skip fail-closed; do not slice an existing target string or silently expand source.
 
-**Evidence.** Stage10 context `2480` spans `[480217,480300)` and includes the trailing space after `_Qu._ 19.`. Current run-9 row 2729 ends at `480299`; row 2730 begins at `480299` and owns the following space plus the next question body. Initial context workflow `34623402220` therefore failed correctly with `run9 member coverage drift for context 2480:2480`.
+**Evidence.** Boundary-aware workflow `34626136705` maps 52 hard rows to 50 Stage10 contexts and proves `49/50` exact row alignment. Context `2480` remains the sole non-row-aligned case and is explicitly skipped. This converts the earlier crash into a durable geometry classification without changing source ownership.
 
-This is orchestration/boundary evidence, not a TC-big quality failure.
+## Generic whole-context TC-big selection is rejected
+
+**Decision.** `strict-clean + emphasis + baseline-alpha` is not a sufficient semantic selector for whole-context second-MT replacement. The 18 mechanically admissible Stage10 contexts include semantically poor/partial cases on manual inspection.
+
+**Decision.** Do not treat aggregate mechanical ceiling **20/16/0, 34 unique** as Product progress. It is a research upper bound only.
+
+## Corrupt baseline verbosity is not a valid completeness floor
+
+**Decision.** The legacy `candidate target alpha >= baseline target alpha` condition must not be generalized to alternative-MT selection when the baseline target is itself inflated by hallucination. This rule rejected several plainly useful TC-big candidates.
+
+For the narrow TC-big delimiter experiment, completeness is constrained against immutable source alphabetic volume instead. This change is local to that selector and does not weaken existing OPUS rescue contracts.
+
+## Narrow target-only delimiter hallucination is the first admissible TC-big defect class
+
+**Decision.** The only currently implemented second-MT rescue class is a source-defined Stage10 context that:
+- contains a current hard failure;
+- is exactly row-aligned to complete current Stage12 rows; and
+- whose aggregate current target adds `()[]{}` delimiter characters beyond source counts.
+
+Candidate acceptance requires a raw TC-big hypothesis, maintained strict-clean verdict, Gutenberg emphasis preservation, zero target-only delimiter additions, and target/source alpha ratio `0.75..1.50`. No corpus-specific whitelist or target editing is allowed.
+
+**Evidence.** Workflow `34627371508` triggers on seven run-9 contexts and accepts five (`3`, `1726`, `1737`, `2066`, `2605`), giving a read-only counterfactual **24/30/0,52 → 24/25/0,47**. The remaining two trigger cases fail closed.
+
+**Non-promotion rule.** This authorizes implementation as default OFF only. It does not authorize public wiring or Product-default promotion until dedicated tests, exact offline runtime proof and persisted full-*Opticks* evidence pass.
 
 ## MetricX is a research ranking signal only
 
 **Decision.** MetricX/QE may rank immutable raw candidates but neither its absolute score nor its preference is sufficient for Product selection.
 
-**Evidence.** Run `34622530818` scores all 172 mechanically admissible TC-big hypotheses. MetricX prefers some admissible TC-big candidate over OPUS in **30/32** cases and the first admissible candidate in **29/32**, while the best-QE rank is spread across ranks 0–5.
+Row-local evidence prefers TC-big in 30/32 mechanically admissible cases. Whole-context evidence (`34627052164`) prefers some TC-big candidate in 16/18 contexts and scores two contexts worse than OPUS. This is useful semantic triage evidence and further proof that QE cannot override source-boundary or semantic vetoes.
 
-**Interpretation.** This strengthens the hypothesis that TC-big often improves the hard residuals, but it does not define an acceptance threshold and cannot override boundary or semantic vetoes.
+## Correct MarianTokenizer semantics make CTranslate2 a viable TC-big inference backend
 
-## CTranslate2 conversion feasibility does not imply generation parity
+**Decision.** The initial `0/52` CTranslate2 parity result is a tokenizer-harness defect, not a basis for rejecting CT2. The release-relevant TC-big runtime must use exact MarianTokenizer semantics, including the `>>rus<<` language prefix and HF token/id conversion.
 
-**Decision.** The pinned TC-big Marian model may be converted to CTranslate2 for research, and a torch-free inference runtime is technically feasible. Do not claim that the converted backend reproduces Transformers output until tokenizer and generation semantics are proven equivalent.
+**Evidence.** Corrected workflow `34626241784` obtains input-token parity `52/52`, exact rank0 parity `49/52`, at least one exact n-best overlap `52/52`, and the same 32 mechanically admissible cases / **13/8/0,20** ceiling as Transformers.
 
-**Evidence.** Initial parity workflow `34622860381` runs successfully in CTranslate2 4.8.2 float32 without Torch import by the audit script, but has `0/52` exact rank0 matches, `0/52` any-hypothesis overlap and only `15/52` mechanically admissible cases, compared with `32/52` under Transformers.
+**Decision.** TC-big inference may therefore use CTranslate2 float32 without Torch, while preserving the three observed rank0 search-order differences as explicit backend behavior rather than pretending exact search identity.
 
-The first harness used raw SentencePiece-side multilingual-prefix handling rather than demonstrated MarianTokenizer-equivalent behavior. A corrected parity experiment is required before choosing CT2 as the release backend for TC-big.
+## TC-big is provisioned as a separate optional offline asset
 
-## Run 9 is the current persisted residual basis
+**Decision.** Keep the second model isolated from the accepted OPUS production asset. `rocketdict-tc-big-en-ru-asset/1` pins repository, revision, weight SHA, CC-BY-4.0 license, target prefix, tokenizer files, CTranslate2 float32 payload and complete payload-tree identity. `ROCKETDICT_TC_BIG_ASSET_DIR` selects the installed asset.
 
-**Decision.** Residual research uses run `9` source spans/current identities. Current persisted gates are **24 numeric / 30 punctuation / 0 length, 52 unique**. Research counterfactuals do not replace that basis until a new persisted Product audit is created.
+`rocketdict-assets build-tc-big-en-ru` is an explicit provisioning step. Runtime processing is offline. The baseline `production` dependency profile does not silently acquire TC-big; separate `alt-mt` / `alt-mt-build` profiles keep release cost visible and optional until promotion is justified.
+
+## Run 9 is still the persisted residual basis
+
+**Decision.** Current persisted gates remain **24 numeric / 30 punctuation / 0 length, 52 unique**. The **24/25/0,47** delimiter result is a read-only counterfactual until a persisted Stage12 run verifies the actual wrapper output, source coverage, untouched rows, SQLite integrity and asset provenance.
 
 ## Acceptance order remains smoke → full corpus → distributable Product
 
