@@ -10,6 +10,7 @@ on:
       - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
       - 'rocketdict-product-core/src/rocketdict/stages.py'
       - 'rocketdict-workbench/tests/real_translation_full_opticks_illustration_label_feasibility.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_illustration_label_feasibility_v3.py'
       - '.github/workflows/rocketdict-full-opticks-illustration-label-feasibility.yml'
   workflow_dispatch:
 
@@ -76,43 +77,64 @@ jobs:
           rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
           test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
-      - name: Run illustration-label structural split feasibility
-        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_illustration_label_feasibility.py
-      - name: Verify fail-closed v2 feasibility invariants
+      - name: Run illustration-label n-best feasibility v3
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_illustration_label_feasibility_v3.py
+      - name: Verify fail-closed v3 invariants
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/full-opticks-illustration-label-feasibility.json"
+          evidence="$ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/full-opticks-illustration-label-feasibility-v3.json"
+          test -s "$evidence"
           echo "$BASE_DB_SHA256  $ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/rocketdict.sqlite" | sha256sum -c -
           python - <<'PY'
           import json, os
           from pathlib import Path
           root = Path(os.environ['ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT'])
-          evidence = json.loads((root / 'full-opticks-illustration-label-feasibility.json').read_text(encoding='utf-8'))
-          if evidence['schema'] != 'rocketdict-full-opticks-illustration-label-feasibility/2':
+          evidence = json.loads((root / 'full-opticks-illustration-label-feasibility-v3.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-illustration-label-feasibility/3':
               raise SystemExit(f"schema drift: {evidence['schema']!r}")
           if evidence['standalone_illustration_label_count'] != 57:
               raise SystemExit(f"illustration label count drift: {evidence['standalone_illustration_label_count']!r}")
-          if evidence['attempted_source_starts'] != [72401, 90105, 203786]:
+          expected_starts = [72401, 90105, 203786]
+          if evidence['attempted_source_starts'] != expected_starts:
               raise SystemExit(f"illustration failure cohort drift: {evidence['attempted_source_starts']!r}")
           if evidence['normalized_model_input_source_starts'] != [72401, 90105]:
               raise SystemExit(f"normalized-input cohort drift: {evidence['normalized_model_input_source_starts']!r}")
-          if evidence['accepted_source_starts'] != [203786]:
-              raise SystemExit(f"fail-closed acceptance drift: {evidence['accepted_source_starts']!r}")
-          normalized = [case for case in evidence['cases'] if case['source_model_input_normalized']]
-          if [case['remainder_rank0_target'] for case in normalized] != ['Пример.', 'Пример.']:
-              raise SystemExit(f"normalized OPUS target drift: {[case['remainder_rank0_target'] for case in normalized]!r}")
-          if any(case['illustration_word_target_shape']['passed'] for case in normalized):
-              raise SystemExit('ambiguous Illustration model input unexpectedly passed semantic target form')
-          if evidence['v1_negative_evidence']['observed_raw_rank0_target'] != '*Иллюстрация._':
-              raise SystemExit('v1 markup-corruption evidence drift')
+          if evidence['accepted_source_starts'] != expected_starts:
+              raise SystemExit(f"v3 acceptance drift: {evidence['accepted_source_starts']!r}")
+          selected = [(case['source_start'], case['selected_rank'], case['selected_target']) for case in evidence['cases']]
+          expected_selected = [
+              (72401, 3, 'Иллюстрация.'),
+              (90105, 3, 'Иллюстрация.'),
+              (203786, 0, 'С центром O'),
+          ]
+          if selected != expected_selected:
+              raise SystemExit(f"selected raw candidates drift: {selected!r}")
+          for case in evidence['cases'][:2]:
+              if case['num_hypotheses'] != 6 or case['model_input'] != 'Illustration.':
+                  raise SystemExit(f"structural-word n-best scope drift: {case!r}")
+              accepted = [h for h in case['hypotheses'] if h.get('accepted')]
+              if not accepted or accepted[0]['rank'] != 3 or accepted[0]['target_text'] != 'Иллюстрация.':
+                  raise SystemExit(f"structural-word selector drift: {accepted!r}")
+          if evidence['cases'][2]['num_hypotheses'] != 1:
+              raise SystemExit('ordinary suffix unexpectedly received n-best escalation')
           if evidence['base_hard_gate_counts'] != {'numeric_symbol': 25, 'punctuation': 33, 'length': 0, 'unique': 55}:
               raise SystemExit(f"base hard gates drift: {evidence['base_hard_gate_counts']!r}")
-          if evidence['counterfactual_hard_gate_counts'] != {'numeric_symbol': 24, 'punctuation': 32, 'length': 0, 'unique': 54}:
+          if evidence['counterfactual_hard_gate_counts'] != {'numeric_symbol': 24, 'punctuation': 30, 'length': 0, 'unique': 52}:
               raise SystemExit(f"counterfactual hard gates drift: {evidence['counterfactual_hard_gate_counts']!r}")
-          if evidence['source_coverage_byte_exact'] is not True or evidence['database_unchanged'] is not True:
-              raise SystemExit('read-only/source-coverage proof missing')
-          print('Illustration-label fail-closed v2 evidence verified.')
+          if evidence['base_segment_count'] != 3343 or evidence['counterfactual_segment_count'] != 3346:
+              raise SystemExit(f"segment-count drift: {evidence['base_segment_count']} -> {evidence['counterfactual_segment_count']}")
+          if evidence['nbest_scope'] != 'exact _Illustration._ suffix only':
+              raise SystemExit(f"n-best scope drift: {evidence['nbest_scope']!r}")
+          for flag in ('source_coverage_byte_exact', 'database_unchanged'):
+              if evidence[flag] is not True:
+                  raise SystemExit(f"missing invariant: {flag}")
+          for flag in ('source_bytes_rewritten', 'target_rewriting', 'placeholders', 'post_translation_literal_injection'):
+              if evidence[flag] is not False:
+                  raise SystemExit(f"unsafe flag drift: {flag}={evidence[flag]!r}")
+          if evidence['promotion_allowed'] is not False or evidence['automatic_product_default_allowed'] is not False:
+              raise SystemExit('research evidence unexpectedly authorizes Product promotion')
+          print('Illustration-label v3 evidence verified.')
           PY
       - name: Record runtime identities
         if: always()
@@ -123,17 +145,17 @@ jobs:
           python -m pip freeze | sort > work/illustration-runtime/pip-freeze.txt || true
           printf '%s\n' "$BASE_RUN_ID" > work/illustration-runtime/base-run-id.txt
           sha256sum work/opus-2020-02-11.zip > work/illustration-runtime/opus.sha256 || true
-          if [ -s "$ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/full-opticks-illustration-label-feasibility.json" ]; then
-            sha256sum "$ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/full-opticks-illustration-label-feasibility.json" > work/illustration-runtime/evidence.sha256
+          if [ -s "$ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/full-opticks-illustration-label-feasibility-v3.json" ]; then
+            sha256sum "$ROCKETDICT_ILLUSTRATION_FEASIBILITY_ROOT/full-opticks-illustration-label-feasibility-v3.json" > work/illustration-runtime/evidence-v3.sha256
           fi
       - name: Upload illustration-label feasibility evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-full-opticks-illustration-label-feasibility
+          name: rocketdict-full-opticks-illustration-label-feasibility-v3
           path: |
             work/opus-asset-build.json
-            work/illustration-feasibility/full-opticks-illustration-label-feasibility.json
+            work/illustration-feasibility/full-opticks-illustration-label-feasibility-v3.json
             work/illustration-runtime/**
           if-no-files-found: warn
           retention-days: 90
