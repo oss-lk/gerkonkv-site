@@ -5,12 +5,12 @@
 ## Current state
 
 - Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- Engineering/L3 checkpoint incorporated here: `fe36ad8cf865ef45cba1a0eecd43b970c8a22858` (`Derive run23 census output identity from evidence`).
+- Repository/L3 checkpoint incorporated here: `97ba935a61c3eeae24a0a99b5e18eaef89575a2d` (`Catch up project state to successful run23 census`).
 - Maintained Product Core + Workbench remain the forward implementation. Authoritative contract: `rocketdict/PRODUCT_TARGET.md`.
 - Final approved 90k+ evidence still requires **0 unresolved numeric/symbol, punctuation and length hard failures**, semantic acceptance and the complete learner/export path.
 - Current best persisted **research** translation basis is run `23`: **17 numeric/symbol / 14 punctuation / 0 length, 30 unique hard-failing sequences** over `3337` rows.
 - Product/default Stage10 remains V1. Broad Stage10-v2 and all current rescue layers remain explicit research evidence only, default OFF/not public-wired/non-promoting.
-- The run23 residual census is now a successful read-only persisted audit. The earlier failure was an orchestration/provenance defect caused by independently duplicated derived hashes, not a translation regression.
+- The run23 residual census is a successful read-only persisted audit. The earlier failure was an orchestration/provenance defect caused by independently duplicated derived hashes, not a translation regression.
 
 ## Recovery protocol
 

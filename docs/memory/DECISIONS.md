@@ -6,11 +6,21 @@ Store only conclusions expensive or risky to rediscover. Git/L3 remains chronolo
 
 **Decision.** Quality cannot be traded for speed/storage/convenience. No fake MT, silent truncation, evaluator weakening, target literal injection, source rewriting, target surgery, placeholders, corpus-specific target patches or automatic n-best cherry-picking. Final approved 90k+ evidence needs zero unresolved numeric/symbol, punctuation and length failures plus semantic/downstream acceptance.
 
-## Run-20 research basis
+## Current persisted research basis: run23
 
-**Decision.** Run `20` supersedes run19 as the best accepted persisted **research** basis: **20 numeric / 14 punctuation / 0 length, 33 unique**. Identities: workflow `34678965465`, artifact `10292783763`, ZIP SHA `0e30b3d10cf263ef6256c422cf2c2003f0c81343ad59f13e1b3531e709b3f7cf`, output SHA `e06aa1620410698bac09a4cc46632aaf3d1c3d45de0f798d29521f722367db85`, text SHA `16ab4a3c3ef192662604e90e428933ab23423b7872bae2bd6de3478b3a46f8c8`, SQLite SHA `879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d`, evidence SHA `2f21b87327033aab76e5d3485c22cfbd6ea672cae9c4c5055a3d129b3f5054c1`.
+**Decision.** Run `23` is the current best accepted persisted **research** translation basis: **17 numeric/symbol / 14 punctuation / 0 length, 30 unique hard-failing sequences** over `3337` rows. Its exact predecessor run22 is **18/14/0,31** over `3338` rows.
 
-It composes directly over exact run19. The source-defined parenthetical wrapper accepts exactly context `1393` as raw OPUS rank0, leaves 3340 unrelated rows exact, reconstructs source byte-exactly and passes SQLite/FK integrity.
+Run23 identities: workflow `34688874921`; artifact ID `10296696335`; ZIP SHA `0df0625406349c4569df5a08f7cbd9952fe881b9c0a659e98ce643e8b4cca997`; SQLite SHA `75ec63ea1b8b905af17a757a2a0dcd2697718945a6e9d354d494bb05d2364ca8`; translation-output SHA `976a7a39928cceda2459ab1b5d04f6996a4b2443efd31cbac6456c2c2e948493`; final-text SHA `ebb85aa3646b24c210eb6448e5938661550acaec851d83f9882889a45d77d0b6`; canonical evidence SHA `0cdb6154289fc176cc75d1baad5a8607222bb92f8340295f5558ab46689ed40c`.
+
+The run23 emphasized-modifier rescue accepted context group `[2496,2497]`, rejected `[2633,2634]`, preserved `3336` untouched rows exactly, reconstructed source byte-exactly and passed SQLite/FK integrity. It is research-only: `promotion_allowed=false`, `automatic_product_default_allowed=false`.
+
+## Run23 residual census and provenance
+
+**Decision.** The corrected read-only run23 census is authoritative for choosing the next hard-failure family. Workflow `34690365432`, artifact ID `10296887793`, ZIP SHA `8cc7ea22a12f27ee0105767bfc7b13c39a9493e945e6d32508b847151c986393`, census evidence SHA `55848393832fd777d7ab23f03f36d8fb2eb1031748faa0d2a096a35ea781ed58`. It verified the exact persisted run23 database without mutation and preserved byte-exact source coverage.
+
+The earlier census attempt `34689198589` failed because a derived SQLite digest had been copied independently and incorrectly. Derived identities must therefore be authenticated/derived from the pinned canonical upstream evidence whenever possible instead of being maintained as duplicated hand-copied constants.
+
+The authoritative residual sequence set is `[325,641,642,644,646,650,743,750,751,752,1499,1579,1755,1788,2110,2290,2346,2357,2375,2591,2721,2741,2889,2997,3000,3007,3011,3083,3211,3305]`.
 
 ## Source-defined parenthetical rescue
 
@@ -28,13 +38,15 @@ The first DOE attempt `34679083884` is classified as orchestration-only: it chec
 
 **Decision.** Product/default Stage10 stays V1. Broad V2 resegmentation, generic row-local TC-big punctuation fallback, generic OPUS/TC-big whole-context fallback, generic bounded-parenthesis fallback and broad square-bracket repair remain rejected because mechanically clean alternatives have demonstrated semantic loss.
 
-## Numeric frontier remains family-specific
+## Numeric/symbol frontier remains family-specific
 
-**Decision.** The numeric residual count has remained `20` from run16 through run20 while punctuation layers changed unrelated rows. Start the next frontier from exact run20 and map all 20 residuals to historical feasibility evidence before adding code. Do not repeat previously rejected generic prime, thousands-grouping, narrow `x→×`, compact-formula-spacing or known bad `54796`/`112001` formulations unless the new experiment changes the source/model geometry materially.
+**Decision.** Start new work from exact run23 and its verified 30-sequence census. Residual numeric/symbol work must remain source-defined and defect-family-specific. Do not repeat tested large-integer source canonicalization/n-best feasibility (0 baseline rescues) or nonliteral numeric beam selection (mechanical rescues only through disallowed automatic n-best choice) without materially new source/model geometry or evidence.
+
+Sequence `325` is the first current investigation because `[in _Fig._ 16.]` overlaps an existing narrow TC-big figure-reference experiment. Inspect that implementation, tests, history and actual lineage before inventing another rescue. If whole-row geometry is genuinely exhausted, a split-geometry experiment is admissible only if selection stays source-defined/fail-closed and uses unmodified raw rank0 model outputs.
 
 ## Audit/orchestration classification
 
-**Decision.** A red workflow does not justify Product changes until the failure is classified. Harness/provisioning defects are repaired without weakening Product criteria. The `[G]` initial snapshot-filename failure is another concrete example.
+**Decision.** A red workflow does not justify Product changes until the failure is classified. Harness/provisioning/provenance defects are repaired without weakening Product criteria. The `[G]` snapshot-filename failure and the first run23 census digest mismatch are concrete examples.
 
 ## Memory protocol
 
