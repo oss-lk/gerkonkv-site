@@ -22,7 +22,7 @@ jobs:
       ROCKETDICT_RESIDUAL_CENSUS_ROOT: ${{ github.workspace }}/work/run23-residual-census
       ROCKETDICT_RESIDUAL_CENSUS_DB: ${{ github.workspace }}/work/run23-residual-census/rocketdict.sqlite
       ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID: '23'
-      ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256: 75ec63eadd2a48d9fd8d68dde4ef16debf396aa8188324397d2a3f0b299b8495
+      ROCKETDICT_RESIDUAL_UPSTREAM_EVIDENCE_SHA256: 0cdb6154289fc176cc75d1baad5a8607222bb92f8340295f5558ab46689ed40c
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -45,13 +45,54 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ env.BASE_RUN_ID }}
 
-      - name: Stage and verify exact run23 database
+      - name: Authenticate upstream run23 evidence and stage database
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$ROCKETDICT_RESIDUAL_CENSUS_ROOT"
-          cp work/base/full-opticks-emphasized-modifier-boundary-rescue/rocketdict.sqlite "$ROCKETDICT_RESIDUAL_CENSUS_DB"
-          echo "$ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
+          UPSTREAM_EVIDENCE="work/base/full-opticks-emphasized-modifier-boundary-rescue/full-opticks-emphasized-modifier-boundary-rescue.json"
+          UPSTREAM_DB="work/base/full-opticks-emphasized-modifier-boundary-rescue/rocketdict.sqlite"
+          test -s "$UPSTREAM_EVIDENCE"
+          test -s "$UPSTREAM_DB"
+          DB_SHA="$(python - "$UPSTREAM_EVIDENCE" <<'PY'
+          import hashlib, json, os, re, sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          evidence = json.loads(path.read_text(encoding='utf-8'))
+          if evidence.get('schema') != 'rocketdict-full-opticks-emphasized-modifier-boundary-rescue-optin/1':
+              raise SystemExit('upstream run23 evidence schema drift')
+          if evidence.get('final_translation_run_id') != 23:
+              raise SystemExit('upstream run23 translation-run drift')
+          if evidence.get('final_segment_count') != 3337:
+              raise SystemExit('upstream run23 segment-count drift')
+          if evidence.get('final_hard_gate_counts') != {'numeric_symbol': 17, 'punctuation': 14, 'length': 0, 'unique': 30}:
+              raise SystemExit(f"upstream run23 hard-gate drift: {evidence.get('final_hard_gate_counts')!r}")
+          if evidence.get('source_coverage_byte_exact') is not True:
+              raise SystemExit('upstream run23 source coverage drift')
+          if evidence.get('database_integrity_check') != 'ok' or evidence.get('foreign_key_violation_count') != 0:
+              raise SystemExit('upstream run23 database-integrity drift')
+          if evidence.get('promotion_allowed') is not False or evidence.get('automatic_product_default_allowed') is not False:
+              raise SystemExit('unsafe upstream run23 promotion flag')
+          for flag in ('source_bytes_rewritten', 'target_rewriting', 'placeholders', 'post_translation_literal_injection', 'corpus_specific_target_patches', 'evaluator_weakened', 'n_best_cherry_picking'):
+              if evidence.get(flag) is not False:
+                  raise SystemExit(f'unsafe upstream run23 flag: {flag}')
+          canonical = dict(evidence)
+          recorded = canonical.pop('evidence_sha256', '')
+          actual = hashlib.sha256(json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8')).hexdigest()
+          pinned = os.environ['ROCKETDICT_RESIDUAL_UPSTREAM_EVIDENCE_SHA256']
+          if recorded != pinned or actual != pinned:
+              raise SystemExit(f'upstream run23 canonical evidence SHA drift: recorded={recorded} actual={actual}')
+          database_sha = str(evidence.get('final_database_sha256') or '')
+          if re.fullmatch(r'[0-9a-f]{64}', database_sha) is None:
+              raise SystemExit('upstream run23 database SHA missing/invalid')
+          print(database_sha)
+          PY
+          )"
+          echo "ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256=$DB_SHA" >> "$GITHUB_ENV"
+          cp "$UPSTREAM_EVIDENCE" "$ROCKETDICT_RESIDUAL_CENSUS_ROOT/upstream-run23-evidence.json"
+          cp "$UPSTREAM_DB" "$ROCKETDICT_RESIDUAL_CENSUS_DB"
+          echo "$DB_SHA  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
 
       - name: Run read-only residual census
         run: python -u rocketdict-workbench/tests/audit_translation_residual_census.py
@@ -89,5 +130,6 @@ jobs:
           path: |
             work/run23-residual-census/translation-residual-census.json
             work/run23-residual-census/summary.json
+            work/run23-residual-census/upstream-run23-evidence.json
           if-no-files-found: error
           retention-days: 90
