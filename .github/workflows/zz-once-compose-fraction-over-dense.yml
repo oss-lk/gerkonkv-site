@@ -1,0 +1,65 @@
+name: One-shot compose fraction rescue over dense figure rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/zz-once-compose-fraction-over-dense.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-self-delete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch exact base-runner import
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('rocketdict-product-core/src/rocketdict/translation_tc_big_fraction_context_rescue_stage.py')
+          text = path.read_text(encoding='utf-8')
+          old = 'from .translation_parenthetical_context_rescue_stage import run_stage12 as run_base_stage12'
+          new = 'from .translation_dense_figure_group_rescue_stage import run_stage12 as run_base_stage12'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one old import, found {text.count(old)}')
+          if new in text:
+              raise SystemExit('dense composition import already present before patch')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+          PY
+          git diff --check
+          git diff -- rocketdict-product-core/src/rocketdict/translation_tc_big_fraction_context_rescue_stage.py
+      - name: Run focused composition-adjacent tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[alt-mt]' pytest
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_translation_dense_figure_group_rescue_stage.py \
+            rocketdict-product-core/tests/test_translation_tc_big_fraction_context_rescue_stage.py
+      - name: Commit patch and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/zz-once-compose-fraction-over-dense.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            rocketdict-product-core/src/rocketdict/translation_tc_big_fraction_context_rescue_stage.py \
+            .github/workflows/zz-once-compose-fraction-over-dense.yml
+          if git diff --cached --quiet; then
+            echo 'No patch to commit.' >&2
+            exit 1
+          fi
+          git commit -m 'Compose fraction rescue over dense figure rescue'
+          git push origin HEAD:chatgpt/product-core-forward
