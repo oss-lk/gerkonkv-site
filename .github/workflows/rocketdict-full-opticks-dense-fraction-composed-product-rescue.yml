@@ -1,0 +1,219 @@
+name: RocketDict Full Opticks Dense + Fraction Composed Product Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/translation_dense_figure_group_rescue_stage.py'
+      - 'rocketdict-product-core/src/rocketdict/translation_tc_big_fraction_context_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_translation_fraction_dense_composition.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_dense_fraction_composed_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-dense-fraction-composed-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  full-opticks-dense-fraction-composed-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASE_RUN_ID: '34678965465'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-parenthetical-whole-context-rescue
+      BASE_DB_SHA256: 879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT: ${{ github.workspace }}/work/full-opticks-dense-fraction-composed-rescue
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install asset builders
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'pytest>=8,<9' 'ctranslate2==4.8.2' 'sentencepiece==0.2.1' \
+            'transformers==4.56.2' 'sacremoses==0.1.1' \
+            'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Run composition and wrapper regressions
+        run: |
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_translation_fraction_dense_composition.py \
+            rocketdict-product-core/tests/test_translation_dense_figure_group_rescue_stage.py \
+            rocketdict-product-core/tests/test_translation_tc_big_fraction_context_rescue_stage.py
+
+      - name: Download immutable run20 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+
+      - name: Stage exact run20 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT"
+          cp work/base/full-opticks-parenthetical-whole-context-rescue/rocketdict.sqlite "$ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and verify official OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+
+      - name: Build verified offline OPUS asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/composed-opus-asset-build.json
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/composed-tc-big-asset-build.json
+
+      - name: Build torch-free composed replay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/composed-runtime-venv
+          work/composed-runtime-venv/bin/python -m pip install --upgrade pip
+          work/composed-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/composed-runtime-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in composed inference runtime')
+          print('Torch-free composed OPUS/TC-big runtime verified.')
+          PY
+
+      - name: Run exact composed full-Opticks replay and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/composed-runtime-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_dense_fraction_composed_product_rescue.py
+
+      - name: Verify persisted composed evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT'])
+          evidence_path = root/'full-opticks-dense-fraction-composed-rescue.json'
+          summary_path = root/'summary.json'
+          db_path = root/'rocketdict.sqlite'
+          text_path = root/'full-opticks-dense-fraction-composed-rescue.txt'
+          for path in (evidence_path, summary_path, db_path, text_path):
+              if not path.is_file() or path.stat().st_size <= 0:
+                  raise SystemExit(f'missing persisted composed artifact: {path}')
+          e = json.loads(evidence_path.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-dense-fraction-composed-rescue-optin/1': raise SystemExit('schema drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':20,'punctuation':14,'length':0,'unique':33}: raise SystemExit('base counts drift')
+          if e['dense_intermediate_hard_gate_counts'] != {'numeric_symbol':19,'punctuation':14,'length':0,'unique':32}: raise SystemExit('dense intermediate counts drift')
+          if e['final_hard_gate_counts'] != {'numeric_symbol':18,'punctuation':14,'length':0,'unique':31}: raise SystemExit(f"final counts drift: {e['final_hard_gate_counts']!r}")
+          if e['dense_intermediate_translation_run_id'] != 21 or e['final_translation_run_id'] != 22: raise SystemExit('lineage run-id drift')
+          if e['base_segment_count'] != 3341 or e['dense_intermediate_segment_count'] != 3339 or e['final_segment_count'] != 3338: raise SystemExit('segment-count drift')
+          if e['untouched_row_count'] != 3336 or e['untouched_source_target_exact'] is not True: raise SystemExit('untouched-row drift')
+          if e['rescue_spans_disjoint'] is not True or e['source_coverage_byte_exact'] is not True: raise SystemExit('source geometry drift')
+          if e['rescues']['dense_figure_group']['selected_rank'] != 0 or e['rescues']['fraction_context']['selected_rank'] != 0: raise SystemExit('rank drift')
+          if e['rescues']['dense_figure_group']['semantic_review']['all_diagnostic_anchors'] is not True: raise SystemExit('dense semantic anchors drift')
+          if e['rescues']['fraction_context']['semantic_review']['all_diagnostic_anchors'] is not True or e['rescues']['fraction_context']['semantic_review']['candidate_split_join_artifact_absent'] is not True: raise SystemExit('fraction semantic anchors drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('unsafe promotion flags')
+          if e['database_integrity_check'] != 'ok' or e['foreign_key_violation_count'] != 0: raise SystemExit('database integrity drift')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag drift: {flag}')
+          def sha(path):
+              h=hashlib.sha256(); h.update(path.read_bytes()); return h.hexdigest()
+          if sha(db_path) != e['final_database_sha256'] or sha(text_path) != e['final_text_sha256']: raise SystemExit('persisted SHA drift')
+          canonical=dict(e); expected=canonical.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')).hexdigest()
+          if actual != expected: raise SystemExit('canonical evidence SHA drift')
+          print(json.dumps({'run':e['final_translation_run_id'],'counts':e['final_hard_gate_counts'],'database_sha256':e['final_database_sha256'],'evidence_sha256':e['evidence_sha256']}, indent=2))
+          PY
+
+      - name: Record composed runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/composed-runtime
+          python -VV > work/composed-runtime/python-builder.txt || true
+          work/composed-runtime-venv/bin/python -VV > work/composed-runtime/python-runtime.txt || true
+          work/composed-runtime-venv/bin/python -m pip freeze | sort > work/composed-runtime/pip-freeze-runtime.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/composed-runtime/opus.sha256 || true
+          if [ -s "$ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT/full-opticks-dense-fraction-composed-rescue.json" ]; then
+            sha256sum "$ROCKETDICT_DENSE_FRACTION_COMPOSED_PRODUCT_ROOT/full-opticks-dense-fraction-composed-rescue.json" > work/composed-runtime/evidence-file.sha256
+          fi
+
+      - name: Upload persisted composed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-dense-fraction-composed-rescue
+          path: |
+            work/composed-opus-asset-build.json
+            work/composed-tc-big-asset-build.json
+            work/full-opticks-dense-fraction-composed-rescue/**
+            work/composed-runtime/**
+          if-no-files-found: error
+          retention-days: 90
