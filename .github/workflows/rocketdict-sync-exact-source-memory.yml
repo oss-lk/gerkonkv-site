@@ -1,0 +1,70 @@
+name: RocketDict Sync Exact Source Memory
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-sync-exact-source-memory.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+      - name: Synchronize mandatory memory
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('PROJECT_STATE.md')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace(
+              '- L3/engineering state incorporated through `001ba055f47f059529aa4b876db8d5308ae957d7` (`Run illustration structural separator DOE`).',
+              '- L3/engineering state incorporated through `a1b021a94c4a81800e0a2f771a1a93a2c5d96f06`; substantive code hardening commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2` (`Enforce exact-source illustration model input`).'
+          )
+          marker = 'This DOE resolves the **mechanical geometry** question. It does not by itself authorize promotion: implementation still requires confirming that existing accepted Product composition precedent treats pre-MT-planned source-owned structural bytes as legitimate passthrough rather than target injection.\n'
+          replacement = '''This DOE resolves the **mechanical geometry** question. Subsequent L3 audit also resolved the two remaining provenance questions:\n\n- direct read-only inspection of persisted run41 SQLite from artifact `10297359600` found `illustration_label_rescue_normalized_model_input_source_starts=[]` and only accepted source start `203786`; therefore run41 itself did **not** persist any candidate generated from normalized `_Illustration._ → Illustration.` input and remains a valid exact-source parent;\n- accepted `rocketdict-stage12-ascii-table-logical-rank0/1` (`table_stage12.py`, `table_logical_structure.py`, `test_table_stage12.py`) already plans immutable source structure before MT, translates lexical source groups only, and renders source-owned whitespace/delimiters/numeric cells from their original spans. This establishes the architectural precedent for the illustration blank-line/trailing structural passthrough; it is not post-hoc target injection.\n\nForward illustration-label code is now contract `/3`: exact source remainder is the only legal model input, normalization is fail-closed, `model_input_source_rewritten=false`, and `_candidate_rows` rejects `model_input != remainder_source`. Targeted hardening workflow `34703487403` completed successfully before commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`; one-shot helper workflows were removed afterward.\n'''
+          assert marker in s
+          s = s.replace(marker, replacement)
+          start = s.index('## Active next actions\n')
+          s = s[:start] + '''## Active next actions\n\n1. Implement the now-authorized generic/default-OFF illustration structural-separator wrapper from the proven source-only plan: OPUS rank0 label + source-owned separator + TC-big rank0 exact suffix + source-owned trailing whitespace.\n2. Add fail-closed tests for exact source/model-input identity, unique rank0, exact structural spans, semantic target form and aggregate mechanical/emphasis checks.\n3. Run maintained Product Core CI, then replay the wrapper from exact run41 and run an independent residual census. The arithmetic expectation **18 numeric / 14 punctuation / 0 length, 31 unique** is not acceptance evidence.\n4. Promote a new parent only if the full replay proves byte-exact source coverage, no regressions/unsafe flags, semantic/boundary acceptance and the expected strict hard-gate improvement.\n5. Continue to zero hard failures, then complete learner/export and Windows release validation.\n'''
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('docs/memory/TRANSLATION_QUALITY.md')
+          s = p.read_text(encoding='utf-8')
+          needle = 'This evidence establishes a mechanically clean geometry but does **not** alone prove that source-owned structural passthrough is an authorized Product composition operation. Before promotion, inspect accepted L3 precedent, especially `rocketdict-stage12-ascii-table-logical-rank0/1` and the Stage12 composition implementation/tests. If those establish that source-owned structural bytes planned before MT are preserved as structure rather than injected into model output, the illustration route may advance to a default-OFF wrapper and full replay. Otherwise reject it.\n'
+          repl = '''This evidence establishes a mechanically clean geometry. L3 architecture audit subsequently confirmed the required precedent: accepted `rocketdict-stage12-ascii-table-logical-rank0/1` plans immutable source groups before MT and its renderer copies source-owned whitespace/delimiters/numeric cells from original spans while only lexical groups receive model output. The illustration `separator`/`trailing` pieces are the same architectural class when discovered before inference.\n\nA separate persisted-run audit also proved run41 itself did not accept the latent historical `_Illustration._ → Illustration.` model-input normalization: `illustration_label_rescue_normalized_model_input_source_starts=[]`; only ordinary source start `203786` was accepted. Thus run41 remains an exact-source promotion parent.\n\nForward illustration rescue is now `rocketdict-stage12-illustration-label-rescue/3` + selector `/3` (commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`). Every remainder is sent exactly as immutable source; normalized input raises; candidate construction requires `model_input == remainder_source`; output/payload records exact-input provenance. Targeted workflow `34703487403` passed before the commit. This hardening changes future capability, not the authenticated run41 translation, because run41 had accepted no normalized input.\n'''
+          assert needle in s
+          s = s.replace(needle, repl)
+          old = '''## Promotion rules / current frontier\n\n1. Never weaken maintained evaluators or repair model output post hoc.\n2. Preserve immutable source/model/config/result identities and exact predecessor lineage.\n3. Persist only deterministic unmodified raw rank0 model output; semantic/boundary review remains mandatory in addition to mechanical gates.\n4. New geometry/model use requires a generic source-defined trigger and must fail closed.\n5. Source-owned structural passthrough may be used only if it is demonstrably planned from immutable source before MT and is supported by existing Product composition contract/precedent; it must never become post-MT target repair.\n6. Immediate next step: audit the accepted structural-passthrough precedent. If compatible, implement the generic illustration wrapper and run full compose+census from exact run41. If incompatible, close this route and move to the next residual family.\n'''
+          new = '''## Promotion rules / current frontier\n\n1. Never weaken maintained evaluators or repair model output post hoc.\n2. Preserve immutable source/model/config/result identities and exact predecessor lineage.\n3. Persist only deterministic unmodified raw rank0 model output; exact lexical model input must equal its immutable source span; semantic/boundary review remains mandatory.\n4. New geometry/model use requires a generic source-defined trigger and must fail closed.\n5. Source-owned structural passthrough is allowed only when planned entirely from immutable source before MT and rendered from those same source spans; the maintained table pipeline is the accepted precedent. It must never become post-MT target repair.\n6. Immediate next step: implement the generic illustration structural-separator wrapper, tests, Product Core CI and full compose+census from exact run41.\n'''
+          assert old in s
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('docs/memory/DECISIONS.md')
+          s = p.read_text(encoding='utf-8')
+          old = '''**Decision.** Do not equate structural passthrough with target literal injection merely because source bytes appear in the aggregate target, and do not declare it safe merely because the DOE labels it source-owned. The deciding criterion is L3 architecture: the separator/trailing bytes must be identified from immutable source before model inference and preserved as structural composition under an already accepted Product mechanism/contract. Inspect `rocketdict-stage12-ascii-table-logical-rank0/1` and associated Stage12 source/tests. Only if this precedent is genuinely equivalent may the illustration wrapper be implemented.\n\nIf precedent is compatible, the wrapper must be generic/source-defined, default OFF, exact-source, raw-rank0-only, fail closed, preserve exact structural bytes, and run full compose+census from run41. If precedent is incompatible, reject the route rather than special-case FIG.21/FIG.24.\n'''
+          new = '''**Decision.** The required structural-passthrough precedent is confirmed. `rocketdict-stage12-ascii-table-logical-rank0/1` uses a source-only pre-MT logical plan; `table_logical_structure.py` renders source-owned whitespace/delimiters/numeric cells from immutable source spans while lexical groups alone receive rank0 MT. Therefore illustration separator/trailing passthrough is legal when and only when it is planned the same way before inference.\n\n**Decision.** Direct audit of persisted run41 proved no accepted candidate used the old `_Illustration._ → Illustration.` model-input normalization (`illustration_label_rescue_normalized_model_input_source_starts=[]`). Run41 therefore remains an exact-source parent despite the latent capability that existed in `/2`. Forward code removes that capability entirely: illustration-label rescue/selector `/3` (commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`) uses exact remainder input, fails closed on normalization/non-equal model input, and records `model_input_source_rewritten=false`. Targeted workflow `34703487403` passed.\n\nThe next wrapper must be generic/source-defined, default OFF, exact-source, raw-rank0-only, preserve exact structural spans, and then undergo Product Core CI plus full compose+census from run41.\n'''
+          assert old in s
+          s = s.replace(old, new)
+          s = s.replace('1. Audit accepted structural-passthrough precedent in Product/Stage12 L3 code and tests, especially `rocketdict-stage12-ascii-table-logical-rank0/1`.\n2. If precedent is equivalent, implement a generic default-OFF illustration structural-separator rank0 wrapper and targeted fail-closed tests.\n3. Replay from exact run41 and run independent census.', '1. Implement the generic default-OFF illustration structural-separator rank0 wrapper and targeted fail-closed tests using the confirmed source-planned structural precedent.\n2. Run maintained Product Core CI.\n3. Replay from exact run41 and run independent census.')
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit memory synchronization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PROJECT_STATE.md docs/memory/TRANSLATION_QUALITY.md docs/memory/DECISIONS.md
+          git commit -m "Sync exact-source illustration provenance"
+          git push origin HEAD:chatgpt/product-core-forward
