@@ -1,0 +1,178 @@
+name: RocketDict Full Opticks Emphasized Modifier Boundary Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/translation_emphasized_modifier_boundary_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_translation_emphasized_modifier_boundary_rescue_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_emphasized_modifier_boundary_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-emphasized-modifier-boundary-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  full-opticks-emphasized-modifier-boundary-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      BASE_RUN_ID: '34687351187'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-dense-fraction-composed-rescue
+      BASE_DB_SHA256: 5cc0bec1d8ab1c9b0eadb9441819d84676f005a5a3bbb3a068745338469b3206
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT: ${{ github.workspace }}/work/full-opticks-emphasized-modifier-boundary-rescue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install maintained runtime and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'pytest>=8,<9' 'ctranslate2==4.8.2' 'sentencepiece==0.2.1'
+
+      - name: Run focused rescue regressions
+        run: |
+          python -m pytest -q \
+            rocketdict-product-core/tests/test_translation_emphasized_modifier_boundary_rescue_stage.py \
+            rocketdict-product-core/tests/test_translation_fraction_dense_composition.py \
+            rocketdict-product-core/tests/test_translation_tc_big_fraction_context_rescue_stage.py \
+            rocketdict-product-core/tests/test_translation_dense_figure_group_rescue_stage.py
+
+      - name: Download exact persisted run22 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+
+      - name: Stage exact run22 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT"
+          cp work/base/full-opticks-dense-fraction-composed-rescue/rocketdict.sqlite "$ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and verify official OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+
+      - name: Build verified offline OPUS asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/emphasized-modifier-opus-asset-build.json
+
+      - name: Build torch-free replay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/emphasized-modifier-product-venv
+          work/emphasized-modifier-product-venv/bin/python -m pip install --upgrade pip
+          work/emphasized-modifier-product-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/emphasized-modifier-product-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in run23 replay runtime')
+          print('Torch-free run23 replay runtime verified.')
+          PY
+
+      - name: Run exact full-Opticks run23 replay and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/emphasized-modifier-product-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_emphasized_modifier_boundary_product_rescue.py
+
+      - name: Verify persisted run23 evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT'])
+          evidence_path = root/'full-opticks-emphasized-modifier-boundary-rescue.json'
+          summary_path = root/'summary.json'
+          db_path = root/'rocketdict.sqlite'
+          text_path = root/'full-opticks-emphasized-modifier-boundary-rescue.txt'
+          for path in (evidence_path, summary_path, db_path, text_path):
+              if not path.is_file() or path.stat().st_size <= 0:
+                  raise SystemExit(f'missing persisted run23 artifact: {path}')
+          e = json.loads(evidence_path.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-emphasized-modifier-boundary-rescue-optin/1': raise SystemExit('schema drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':18,'punctuation':14,'length':0,'unique':31}: raise SystemExit('base counts drift')
+          if e['final_hard_gate_counts'] != {'numeric_symbol':17,'punctuation':14,'length':0,'unique':30}: raise SystemExit(f"final counts drift: {e['final_hard_gate_counts']!r}")
+          if e['base_translation_run_id'] != 22 or e['final_translation_run_id'] != 23: raise SystemExit('run lineage drift')
+          if e['base_segment_count'] != 3338 or e['final_segment_count'] != 3337: raise SystemExit('segment-count drift')
+          if e['discovered_group_count'] != 4: raise SystemExit('source-group census drift')
+          if e['attempted_context_groups'] != [[2496,2497],[2633,2634]]: raise SystemExit('attempted groups drift')
+          if e['accepted_context_groups'] != [[2496,2497]] or e['rejected_context_groups'] != [[2633,2634]]: raise SystemExit('selection groups drift')
+          if e['selected_rank'] != 0 or e['model'] != 'OPUS': raise SystemExit('raw model selection drift')
+          if e['rejected_long_group_unchanged'] is not True: raise SystemExit('rejected long group changed')
+          if e['untouched_row_count'] != 3336 or e['untouched_source_target_exact'] is not True: raise SystemExit('untouched row drift')
+          if e['semantic_review']['all_diagnostic_anchors'] is not True: raise SystemExit('semantic anchors drift')
+          if e['source_coverage_byte_exact'] is not True or e['database_integrity_check'] != 'ok' or e['foreign_key_violation_count'] != 0: raise SystemExit('integrity drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('unsafe promotion flag')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag drift: {flag}')
+          def sha(path):
+              h=hashlib.sha256(); h.update(path.read_bytes()); return h.hexdigest()
+          if sha(db_path) != e['final_database_sha256'] or sha(text_path) != e['final_text_sha256']: raise SystemExit('persisted SHA drift')
+          canonical=dict(e); expected=canonical.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')).hexdigest()
+          if actual != expected: raise SystemExit('canonical evidence SHA drift')
+          print(json.dumps({'run':e['final_translation_run_id'],'counts':e['final_hard_gate_counts'],'database_sha256':e['final_database_sha256'],'evidence_sha256':e['evidence_sha256']}, indent=2))
+          PY
+
+      - name: Record replay runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/emphasized-modifier-product-runtime
+          python -VV > work/emphasized-modifier-product-runtime/python-builder.txt || true
+          work/emphasized-modifier-product-venv/bin/python -VV > work/emphasized-modifier-product-runtime/python-runtime.txt || true
+          work/emphasized-modifier-product-venv/bin/python -m pip freeze | sort > work/emphasized-modifier-product-runtime/pip-freeze-runtime.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/emphasized-modifier-product-runtime/opus.sha256 || true
+          if [ -s "$ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT/full-opticks-emphasized-modifier-boundary-rescue.json" ]; then
+            sha256sum "$ROCKETDICT_EMPHASIZED_MODIFIER_PRODUCT_ROOT/full-opticks-emphasized-modifier-boundary-rescue.json" > work/emphasized-modifier-product-runtime/evidence-file.sha256
+          fi
+
+      - name: Upload persisted run23 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-emphasized-modifier-boundary-rescue
+          path: |
+            work/emphasized-modifier-opus-asset-build.json
+            work/full-opticks-emphasized-modifier-boundary-rescue/**
+            work/emphasized-modifier-product-runtime/**
+          if-no-files-found: error
+          retention-days: 90
