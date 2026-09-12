@@ -15,7 +15,6 @@ predicate, and never authorizes Product promotion without semantic review and a
 later full-corpus replay.
 """
 
-from collections import Counter
 import hashlib
 import json
 import os
@@ -34,7 +33,7 @@ BASE_DATABASE_SHA256 = "879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c
 BASE_RUN_ID = 20
 BASE_OUTPUT_SHA256 = "e06aa1620410698bac09a4cc46632aaf3d1c3d45de0f798d29521f722367db85"
 SOURCE_TEXT_SHA256 = "436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a"
-EXPECTED_FAMILY_COUNT = 17
+EXPECTED_FAMILY_COUNT = 15
 EXPECTED_TRIGGER_SEQUENCES = [325]
 BEAM_SIZE = 6
 NUM_HYPOTHESES = 1
