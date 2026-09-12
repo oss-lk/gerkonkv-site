@@ -16,9 +16,10 @@ from typing import Any
 
 from .numeric_words import extract_russian_ordinals
 from .prime_notation import compare_numeric_prime_notation
+from .source_numeric_words import extract_spelled_numeric_licenses
 from .stages import StageExecutionError, _quality_run
 
-CONTRACT = "rocketdict-maintained-numeric-integrity/5"
+CONTRACT = "rocketdict-maintained-numeric-integrity/6"
 
 _ORDINAL_SUFFIX = r"(?:st|nd|rd|th|d|[-‑–]?(?:й|я|е|го|му|ым|ом|ой|ую|ых))"
 _ENG_DIGIT_ORDINAL_RE = re.compile(r"^\s*\d+(?:st|nd|rd|th)\s*$", re.IGNORECASE)
@@ -285,33 +286,11 @@ def source_digit_ordinal_counter(source: str) -> Counter[str]:
 
 def spelled_numeric_licenses(source: str) -> Counter[str]:
     """License only explicit English cardinal/ordinal number words in source."""
-    words = re.findall(r"(?<![A-Za-z])([A-Za-z]+)(?![A-Za-z])", source.casefold())
-    out: Counter[str] = Counter()
-    index = 0
-    while index < len(words):
-        word = words[index]
-        ordinal = _ORDINAL_WORDS.get(word)
-        if ordinal is not None:
-            out[str(ordinal)] += 1
-            index += 1
-            continue
-        value = _NUMBER_WORDS.get(word)
-        if value is None:
-            index += 1
-            continue
-        if (
-            value >= 20
-            and value < 100
-            and value % 10 == 0
-            and index + 1 < len(words)
-            and 0 < (_NUMBER_WORDS.get(words[index + 1]) or 0) < 10
-        ):
-            out[str(value + _NUMBER_WORDS[words[index + 1]])] += 1
-            index += 2
-            continue
-        out[str(value)] += 1
-        index += 1
-    return out
+    return extract_spelled_numeric_licenses(
+        source,
+        cardinal_words=_NUMBER_WORDS,
+        ordinal_words=_ORDINAL_WORDS,
+    )
 
 
 def _positive_delta(left: Counter[str], right: Counter[str]) -> dict[str, int]:
