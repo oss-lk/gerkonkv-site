@@ -4,54 +4,38 @@ Store only conclusions expensive or risky to rediscover. Git/L3 remains chronolo
 
 ## Quality/release invariants
 
-**Decision.** Speed, storage and convenience may not reduce Product quality/evidence. Real EN→RU MT is mandatory; no fake/identity/mock/dictionary substitution, silent truncation, evaluator weakening, target literal injection, source rewriting, target surgery, placeholders, corpus-specific target patches or automatic n-best cherry-picking.
+**Decision.** Quality cannot be traded for speed/storage/convenience. No fake MT, silent truncation, evaluator weakening, target literal injection, source rewriting, target surgery, placeholders, corpus-specific target patches or automatic n-best cherry-picking. Final approved 90k+ evidence needs zero unresolved numeric/symbol, punctuation and length failures plus semantic/downstream acceptance.
 
-`rocketdict/PRODUCT_TARGET.md` remains authoritative: final approved 90k+ heavy evidence needs zero unresolved numeric/symbol, punctuation and length failures, semantic acceptance, and successful complete learner-dictionary/export processing.
+## Run-20 research basis
 
-## Maintained implementation and assets
+**Decision.** Run `20` supersedes run19 as the best accepted persisted **research** basis: **20 numeric / 14 punctuation / 0 length, 33 unique**. Identities: workflow `34678965465`, artifact `10292783763`, ZIP SHA `0e30b3d10cf263ef6256c422cf2c2003f0c81343ad59f13e1b3531e709b3f7cf`, output SHA `e06aa1620410698bac09a4cc46632aaf3d1c3d45de0f798d29521f722367db85`, text SHA `16ab4a3c3ef192662604e90e428933ab23423b7872bae2bd6de3478b3a46f8c8`, SQLite SHA `879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d`, evidence SHA `2f21b87327033aab76e5d3485c22cfbd6ea672cae9c4c5055a3d129b3f5054c1`.
 
-**Decision.** Forward work targets `rocketdict-product-core` + Workbench. Production baseline is pinned OPUS EN→RU `opus-2020-02-11` float32; TC-big remains an independent pinned comparator/narrow-rescue model, not a generic fallback.
+It composes directly over exact run19. The source-defined parenthetical wrapper accepts exactly context `1393` as raw OPUS rank0, leaves 3340 unrelated rows exact, reconstructs source byte-exactly and passes SQLite/FK integrity.
 
-## Translation-quality promotion
+## Source-defined parenthetical rescue
 
-**Decision.** Promote only after classifying the defect, preserving immutable source ownership and validating contiguous/boundary-sensitive evidence. Mechanical hard-gate success is insufficient; semantic review is mandatory. Exact source spans may replace current translation only when representable by complete current rows. Research wrappers remain default OFF/not public-wired unless separately promoted.
+**Decision.** `rocketdict-stage12-parenthetical-whole-context-rescue/1` is an accepted default-OFF research layer only because a corpus-wide source predicate distinguished the safe rank0 case from unsafe siblings without offset/text whitelisting.
 
-## Run-19 research basis
+Eligibility requires one complete split Stage10 context, `<=160` NLP tokens, exactly one short balanced source parenthetical pair (`<=8` alpha words), both parentheses absent from aggregate current target, other hard punctuation exact and unrelated member diagnostics clean. Only raw OPUS rank0 is eligible, with strict hard/research/emphasis/punctuation/content-volume vetoes.
 
-**Decision.** Run `19` supersedes run18 as the best accepted persisted **research** basis: **20 numeric / 15 punctuation / 0 length, 34 unique**. Identities: workflow `34676310994`, artifact `10292442391`, ZIP SHA `51e00030d19799157d83db8a9dbc9093851da9be897619e465699b2cde72ef91`, output SHA `48096e0c1085c0598bc8abf212a2b2ba9a1109bb232fa2487c0472f35c06a1d9`, SQLite SHA `8519ea592b0bd948b68980ed19b710f05f20f9e0a60f0cb6c3e1a7763d5a8f76`, evidence SHA `ba6b24c0b4f628d908b5310aaf05268de2323033d7bbb629d081d755ddb8bf5f`.
+## Inline `[G]` is not a simple resegmentation defect
 
-It composes over exact run18. A new source-defined bounded-question wrapper attempts contexts `2462` and `2726`; only raw OPUS rank0 for `2462` is accepted. `2726` remains unchanged because emphasis preservation vetoes the candidate. 3341 other base rows are target-exact; source reconstruction and SQLite/FK integrity pass.
+**Decision.** Do not create an inline-footnote wrapper for context `598` under the current model/search evidence. Corrected whole-context DOE `34679178153` tested six OPUS and six TC-big hypotheses on the exact 115-token Stage10 source. All twelve omit `[G]`; no hypothesis is mechanically admissible. This materially different formulation confirms that the earlier row-local TC-big failure was not merely caused by Stage12 splitting.
 
-## Source-defined bounded question rescue
+The first DOE attempt `34679083884` is classified as orchestration-only: it checked the wrong snapshot filename (`pytorch_model.bin`). Commit `6b90cc75` corrected provisioning to the pinned `model.safetensors`/proven snapshot pattern without changing model or acceptance criteria.
 
-**Decision.** `rocketdict-stage12-question-mark-whole-context-rescue/1` is an accepted default-OFF research layer because it addresses a geometry-caused question-mark defect without widening the generic planner.
+## Generic fallbacks remain rejected
 
-The trigger requires one complete Stage10 context represented by 2+ current split rows, one immutable source terminal `?`, extra premature target question-mark debt, no unrelated hard/research debt, and `<=160` NLP tokens. Only raw OPUS rank0 is eligible. Strict hard/research checks, Gutenberg emphasis, source coverage and conservative content-volume checks remain vetoes. Run19 proves one acceptance and one fail-closed rejection.
+**Decision.** Product/default Stage10 stays V1. Broad V2 resegmentation, generic row-local TC-big punctuation fallback, generic OPUS/TC-big whole-context fallback, generic bounded-parenthesis fallback and broad square-bracket repair remain rejected because mechanically clean alternatives have demonstrated semantic loss.
 
-## Generic bounded-parenthesis rescue is rejected
+## Numeric frontier remains family-specific
 
-**Decision.** The run19 bounded-parenthesis DOE `34676468786` does **not** justify a generic whole-context parenthesis rescue, even though counterfactual hard counts look attractive.
+**Decision.** The numeric residual count has remained `20` from run16 through run20 while punctuation layers changed unrelated rows. Start the next frontier from exact run20 and map all 20 residuals to historical feasibility evidence before adding code. Do not repeat previously rejected generic prime, thousands-grouping, narrow `x→×`, compact-formula-spacing or known bad `54796`/`112001` formulations unless the new experiment changes the source/model geometry materially.
 
-Four split contexts inside the 160-token cap were tested. TC-big rank0 is mechanically admissible on `668`, `1393`, `1977` but semantic inspection finds material omissions in `1393` and `1977`. OPUS rank0 is admissible only on `1393`; OPUS `668` still loses one of the two parenthetical clauses; `2969` remains inadmissible. OPUS rank2 for `1977` is evidence that search can recover content, but automatic n-best cherry-picking is not allowed.
+## Audit/orchestration classification
 
-A future `1393`-class wrapper is permitted only if a generic source-owned predicate can distinguish that safe case from unsafe siblings without encoding corpus offset, source phrase or expected target text. Otherwise `1393` stays research-only.
-
-## Stage10 V2 and generic fallbacks remain rejected
-
-**Decision.** Product/default Stage10 stays V1. Broad V2 resegmentation, generic row-local TC-big punctuation fallback, generic OPUS/TC-big whole-context fallback and broad square-bracket repair all remain rejected because mechanically clean outputs have demonstrated semantic loss.
-
-## Residual defects stay family-specific
-
-**Decision.** No universal punctuation/numeric fixer. Current run19 punctuation residuals mix square-bracket losses, parenthesis losses/corruption and question migration. In particular, bounded question `2726` is blocked by emphasis; oversized question context `2730` is above the proven cap. Square-bracket residuals also have different geometries: `54796` is unsplit and carries numeric debt, `301051` is already a grouped unit, while only `[G]` at `112541` is a bounded split-context candidate.
-
-## Audit failures are classified before Product changes
-
-**Decision.** A red heavy workflow is not automatically a Product/model defect. Inspect persisted output/logs first. Repair harness-only defects without weakening Product acceptance semantics; never change evaluators merely to make a run green.
-
-## Acceptance order
-
-**Decision.** Real source→Stage25 smoke/replay must be green before full-corpus acceptance. Final complete public-domain translation evidence must reach zero hard failures and semantic acceptance before downstream heavy learner/export and Windows clean-install/distribution become the release frontier.
+**Decision.** A red workflow does not justify Product changes until the failure is classified. Harness/provisioning defects are repaired without weakening Product criteria. The `[G]` initial snapshot-filename failure is another concrete example.
 
 ## Memory protocol
 
-**Decision.** Recovery is `PROJECT_STATE.md` → HEAD diff → `docs/memory/INDEX.md`/relevant L2 → unrestricted L3. Stale L1 is repaired from L3 before new work. Before user-facing development completion, synchronize L1/L2 to actual HEAD/CI/artifacts.
+**Decision.** Recovery is `PROJECT_STATE.md` → HEAD diff → `docs/memory/INDEX.md`/relevant L2 → unrestricted L3. Before any user-facing development result, synchronize L1 plus both mandatory L2 files to actual HEAD/CI/artifacts.

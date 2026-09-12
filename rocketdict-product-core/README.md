@@ -2,63 +2,40 @@
 
 Status: maintained forward Product runtime (`1.0.0.dev1`).
 
-This package is the current RocketDict implementation. It is maintained forward code, not a reconstruction of an unavailable historical 0.30.x package.
+This package is the current RocketDict implementation. The Workbench `rocketdict-product-run` drives the maintained source→Stage25 path from immutable source through real NLP/MT, hard gates, alignment, lexical/sense processing, cards and export.
 
-## Maintained Product path
+## Translation architecture
 
-The maintained core owns the Product execution/storage path through Stage25:
+Product/default Stage10 remains V1; broad Stage10-v2 is explicit research evidence only. Stage12 primary translation uses the pinned real OPUS EN→RU planner/runtime. Research rescue layers are separate immutable selection runs, default OFF/not public-wired, and never rewrite primary targets in place.
 
-`source → Stage8 production spaCy NLP → Stage10 context → Stage12 real OPUS EN→RU → Stage14 refinement boundary → Stage15 hard gates → Stage16 approval → Stage17 alignment → Stage18 lexical extraction → Stage19 sense induction → Stage20 contextual lexical OPUS → Stage21 CEFR-J → Stage22 CMUdict → Stage23 sense examples → Stage24 immutable cards/set → Stage25 JSON export`
+Recent source-defined research layers include bounded question-context and bounded parenthetical whole-context OPUS rank0 rescue. The latter contract is `rocketdict-stage12-parenthetical-whole-context-rescue/1`: a complete Stage10 context split across 2+ current rows, <=160 NLP tokens, exactly one short balanced source parenthetical pair, both source parentheses lost from the aggregate target, unrelated hard/research diagnostics clean, and deterministic raw OPUS rank0 only. Strict hard/research checks, Gutenberg emphasis, exact hard punctuation and conservative content-volume checks remain vetoes.
 
-The Workbench `rocketdict-product-run` drives the same public maintained API from source through Stage25 and resumes from immutable identities.
-
-### Stage10 source-boundary policy
-
-Product/default Stage10 is `structural-entity-term-discourse-pronoun-v1`, schema `rocketdict-product-stage10/1`. Research V2 remains explicit only. Broad V2 resegmentation is not a Product/default replacement: full-corpus mechanical gains were accompanied by semantic regressions on newly merged clean contexts.
-
-### Stage12 translation and research layers
-
-Stage12 uses `rocketdict-stage12-protected-split/8`. The real OPUS primary translation is immutable and cache-reusable. Rescue mechanisms are separate default-OFF selection layers and never rewrite primary output in place.
-
-Public Stage12 continues to expose only the maintained public research surfaces already documented by the API. Additional evidence-backed wrappers remain internal/default OFF/not public-wired, including TC-big delimiter/reference/numeric classes, Stage10 boundary-pair rescue, orphan-closing-parenthesis rescue, and the bounded question-mark whole-context rescue.
-
-`rocketdict-stage12-question-mark-whole-context-rescue/1` addresses a source-defined split-question defect without changing the general planner. It requires a complete Stage10 context represented by multiple current split rows, one source terminal question mark, premature extra target question debt, no unrelated hard/research debt, and `<=160` NLP tokens. Only unmodified OPUS rank0 is considered. Strict mechanical/research checks, Gutenberg emphasis preservation and conservative content-volume checks are mandatory; otherwise all base rows are copied unchanged.
-
-No rescue path may perform source rewriting, target surgery, placeholders, post-translation literal injection, corpus-specific target patches, automatic n-best cherry-picking or evaluator weakening.
+No rescue may perform source rewriting, target surgery, placeholders, post-translation literal injection, corpus-specific target patches, evaluator weakening or automatic n-best cherry-picking.
 
 ## Current full-Opticks evidence
 
-Large-corpus acceptance uses the complete pinned Project Gutenberg *Opticks* source: normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters.
+The canonical heavy corpus is complete Project Gutenberg *Opticks*, normalized-text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters.
 
-Persisted progression now reaches:
+Late persisted progression:
 
 - run `16`: **20 numeric / 18 punctuation / 0 length**, 37 unique;
 - run `17`: **20/17/0**, 36 unique;
 - run `18`: **20/16/0**, 35 unique;
-- run `19`: **20/15/0**, 34 unique.
+- run `19`: **20/15/0**, 34 unique;
+- run `20`: **20/14/0**, 33 unique.
 
-Run `19` is the current best persisted **research** residual basis. It composes directly over run18 with one accepted bounded question-context OPUS rank0 replacement. Workflow `34676310994`, artifact `10292442391`, artifact ZIP SHA-256 `51e00030d19799157d83db8a9dbc9093851da9be897619e465699b2cde72ef91`, final output SHA-256 `48096e0c1085c0598bc8abf212a2b2ba9a1109bb232fa2487c0472f35c06a1d9`, final SQLite SHA-256 `8519ea592b0bd948b68980ed19b710f05f20f9e0a60f0cb6c3e1a7763d5a8f76`, audit evidence SHA-256 `ba6b24c0b4f628d908b5310aaf05268de2323033d7bbb629d081d755ddb8bf5f`.
+Run `20` is the current best persisted **research** residual basis. It composes directly over run19 and accepts exactly one bounded parenthetical context (`1393`) as unmodified OPUS rank0. Workflow `34678965465`, artifact `10292783763`, ZIP SHA-256 `0e30b3d10cf263ef6256c422cf2c2003f0c81343ad59f13e1b3531e709b3f7cf`, final Stage12 output SHA-256 `e06aa1620410698bac09a4cc46632aaf3d1c3d45de0f798d29521f722367db85`, final text SHA-256 `16ab4a3c3ef192662604e90e428933ab23423b7872bae2bd6de3478b3a46f8c8`, final SQLite SHA-256 `879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d`, evidence SHA-256 `2f21b87327033aab76e5d3485c22cfbd6ea672cae9c4c5055a3d129b3f5054c1`.
 
-The wrapper attempts question contexts `2462` (71 NLP tokens) and `2726` (157). `2462` is accepted as raw OPUS rank0; `2726` is rejected because emphasis preservation fails. The persisted run keeps 3341 other run18 rows target-exact, reconstructs the complete source byte-exactly, and passes SQLite/FK integrity.
+The persisted run keeps 3340 other run19 rows source/target exact, reconstructs the complete source byte-exactly, and passes SQLite/FK integrity. Product CI `34678795359` is green for the wrapper including real Stage8→25/unified Product execution. This remains research evidence; Product defaults do not change.
 
-### Bounded parenthesis research
+## Negative square-bracket evidence
 
-Run19 read-only DOE `34676468786` tests contexts `668`, `1393`, `1977`, `2969` with OPUS and TC-big n-best. Artifact `10292347874`, ZIP SHA-256 `85014707fc29663cbc75075e3660c1f053921b0b1caa6a575584d8c8736e4274`, evidence SHA `77027658bc87890d7d861f944bd99a7ba3f926aa365973f432410e3986352c7f`.
+Inline source marker `[G]` at Stage10 context `598` was tested both row-locally and as the complete 115-token Stage10 context. Corrected whole-context workflow `34679178153` tested six OPUS plus six TC-big raw hypotheses; artifact `10293031844`, ZIP SHA `b4e8e09c848ce4015a6d4db5a80a2007420f93384563663df5e260a09d4a1d00`, evidence SHA `5530b8235e8d39e44be77032320cf898516b7dc07831e9b4929cd9283a300a61`. Every hypothesis drops `[G]`, so no inline-footnote wrapper is authorized under current models/search.
 
-Mechanical counterfactuals alone are misleading: TC-big rank0 would reduce punctuation to 12 but loses source-owned content in at least contexts `1393` and `1977`; OPUS rank0 is mechanically admissible only on `1393`; OPUS `668` still loses one of two parenthetical clauses; `2969` is inadmissible. No generic parenthesis whole-context rescue is authorized. Higher-beam recovery is research evidence only and is not eligible for automatic selection.
+An earlier DOE attempt failed before inference because its provisioning expected `pytorch_model.bin`; the pinned TC-big snapshot uses `model.safetensors`. The orchestration was corrected without changing any quality criterion.
 
-These persisted improvements do **not** change Product defaults. Final approved heavy evidence still requires zero unresolved hard failures and complete semantic acceptance.
+## Assets and release boundary
 
-## External production assets
+The accepted OPUS archive SHA-256 is `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`. TC-big is optional, separately pinned/provisioned and remains a comparator/narrow rescue only.
 
-Processing is offline once assets are provisioned. The accepted OPUS EN→RU archive is pinned to SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`. Production NLP uses the pinned accepted spaCy model; Stage21 uses CEFR-J evidence and Stage22 exact CMUdict entries.
-
-TC-big remains optional and separately provisioned. It is an independent comparator/narrow rescue model, not a generic fallback.
-
-## Verification and release boundary
-
-The maintained Stage8→25 path and unified `rocketdict-product-run` are continuously checked with real pinned NLP/OPUS/CEFR-J runtime. Optional research wrappers must not alter the default path while disabled.
-
-A narrow rescue is never promoted merely because one corpus improves. Required evidence includes source-defined triggering, exact boundary geometry, unmodified deterministic raw candidates, semantic review, persisted full-corpus regression, byte-exact untouched/source checks, SQLite integrity, exact model/asset identity and release-size/performance assessment.
-
-After heavy translation gates reach zero unresolved failures, the next release frontier is complete downstream learner/export validation and Windows distribution/clean-install testing.
+The maintained Stage8→25 path and unified `rocketdict-product-run` are continuously tested with real pinned runtime. A narrow rescue is never promoted merely because one corpus improves. Final approved heavy evidence still requires zero unresolved hard failures and complete semantic acceptance; only then does downstream heavy learner/export plus Windows clean-install/distribution become the release frontier.
