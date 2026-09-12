@@ -20,11 +20,23 @@ Production baseline is pinned OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `7
 
 Exact source spans may be replacement units only when representable by complete current Stage12 rows; never slice target strings. Existing narrow TC-big wrappers remain default OFF/not public-wired; corpus improvement never automatically changes Product defaults.
 
-## Run-17 research basis
+## Run-18 research basis
 
-**Decision.** Run `17` supersedes run16 as the best accepted persisted **research** translation basis: **20 numeric / 17 punctuation / 0 length, 36 unique**. Identities: workflow `34656818930`, artifact `10285447200`, artifact ZIP SHA `339b71584f35f6981e1bcfa2dfcd391f98807d12f864ffae3070d6737356387d`, output SHA `f7c04209d9e8d7ffab673a2987b0024c334f24fee59736466597ea99125f7ff1`, SQLite SHA `2cbf20b39168003e494b2fb73c9b9baea427283def04a076a673e5023d7346a4`, evidence SHA `a5d786f4d25ee35917014aae7e435ad1f311c1ffb80744a3a60cacd4c62d6843`.
+**Decision.** Run `18` supersedes run17 as the best accepted persisted **research** translation basis: **20 numeric / 16 punctuation / 0 length, 35 unique**. Identities: workflow `34675224977`, artifact `10292311024`, artifact ZIP SHA `ae4a32221985aaff2842a87bf9548698d8e76b33815633ddb67100b8fc9dea1d`, output SHA `666e8a2cae0bb6ff6f25b95475c2335ee5e3c98f7f2d6ab7deb9be92295be290`, SQLite SHA `803a2cbccb287ad0fadf4b14d932e1e33ebafef2ec5406619b0caf0898525143`, evidence SHA `61ddb44ceed56d0acb552a5cddecac1543e679c35ad450c41270136c5e014733`.
 
-It composes directly over exact run16, merges one independently proven punctuation-only false-boundary pair into raw TC-big rank0, leaves 3342 other run16 rows source/target exact, reconstructs the complete source byte-exactly and passes SQLite/FK integrity. The accepted pair passed maintained strict/research/emphasis checks and focused semantic review. This is still default-OFF research evidence, not Product promotion.
+It composes directly over exact run17 and replaces one source-defined orphan-closing-parenthesis fragment at source start `417917` with raw TC-big rank0. Immutable source contains no round parentheses; the prior target had exactly one target-only closing parenthesis. The candidate preserves numeric order and all maintained strict/research/emphasis checks; 3342 other rows remain source/target exact, complete source coverage is byte-exact and SQLite/FK integrity passes. This remains default-OFF research evidence and does not authorize Product promotion without semantic acceptance.
+
+## Generic punctuation fallback remains rejected
+
+**Decision.** The exact run17-wide TC-big punctuation n-best DOE (`34674771224`, artifact `10292300428`) does not justify a generic row-local second-model fallback. Several raw hypotheses pass every current mechanical/structural gate, but manual semantic inspection exposes false positives, including degree/relation loss and untranslated archaic source wording. Therefore mechanical eligibility across punctuation residuals is candidate evidence only; selectors must stay defect-family-specific and source-defined.
+
+## Source-defined orphan closing-parenthesis rescue
+
+**Decision.** `rocketdict-stage12-tc-big-orphan-closing-parenthesis-rescue/1` is an accepted default-OFF research continuation because its trigger isolates a source-owned defect shape rather than a corpus row.
+
+Eligibility requires a current split linguistic fragment whose immutable source has no round parentheses, whose target has exactly one closing `)` and no opening `(`, whose only Product-hard failure is punctuation, and which has no other delimiter/question/exclamation/numeric or maintained technical-token debt. Source complexity is capped. Only raw TC-big rank0 is eligible; it must exactly match source punctuation counts, pass numeric/symbol, strict research, emphasis and source-relative completeness checks. Any failed condition leaves the base row unchanged.
+
+Full replay workflow `34675224977` proves exactly one run17 row is attempted/accepted and improves **20/17/0,36 → 20/16/0,35** with zero drift in the other 3342 rows. Product CI `34675206945` is green including real-runtime Stage8→25 and unified source→25.
 
 ## Stage10 V2 is research evidence, not Product translation default
 
@@ -32,36 +44,23 @@ It composes directly over exact run16, merges one independently proven punctuati
 
 Full replay workflow `34652579262` proves mechanical improvement to **20/16/0,36** with zero drift on 3264 unchanged source geometries, but semantic review finds material regressions on newly merged clean contexts. Therefore Product/default translation geometry stays V1; V2 remains explicitly selectable research evidence.
 
-Low-level `run_stage10()` was aligned to this decision in commit `d438da03cbbd0882b34c3caea58a651a92058253`: default V1, explicit V2 only.
-
 ## Source-defined boundary-pair punctuation rescue
 
-**Decision.** A narrow default-OFF pair-level second-MT rescue is the accepted research continuation of the Stage10-v2 finding; wholesale V2 resegmentation is not.
-
-The `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1` trigger requires:
-- the boundary is independently proven by the generic Stage10-v2 source predicate from immutable Stage8 evidence;
-- exactly two complete adjacent unsplit current Stage12 rows map to two consecutive exact V1 contexts;
-- at least one current punctuation hard failure and **zero** current numeric/symbol or length failure across the pair;
-- the combined immutable source is within the conservative complexity cap;
-- only raw TC-big rank0 may be selected;
-- strict maintained hard/research checks, emphasis preservation and source-relative completeness pass;
-- otherwise both base rows remain exact.
-
-The Product selector contains no corpus offset, `whence` source phrase or expected Russian target. Full replay workflow `34656818930` proves exactly one run16 pair is accepted at boundary `522572`, improving punctuation by one with no drift elsewhere. The initial beam6/beam8 expected-string audit mismatch was corrected only after inspecting the actual raw beam6 output; selector/gates were not changed.
+**Decision.** A narrow default-OFF pair-level second-MT rescue is the accepted research continuation of the Stage10-v2 finding; wholesale V2 resegmentation is not. `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1` requires independent Stage8/V2 boundary proof, two complete adjacent V1 rows, punctuation-only hard debt, conservative complexity and raw TC-big rank0. Run17 replay `34656818930` improved run16 **20/18/0,37 → 20/17/0,36** without unrelated drift.
 
 ## Residual defects stay family-specific
 
-**Decision.** No universal punctuation/numeric fixer. Current run17 residuals still mix source-owned labels/references, delimiter losses/additions, target-only questions, numeric-symbol corruption and long-context notation. A failed OPUS formulation does not forbid a materially different source-defined/model formulation; success on one narrow class does not license generic second-model fallback.
+**Decision.** No universal punctuation/numeric fixer. Current run18 residuals mix delimiter losses, question migration, square-bracket/reference forms and numeric-symbol corruption. A failed OPUS formulation does not forbid a materially different source-defined/model formulation; success on one narrow class does not license generic second-model fallback.
 
-Historical broad square-bracket-loss OPUS and generic TC-big directions remain rejected. Before implementing the next selector, inspect existing feasibility evidence and cluster the exact run17 residuals by source-owned defect family.
+Before implementing another selector, inspect historical feasibility evidence and cluster the exact run18 residuals by source-owned defect family. Broad square-bracket-loss OPUS and generic TC-big directions remain rejected.
 
 ## Broad TC-big remains rejected
 
-**Decision.** TC-big is an independent comparator/narrow rescue model, not generic fallback. Prior whole-context experiments show mechanically clean semantic false positives; context `2725` remains a counterexample. Source-relative completeness bounds may be used only inside justified selectors.
+**Decision.** TC-big is an independent comparator/narrow rescue model, not generic fallback. Prior whole-context and run17-wide punctuation experiments show mechanically clean semantic false positives. Source-relative completeness bounds may be used only inside justified selectors.
 
 ## Audit failures are classified before Product changes
 
-**Decision.** A red heavy workflow is not automatically a Product/model defect. Inspect persisted output/logs first. Repair harness-only defects without weakening Product acceptance semantics; never change evaluators merely to make a run green. The run17 beam6 fixture correction is a concrete example: the first full replay failed on a stale expected target, while the produced raw candidate and invariants were independently inspected before the audit fixture changed.
+**Decision.** A red heavy workflow is not automatically a Product/model defect. Inspect persisted output/logs first. Repair harness-only defects without weakening Product acceptance semantics; never change evaluators merely to make a run green.
 
 ## Acceptance order
 

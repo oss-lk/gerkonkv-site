@@ -15,11 +15,25 @@ Durable translation-quality conclusions only. This is not a changelog and does n
 
 Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` chars.
 
-Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → run `16` **20/18/0,37** → run `17` **20/17/0,36**.
+Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → run `16` **20/18/0,37** → run `17` **20/17/0,36** → run `18` **20/16/0,35**.
 
-Run `17` is the best accepted persisted **research** translation basis. Workflow `34656818930`; artifact `10285447200`; artifact ZIP SHA-256 `339b71584f35f6981e1bcfa2dfcd391f98807d12f864ffae3070d6737356387d`; output SHA `f7c04209d9e8d7ffab673a2987b0024c334f24fee59736466597ea99125f7ff1`; SQLite SHA `2cbf20b39168003e494b2fb73c9b9baea427283def04a076a673e5023d7346a4`; evidence SHA `a5d786f4d25ee35917014aae7e435ad1f311c1ffb80744a3a60cacd4c62d6843`.
+Run `18` is the best accepted persisted **research** translation basis. Workflow `34675224977`; artifact `10292311024`; artifact ZIP SHA-256 `ae4a32221985aaff2842a87bf9548698d8e76b33815633ddb67100b8fc9dea1d`; output SHA `666e8a2cae0bb6ff6f25b95475c2335ee5e3c98f7f2d6ab7deb9be92295be290`; SQLite SHA `803a2cbccb287ad0fadf4b14d932e1e33ebafef2ec5406619b0caf0898525143`; evidence SHA `61ddb44ceed56d0acb552a5cddecac1543e679c35ad450c41270136c5e014733`.
 
-Run17 directly composes over exact run16. One source-defined punctuation-only false-boundary pair at `522572` is replaced by raw TC-big rank0; 3342 other base rows have zero source/target drift. Source reconstruction is byte-exact, SQLite integrity `ok`, FK violations zero. The accepted pair passes maintained strict/research/emphasis checks and diagnostic semantic anchors. This makes run17 a research basis only; it does not promote TC-big or the wrapper into Product defaults.
+Run18 directly composes over exact run17. One source-defined orphan-closing-parenthesis failure at source start `417917` is replaced by raw TC-big rank0; 3342 other run17 rows have zero source/target drift. Source reconstruction is byte-exact, SQLite integrity `ok`, FK violations zero. The accepted source has no `(` or `)`, while the baseline target has exactly one target-only closing `)` and no opening `(`. The selected raw rank0 preserves the five required numeric expressions/order, removes the orphan delimiter, passes strict hard/research/emphasis checks and focused diagnostic semantic anchors (bright rings, observation, thinner glass, diameters, same rings, third observation, thicker glass). This remains research evidence and requires manual semantic review before any Product promotion.
+
+## Run17-wide punctuation n-best DOE
+
+Workflow `34674771224`, artifact `10292300428`, artifact ZIP SHA-256 `75a107b25e50f31b404f41a8129054d42303aaa7b29cb71f6ee154de3be60860` is a read-only exact-run17 TC-big beam-6/n-best screening over all 17 punctuation residual rows.
+
+The DOE proves that multiple residuals have mechanically eligible TC-big hypotheses, including several rank0 candidates, but mechanical cleanliness is not a safe generic selector. Manual semantic inspection found false positives: examples include a parenthetical case where `very little convex` loses the intended degree relation and a question-loss case that leaves source wording such as `fix'd` untranslated. Therefore **generic row-local TC-big punctuation fallback is rejected**, even when hard/structural/emphasis checks are green. The DOE is candidate-generation evidence only.
+
+## Orphan closing-parenthesis rescue
+
+Contract: `rocketdict-stage12-tc-big-orphan-closing-parenthesis-rescue/1`, with matching selector/trigger `/1`; default OFF and not public-wired.
+
+The trigger is source-defined and intentionally narrower than target-delimiter rescue: a current split linguistic Stage12 fragment must already hard-fail only because immutable source has `0/0` round-parenthesis counts while target has exactly `0/1`; no numeric/symbol, question/exclamation, square/curly delimiter or maintained technical-token debt may coexist; source complexity is capped conservatively. Only raw TC-big rank0 is considered. The candidate must be non-empty, preserve exact source punctuation counts, numeric/symbol integrity, Gutenberg emphasis, strict research diagnostics and source-relative alphabetic volume. Rejection preserves the base row byte/target exact.
+
+Product CI `34675206945` passed dependency-light and real-runtime maintained Stage8→25/unified Product execution. Full replay `34675224977` proves exactly one run17 row is attempted/accepted and improves **20/17/0,36 → 20/16/0,35** with all other 3342 rows unchanged.
 
 ## Stage10 source-boundary research
 
@@ -29,19 +43,11 @@ Planner-impact workflow `34651300446` proves V1 `3353` → V2 `3325` planned uni
 
 Full broad V2 real-MT replay workflow `34652579262` is mechanically green at **20/16/0,36**, with 3264 unchanged source geometries and zero target drift. But semantic review rejects broad V2 translation promotion: representative regressions on previously clean geometry include loss of `HEFK`, loss of `_in vacuo_`, and duplicated/garbled technical content. Therefore source-boundary correctness alone does not license wholesale MT resegmentation.
 
-Low-level `run_stage10()` default was realigned to V1 in commit `d438da03cbbd0882b34c3caea58a651a92058253`; V2 is now explicit research selection only.
+Low-level `run_stage10()` default is V1; V2 remains explicit research selection only.
 
 ## Boundary-pair punctuation rescue
 
-Contract: `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1`, with matching selector/trigger `/1`; default OFF and not public-wired.
-
-Eligibility is generic and source-owned: exactly two adjacent complete unsplit V1 Stage12 rows, consecutive exact V1 Stage10 contexts, immutable Stage8 sentence evidence satisfying the V2 false-boundary predicate, at least one current punctuation hard failure, zero current numeric/symbol and length failures, and a conservative source complexity cap. Product code does not encode the corpus offset, `whence`, or an expected target phrase.
-
-Only unmodified TC-big rank0 is considered. Strict maintained checks, Gutenberg emphasis preservation and source-relative completeness must all pass. Rejection leaves both rows exact. The wrapper composes over the existing run16 rescue stack; no source rewriting, target surgery, literals, placeholders or evaluator changes occur.
-
-Product CI workflow `34656258155` passed 301 Product Core tests, 213 Workbench tests (1 skipped) and real-runtime maintained Product execution. Terminal workflow `34656444553` also passed dependency-light and real-runtime jobs.
-
-The full corrected replay `34656818930` proves the one accepted pair improves run16 **20/18/0,37 → 20/17/0,36**, with 3342 untouched rows and zero target drift. The initial replay failure was audit-only: a beam-8 feasibility string was pinned while implementation uses beam6; the observed raw beam6 rank0 was independently inspected and the selector/gates were not changed.
+Contract: `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1`; default OFF and not public-wired. Eligibility requires two adjacent exact unsplit V1 rows, independent Stage8/V2 false-boundary proof, punctuation-only current hard debt, conservative complexity, and raw TC-big rank0 only. Full replay `34656818930` established run17 **20/18/0,37 → 20/17/0,36** with 3342 untouched rows.
 
 ## Earlier rescue evidence still binding
 
@@ -52,7 +58,8 @@ The full corrected replay `34656818930` proves the one accepted pair improves ru
 - run `14`: target-only equals addition, **23/18/0,40 → 22/18/0,39**;
 - run `15`: angular-minute prime, **22/18/0,39 → 21/18/0,38**;
 - run `16`: short DMS over run15, **21/18/0,38 → 20/18/0,37**;
-- run `17`: punctuation-only false-boundary pair, **20/18/0,37 → 20/17/0,36**.
+- run `17`: punctuation-only false-boundary pair, **20/18/0,37 → 20/17/0,36**;
+- run `18`: orphan closing parenthesis, **20/17/0,36 → 20/16/0,35**.
 
 Persisted success is research evidence, not automatic Product-default authorization.
 
@@ -60,6 +67,7 @@ Persisted success is research evidence, not automatic Product-default authorizat
 
 - Broad Stage10-v2 translation geometry: rejected for Product/default use because full semantic review found regressions despite improved hard-gate counts.
 - Generic OPUS/TC-big whole-context fallback: rejected; mechanically clean alternatives can lose semantics.
+- Generic row-local TC-big punctuation fallback: rejected by the exact run17 n-best DOE; mechanical eligibility produced semantic false positives.
 - Broad context `2725`/`2730`: unsafe.
 - Broad square-bracket-loss OPUS formulation: no admissible safe cohort.
 - Generic prime normalization/decomposition: rejected; only source-defined narrow classes may proceed.
