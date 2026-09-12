@@ -5,10 +5,11 @@ from __future__ import annotations
 Only already-hard-failing rows beginning an exact standalone ``[Illustration:
 ...]`` line plus blank separator are considered. The prefix remains byte-exact
 source-owned structure. The linguistic remainder still uses pinned real OPUS.
-Exact ``_Illustration._`` is the one proven ambiguity and therefore uses the
-canonical ``Illustration.`` model input with beam6/n6 diagnostic evidence, but
-only the unique raw rank0 may be persisted. Other suffixes use exact source input and rank0. Disabled by default; no source
-or target rewriting, placeholders, or post-translation literal injection.
+Every linguistic remainder is sent to MT exactly as it appears in the immutable
+source. Exact ``_Illustration._`` remains a semantically constrained source class,
+but it receives no canonicalization and only its unique raw rank0 may be persisted.
+Disabled by default; no source/model-input or target rewriting, placeholders, or
+post-translation literal injection.
 """
 
 from pathlib import Path
@@ -23,14 +24,14 @@ from .translation_rescue import evaluate_rescue_pair
 from .translation_rank0 import select_rank0_evaluation
 from . import translation_stage as primary_stage
 
-ILLUSTRATION_LABEL_RESCUE_CONTRACT = "rocketdict-stage12-illustration-label-rescue/2"
-ILLUSTRATION_LABEL_SELECTOR_CONTRACT = "rocketdict-stage12-illustration-label-selector/2"
+ILLUSTRATION_LABEL_RESCUE_CONTRACT = "rocketdict-stage12-illustration-label-rescue/3"
+ILLUSTRATION_LABEL_SELECTOR_CONTRACT = "rocketdict-stage12-illustration-label-selector/3"
 ILLUSTRATION_WORD_TARGET_FORM_CONTRACT = "rocketdict-stage12-illustration-word-target-form/1"
-ILLUSTRATION_LABEL_SELECTED_PHASE = "illustration-label-selected-v2"
+ILLUSTRATION_LABEL_SELECTED_PHASE = "illustration-label-selected-v3"
 ILLUSTRATION_LABEL_TRIGGER_CONTRACT = "rocketdict-stage12-illustration-label-hard-failure-trigger/1"
 DEFAULT_ENABLED = False
 ILLUSTRATION_WORD_SOURCE = "_Illustration._"
-ILLUSTRATION_WORD_MODEL_INPUT = "Illustration."
+ILLUSTRATION_WORD_MODEL_INPUT = ILLUSTRATION_WORD_SOURCE
 ILLUSTRATION_WORD_ACCEPTED_TERMS = ("иллюстрация", "рисунок")
 STRUCTURAL_WORD_BEAM_SIZE = 6
 STRUCTURAL_WORD_NUM_HYPOTHESES = 6
@@ -70,9 +71,12 @@ def _split_prefix(source: str) -> tuple[str, str] | None:
 
 
 def _model_input_for_remainder(remainder: str) -> tuple[str, bool, str]:
-    if remainder.strip() == ILLUSTRATION_WORD_SOURCE:
-        return ILLUSTRATION_WORD_MODEL_INPUT, True, "standalone_illustration_word"
-    return remainder, False, "ordinary_linguistic_suffix"
+    candidate_kind = (
+        "standalone_illustration_word"
+        if remainder.strip() == ILLUSTRATION_WORD_SOURCE
+        else "ordinary_linguistic_suffix"
+    )
+    return remainder, False, candidate_kind
 
 
 def evaluate_illustration_word_target_shape(target: str) -> dict[str, Any]:
@@ -117,9 +121,12 @@ def evaluate_illustration_label_candidate(
     )
     structural_verdict = evaluate_rescue_pair(structural_source, structural_source)
     remainder_verdict = evaluate_rescue_pair(remainder_source, target)
+    if normalized_model_input:
+        raise ValueError("illustration-label rescue forbids normalized model input")
+    standalone_word = remainder_source.strip() == ILLUSTRATION_WORD_SOURCE
     target_shape = (
         evaluate_illustration_word_target_shape(target)
-        if normalized_model_input
+        if standalone_word
         else {"contract": ILLUSTRATION_WORD_TARGET_FORM_CONTRACT, "applicable": False, "passed": True}
     )
     accepted = (
@@ -142,6 +149,7 @@ def evaluate_illustration_label_candidate(
 def _safety_flags() -> dict[str, bool]:
     return {
         "source_bytes_rewritten": False,
+        "model_input_source_rewritten": False,
         "target_rewriting": False,
         "placeholders": False,
         "post_translation_literal_injection": False,
@@ -178,6 +186,10 @@ def _candidate_rows(
 ) -> list[dict[str, Any]]:
     if selected_rank != 0:
         raise ValueError("illustration-label rescue is rank0-only")
+    if normalized_model_input:
+        raise ValueError("illustration-label rescue forbids normalized model input")
+    if model_input != remainder_source:
+        raise ValueError("illustration-label rescue model input must equal source remainder")
     if selected_rank < 0 or selected_rank >= len(hypotheses):
         raise ValueError("illustration-label rescue selected rank is outside hypotheses")
     target = str(hypotheses[selected_rank].get("text") or "")
@@ -198,7 +210,8 @@ def _candidate_rows(
         "split_source_boundary": boundary,
         "candidate_kind": candidate_kind,
         "model_input": model_input,
-        "source_model_input_normalized": normalized_model_input,
+        "source_model_input_normalized": False,
+        "model_input_source_exact": True,
         "generation": dict(generation),
         "selected_rank": selected_rank,
         "selected_target": target,
@@ -355,23 +368,14 @@ def run_stage12(
                 })
 
         normalized_attempts = [x for x in attempts if bool(x["normalized_model_input"])]
-        ordinary_attempts = [x for x in attempts if not bool(x["normalized_model_input"])]
+        if normalized_attempts:
+            raise StageExecutionError("Stage12 illustration-label exact-source contract forbids normalized model input")
+        ordinary_attempts = list(attempts)
         generated_by_id: dict[int, list[dict[str, Any]]] = {}
         structural_batch_count = 0
         ordinary_batch_count = 0
         if attempts:
             translator = OpusTranslator(device=device, compute_type=compute_type)
-            if normalized_attempts:
-                generated = primary_stage._translate_primary_request_batches(
-                    translator, [str(x["model_input"]) for x in normalized_attempts],
-                    batch_size=request_batch_size, beam_size=STRUCTURAL_WORD_BEAM_SIZE,
-                    num_hypotheses=STRUCTURAL_WORD_NUM_HYPOTHESES, max_decoding_length=128,
-                )
-                if len(generated) != len(normalized_attempts) or any(len(h) != STRUCTURAL_WORD_NUM_HYPOTHESES for h in generated):
-                    raise StageExecutionError("Stage12 illustration-label structural-word n-best cardinality drift")
-                for attempt, hypotheses in zip(normalized_attempts, generated, strict=True):
-                    generated_by_id[int(attempt["row"]["id"])] = hypotheses
-                structural_batch_count = (len(normalized_attempts) + request_batch_size - 1) // request_batch_size
             if ordinary_attempts:
                 generated = primary_stage._translate_primary_request_batches(
                     translator, [str(x["model_input"]) for x in ordinary_attempts],
@@ -483,7 +487,8 @@ def run_stage12(
             "illustration_label_rescue_rejected_source_starts": rejected_starts,
             "illustration_label_rescue_selected_ranks": [int(value["selected_rank"]) for value in accepted_values],
             "illustration_label_rescue_selected_targets": [str(value["selected_target"]) for value in accepted_values],
-            "illustration_label_rescue_normalized_model_input_source_starts": [int(value["source_start"]) for value in accepted_values if bool(value["normalized_model_input"])],
+            "illustration_label_rescue_normalized_model_input_source_starts": [],
+            "illustration_label_rescue_model_inputs_source_exact": True,
             "illustration_label_rescue_structural_word_beam_size": STRUCTURAL_WORD_BEAM_SIZE,
             "illustration_label_rescue_structural_word_num_hypotheses": STRUCTURAL_WORD_NUM_HYPOTHESES,
             "illustration_label_rescue_ordinary_suffix_beam_size": ORDINARY_SUFFIX_BEAM_SIZE,

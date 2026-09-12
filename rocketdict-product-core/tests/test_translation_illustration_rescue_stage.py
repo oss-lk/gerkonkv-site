@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from rocketdict.translation_illustration_rescue_stage import (
     ILLUSTRATION_LABEL_RESCUE_CONTRACT,
     ILLUSTRATION_LABEL_SELECTED_PHASE,
     ILLUSTRATION_LABEL_SELECTOR_CONTRACT,
     ILLUSTRATION_WORD_MODEL_INPUT,
+    ILLUSTRATION_WORD_SOURCE,
     ILLUSTRATION_WORD_TARGET_FORM_CONTRACT,
     _base_parameters,
     _candidate_rows,
@@ -85,10 +88,11 @@ def test_trigger_rejects_inline_or_missing_blankline_or_clean_row() -> None:
     assert clean_trigger["eligible"] is False
 
 
-def test_exact_illustration_word_uses_canonical_model_input_only() -> None:
+def test_exact_illustration_word_uses_exact_source_model_input_only() -> None:
+    assert ILLUSTRATION_WORD_MODEL_INPUT == ILLUSTRATION_WORD_SOURCE
     assert _model_input_for_remainder("_Illustration._ ") == (
-        ILLUSTRATION_WORD_MODEL_INPUT,
-        True,
+        "_Illustration._ ",
+        False,
         "standalone_illustration_word",
     )
     assert _model_input_for_remainder("With the Center O ") == (
@@ -118,7 +122,7 @@ def test_selector_matches_v3_raw_nbest_acceptance_boundary() -> None:
             structural_source=structural,
             remainder_source=remainder,
             target=target,
-            normalized_model_input=True,
+            normalized_model_input=False,
         )
         if selection["accepted"]:
             accepted.append((rank, target))
@@ -166,14 +170,14 @@ def test_candidate_rows_preserve_source_bytes_raw_rank_and_provenance() -> None:
         structural_source=structural,
         remainder_source=remainder,
         target="Иллюстрация.",
-        normalized_model_input=True,
+        normalized_model_input=False,
     )
     rows = _candidate_rows(
         base=row,
         structural_source=structural,
         remainder_source=remainder,
-        model_input=ILLUSTRATION_WORD_MODEL_INPUT,
-        normalized_model_input=True,
+        model_input=remainder,
+        normalized_model_input=False,
         candidate_kind="standalone_illustration_word",
         hypotheses=hypotheses,
         selected_rank=0,
@@ -191,9 +195,29 @@ def test_candidate_rows_preserve_source_bytes_raw_rank_and_provenance() -> None:
     assert rescue["selector_contract"] == ILLUSTRATION_LABEL_SELECTOR_CONTRACT
     assert rescue["target_form_contract"] == ILLUSTRATION_WORD_TARGET_FORM_CONTRACT
     assert rescue["raw_model_selected"] is True
-    assert rescue["source_model_input_normalized"] is True
-    assert rescue["model_input"] == ILLUSTRATION_WORD_MODEL_INPUT
+    assert rescue["source_model_input_normalized"] is False
+    assert rescue["model_input_source_exact"] is True
+    assert rescue["model_input"] == remainder
     assert rescue["source_bytes_rewritten"] is False
+    assert rescue["model_input_source_rewritten"] is False
     assert rescue["target_rewriting"] is False
     assert rescue["placeholders"] is False
     assert rescue["post_translation_literal_injection"] is False
+
+
+def test_candidate_rows_reject_any_non_exact_model_input() -> None:
+    row = _failing_row()
+    trigger = evaluate_illustration_label_trigger(row)
+    structural = str(trigger["structural_source"])
+    remainder = str(trigger["remainder_source"])
+    hypotheses = [{"rank": 0, "text": "Иллюстрация.", "score": -0.1}]
+    selection = evaluate_illustration_label_candidate(row, structural_source=structural, remainder_source=remainder, target="Иллюстрация.", normalized_model_input=False)
+    with pytest.raises(ValueError, match="model input must equal source remainder"):
+        _candidate_rows(base=row, structural_source=structural, remainder_source=remainder, model_input="Illustration.", normalized_model_input=False, candidate_kind="standalone_illustration_word", hypotheses=hypotheses, selected_rank=0, trigger=trigger, selection=selection, generation={"beam_size": 6, "num_hypotheses": 1})
+
+
+def test_candidate_evaluation_rejects_normalized_model_input_flag() -> None:
+    row = _failing_row()
+    trigger = evaluate_illustration_label_trigger(row)
+    with pytest.raises(ValueError, match="forbids normalized model input"):
+        evaluate_illustration_label_candidate(row, structural_source=str(trigger["structural_source"]), remainder_source=str(trigger["remainder_source"]), target="Иллюстрация.", normalized_model_input=True)
