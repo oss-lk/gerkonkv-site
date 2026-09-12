@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 import rocketdict.translation_tc_big_short_angular_dms_rescue_stage as stage
+from rocketdict.stages import StageExecutionError
 from rocketdict.translation_tc_big_short_angular_dms_rescue_stage import (
     MAX_SOURCE_ALPHA_WORDS,
     TC_BIG_SHORT_ANGULAR_DMS_RESCUE_CONTRACT,
@@ -14,6 +15,7 @@ from rocketdict.translation_tc_big_short_angular_dms_rescue_stage import (
     _alpha_word_count,
     _base_parameters,
     _eligible_rows,
+    _evaluate_rank0_hypotheses,
     _source_dms,
     evaluate_tc_big_short_angular_dms_candidate,
     evaluate_tc_big_short_angular_dms_trigger,
@@ -61,9 +63,15 @@ def test_source_dms_and_word_cap_are_source_defined() -> None:
 def test_trigger_rejects_long_dms_context_even_when_prime_is_broken() -> None:
     short_source = "Whence this Angle is 2 deg. 0'. 7''. "
     short = _row(1, short_source, "Откуда угол 2 градуса. 0 футов 7 футов. ")
-    trigger = evaluate_tc_big_short_angular_dms_trigger(short, exact_stage10_context=True)
+    trigger = evaluate_tc_big_short_angular_dms_trigger(
+        short, exact_stage10_context=True
+    )
     assert trigger["eligible"] is True
-    assert trigger["source_dms"] == {"degrees": "2", "minutes": "0", "seconds": "7"}
+    assert trigger["source_dms"] == {
+        "degrees": "2",
+        "minutes": "0",
+        "seconds": "7",
+    }
     assert trigger["source_alpha_word_count"] == 5
 
     long_source = (
@@ -71,15 +79,19 @@ def test_trigger_rejects_long_dms_context_even_when_prime_is_broken() -> None:
         "the Chord subtends an Angle of 2 deg. 0'. 7''. "
     )
     assert _alpha_word_count(long_source) > MAX_SOURCE_ALPHA_WORDS
-    long_row = _row(2, long_source, "Расстояние даёт угол 2 градуса 0 футов 7 футов. ")
+    long_row = _row(
+        2, long_source, "Расстояние даёт угол 2 градуса 0 футов 7 футов. "
+    )
     long_trigger = evaluate_tc_big_short_angular_dms_trigger(
         long_row, exact_stage10_context=True
     )
     assert long_trigger["eligible"] is False
-
-    assert evaluate_tc_big_short_angular_dms_trigger(
-        short, exact_stage10_context=False
-    )["eligible"] is False
+    assert (
+        evaluate_tc_big_short_angular_dms_trigger(
+            short, exact_stage10_context=False
+        )["eligible"]
+        is False
+    )
 
 
 def test_candidate_needs_exact_dms_and_russian_angle_semantics() -> None:
@@ -111,6 +123,54 @@ def test_candidate_needs_exact_dms_and_russian_angle_semantics() -> None:
     assert broken_seconds["accepted"] is False
 
 
+def test_rank1_cannot_rescue_rejected_rank0() -> None:
+    source = "Whence this Angle is 2 deg. 0'. 7''. "
+    evaluated, selected_target, selected_selection = _evaluate_rank0_hypotheses(
+        source,
+        [
+            {"rank": 0, "text": "Откуда этот угол 2 град. 0'. 7'.", "score": -0.1},
+            {"rank": 1, "text": "Откуда этот угол 2 град. 0'. 7''.", "score": -0.2},
+        ],
+    )
+    assert evaluated[0]["accepted"] is False
+    assert evaluated[0]["selection_authorized"] is True
+    assert evaluated[1]["accepted"] is True
+    assert evaluated[1]["selection_authorized"] is False
+    assert selected_target is None
+    assert selected_selection is None
+
+
+def test_rank0_selection_ignores_later_acceptable_beams() -> None:
+    source = "Whence this Angle is 2 deg. 0'. 7''. "
+    good = "Откуда этот угол 2 град. 0'. 7''."
+    evaluated, selected_target, selected_selection = _evaluate_rank0_hypotheses(
+        source,
+        [
+            {"rank": 0, "text": good, "score": -0.1},
+            {"rank": 1, "text": good, "score": -0.2},
+        ],
+    )
+    assert all(item["accepted"] is True for item in evaluated)
+    assert evaluated[0]["selection_authorized"] is True
+    assert evaluated[1]["selection_authorized"] is False
+    assert selected_target == good
+    assert selected_selection is not None
+    assert selected_selection["accepted"] is True
+
+
+def test_rank0_cardinality_drift_fails_closed() -> None:
+    source = "Whence this Angle is 2 deg. 0'. 7''. "
+    good = "Откуда этот угол 2 град. 0'. 7''."
+    with pytest.raises(StageExecutionError, match="rank-0 cardinality drift"):
+        _evaluate_rank0_hypotheses(
+            source,
+            [
+                {"rank": 1, "text": good, "score": -0.1},
+                {"rank": 2, "text": good, "score": -0.2},
+            ],
+        )
+
+
 def test_eligible_rows_require_exact_stage10_context() -> None:
     source = "Whence this Angle is 2 deg. 0'. 7''. "
     row = _row(
@@ -120,18 +180,26 @@ def test_eligible_rows_require_exact_stage10_context() -> None:
         context_start=0,
         context_end=0,
     )
-    context = [{
-        "id": 100,
-        "sequence_number": 0,
-        "kind": "context_sentence",
-        "source_start": 0,
-        "source_end": len(source),
-        "source_text": source,
-        "target_text": "",
-        "payload": {},
-    }]
+    context = [
+        {
+            "id": 100,
+            "sequence_number": 0,
+            "kind": "context_sentence",
+            "source_start": 0,
+            "source_end": len(source),
+            "source_text": source,
+            "target_text": "",
+            "payload": {},
+        }
+    ]
     assert len(_eligible_rows(content=source, base_rows=[row], context_rows=context)) == 1
-    cut = [{**context[0], "source_end": len(source) - 1, "source_text": source[:-1]}]
+    cut = [
+        {
+            **context[0],
+            "source_end": len(source) - 1,
+            "source_text": source[:-1],
+        }
+    ]
     assert _eligible_rows(content=source, base_rows=[row], context_rows=cut) == []
 
 
@@ -163,16 +231,17 @@ def test_disabled_run_delegates_without_model_probe(
     assert observed["parameters"] == {"enable_tc_big_angular_minute_rescue": True}
 
 
-def test_enabled_run_selects_first_raw_dms_candidate(
+def test_enabled_run_rejects_good_rank1_when_rank0_is_bad(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
     first_source = "Whence this Angle is 2 deg. 0'. 7''. "
     second_source = "Clean row."
     content = first_source + second_source
+    original_target = "Откуда угол 2 градуса. 0 футов 7 футов. "
     first = _row(
         11,
         first_source,
-        "Откуда угол 2 градуса. 0 футов 7 футов. ",
+        original_target,
         context_start=0,
         context_end=0,
     )
@@ -185,14 +254,40 @@ def test_enabled_run_selects_first_raw_dms_candidate(
         context_end=1,
     )
     contexts = [
-        {"id":101,"sequence_number":0,"kind":"context_sentence","source_start":0,"source_end":len(first_source),"source_text":first_source,"target_text":"","payload":{}},
-        {"id":102,"sequence_number":1,"kind":"context_sentence","source_start":len(first_source),"source_end":len(content),"source_text":second_source,"target_text":"","payload":{}},
+        {
+            "id": 101,
+            "sequence_number": 0,
+            "kind": "context_sentence",
+            "source_start": 0,
+            "source_end": len(first_source),
+            "source_text": first_source,
+            "target_text": "",
+            "payload": {},
+        },
+        {
+            "id": 102,
+            "sequence_number": 1,
+            "kind": "context_sentence",
+            "source_start": len(first_source),
+            "source_end": len(content),
+            "source_text": second_source,
+            "target_text": "",
+            "payload": {},
+        },
     ]
-    base_output = {"translation_run_id": 15, "document_version_id": 7, "model_request_count": 500}
+    base_output = {
+        "translation_run_id": 15,
+        "document_version_id": 7,
+        "model_request_count": 500,
+    }
     base_run = {"id": 15, "output": base_output, "output_sha256": "a" * 64}
     document = {"id": 7, "content_text": content, "text_sha256": "b" * 64}
-    monkeypatch.setattr(stage, "run_base_stage12", lambda *args, **kwargs: dict(base_output))
-    monkeypatch.setattr(stage, "connect", lambda *args, **kwargs: nullcontext(SimpleNamespace()))
+    monkeypatch.setattr(
+        stage, "run_base_stage12", lambda *args, **kwargs: dict(base_output)
+    )
+    monkeypatch.setattr(
+        stage, "connect", lambda *args, **kwargs: nullcontext(SimpleNamespace())
+    )
     monkeypatch.setattr(stage, "get_run", lambda connection, run_id: base_run)
 
     def fake_items(connection, run_id, *, kind):  # type: ignore[no-untyped-def]
@@ -203,7 +298,9 @@ def test_enabled_run_selects_first_raw_dms_candidate(
         raise AssertionError((run_id, kind))
 
     monkeypatch.setattr(stage, "get_run_items", fake_items)
-    monkeypatch.setattr(stage, "get_document", lambda connection, document_version_id: document)
+    monkeypatch.setattr(
+        stage, "get_document", lambda connection, document_version_id: document
+    )
     monkeypatch.setattr(stage, "_start", lambda *args, **kwargs: (16, None))
     completed: dict[str, object] = {}
 
@@ -215,22 +312,26 @@ def test_enabled_run_selects_first_raw_dms_candidate(
     monkeypatch.setattr(stage, "_fail", lambda *args, **kwargs: None)
     monkeypatch.setattr(stage, "tc_big_status", lambda: {"available": True})
     bad_rank0 = "Откуда этот угол 2 град. 0'. 7'."
-    raw_rank1 = "Откуда этот угол 2 град. 0'. 7''."
+    good_rank1 = "Откуда этот угол 2 град. 0'. 7''."
 
     class FakeTranslator:
         def __init__(self, *, device: str, compute_type: str) -> None:
             assert device == "cpu" and compute_type == "float32"
 
-        def translate(self, texts, *, beam_size, num_hypotheses, max_decoding_length):  # type: ignore[no-untyped-def]
+        def translate(
+            self, texts, *, beam_size, num_hypotheses, max_decoding_length
+        ):  # type: ignore[no-untyped-def]
             assert texts == [first_source]
-            return [[
-                {"rank":0,"text":bad_rank0,"score":-0.1},
-                {"rank":1,"text":raw_rank1,"score":-0.2},
-                {"rank":2,"text":raw_rank1,"score":-0.3},
-                {"rank":3,"text":raw_rank1,"score":-0.4},
-                {"rank":4,"text":raw_rank1,"score":-0.5},
-                {"rank":5,"text":raw_rank1,"score":-0.6},
-            ]]
+            return [
+                [
+                    {"rank": 0, "text": bad_rank0, "score": -0.1},
+                    {"rank": 1, "text": good_rank1, "score": -0.2},
+                    {"rank": 2, "text": good_rank1, "score": -0.3},
+                    {"rank": 3, "text": good_rank1, "score": -0.4},
+                    {"rank": 4, "text": good_rank1, "score": -0.5},
+                    {"rank": 5, "text": good_rank1, "score": -0.6},
+                ]
+            ]
 
     monkeypatch.setattr(stage, "TcBigTranslator", FakeTranslator)
     result = stage.run_stage12(
@@ -241,17 +342,17 @@ def test_enabled_run_selects_first_raw_dms_candidate(
     assert result["translation_run_id"] == 16
     assert result["base_translation_run_id"] == 15
     assert result["tc_big_short_angular_dms_rescue_attempt_count"] == 1
-    assert result["tc_big_short_angular_dms_rescue_accepted_count"] == 1
-    assert result["tc_big_short_angular_dms_rescue_selected_ranks"] == [1]
+    assert result["tc_big_short_angular_dms_rescue_accepted_count"] == 0
+    assert result["tc_big_short_angular_dms_rescue_rejected_count"] == 1
+    assert result["tc_big_short_angular_dms_rescue_selected_ranks"] == []
+    assert result["automatic_n_best_cherry_picking"] is False
     items = completed["items"]
     assert isinstance(items, list) and len(items) == 2
-    assert items[0]["target_text"] == raw_rank1
+    assert items[0]["target_text"] == original_target
     rescue = items[0]["payload"]["tc_big_short_angular_dms_rescue"]
-    assert rescue["raw_model_selected"] is True
-    assert rescue["selection"]["semantic_dms_preserved"] is True
-    assert items[0]["payload"]["hypotheses"][1]["text"] == raw_rank1
+    assert rescue["applied"] is False
+    assert rescue["automatic_n_best_cherry_picking"] is False
     assert items[1]["target_text"] == second["target_text"]
-    assert items[1]["payload"]["tc_big_short_angular_dms_rescue"]["applied"] is False
     assert "".join(str(item["source_text"]) for item in items) == content
 
 
@@ -263,4 +364,6 @@ def test_base_parameters_strip_only_dms_controls() -> None:
         "tc_big_short_angular_dms_selector_contract": TC_BIG_SHORT_ANGULAR_DMS_SELECTOR_CONTRACT,
         "tc_big_short_angular_dms_trigger_contract": TC_BIG_SHORT_ANGULAR_DMS_TRIGGER_CONTRACT,
     }
-    assert _base_parameters(parameters) == {"enable_tc_big_angular_minute_rescue": True}
+    assert _base_parameters(parameters) == {
+        "enable_tc_big_angular_minute_rescue": True
+    }
