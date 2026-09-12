@@ -25,6 +25,7 @@ jobs:
       TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
       TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
       TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
       ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
       ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
       ROCKETDICT_RUN20_INLINE_FOOTNOTE_DOE_ROOT: ${{ github.workspace }}/work/run20-inline-footnote-context-doe
@@ -34,10 +35,15 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install asset builders
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e './rocketdict-product-core[production,alt-mt,asset-builders]'
-          python -m pip install -e ./rocketdict-workbench
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' \
+            'transformers==4.56.2' 'sacremoses==0.1.1' \
+            'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
       - name: Download immutable run20 evidence
         uses: actions/download-artifact@v4
         with:
@@ -70,28 +76,40 @@ jobs:
           fi
           echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
       - name: Build verified offline OPUS asset
-        run: rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/opus-asset-build.json
       - name: Restore pinned TC-big snapshot cache
         uses: actions/cache@v4
         with:
           path: work/tc-big-snapshot
-          key: rocketdict-tc-big-${{ env.TC_BIG_REVISION }}-${{ env.TC_BIG_WEIGHTS_SHA256 }}
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
       - name: Obtain exact pinned TC-big snapshot
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import os
-          from pathlib import Path
           from huggingface_hub import snapshot_download
-          root = Path('work/tc-big-snapshot')
-          if not (root / 'pytorch_model.bin').is_file():
-              root.mkdir(parents=True, exist_ok=True)
-              snapshot_download(repo_id=os.environ['TC_BIG_REPO'], revision=os.environ['TC_BIG_REVISION'], local_dir=str(root), local_dir_use_symlinks=False)
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
           PY
-          echo "$TC_BIG_WEIGHTS_SHA256  work/tc-big-snapshot/pytorch_model.bin" | sha256sum -c -
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
       - name: Build byte-verified offline TC-big asset
-        run: rocketdict-assets build-tc-big-en-ru work/tc-big-snapshot "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/tc-big-asset-build.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/tc-big-asset-build.json
       - name: Run exact read-only inline footnote DOE
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_run20_inline_footnote_context_doe.py
       - name: Verify read-only DOE contract
