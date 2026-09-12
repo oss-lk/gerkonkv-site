@@ -6,8 +6,8 @@ Only already-hard-failing rows beginning an exact standalone ``[Illustration:
 ...]`` line plus blank separator are considered. The prefix remains byte-exact
 source-owned structure. The linguistic remainder still uses pinned real OPUS.
 Exact ``_Illustration._`` is the one proven ambiguity and therefore uses the
-v3-proven canonical ``Illustration.`` beam6/n6 raw-hypothesis selector. Other
-suffixes use exact source input and beam6/rank0. Disabled by default; no source
+canonical ``Illustration.`` model input with beam6/n6 diagnostic evidence, but
+only the unique raw rank0 may be persisted. Other suffixes use exact source input and rank0. Disabled by default; no source
 or target rewriting, placeholders, or post-translation literal injection.
 """
 
@@ -20,12 +20,13 @@ from .runtime import OpusTranslator
 from .stages import StageExecutionError, _complete, _fail, _start
 from .translation_numeric_hard_rescue_stage import run_stage12 as run_base_stage12
 from .translation_rescue import evaluate_rescue_pair
+from .translation_rank0 import select_rank0_evaluation
 from . import translation_stage as primary_stage
 
-ILLUSTRATION_LABEL_RESCUE_CONTRACT = "rocketdict-stage12-illustration-label-rescue/1"
-ILLUSTRATION_LABEL_SELECTOR_CONTRACT = "rocketdict-stage12-illustration-label-selector/1"
+ILLUSTRATION_LABEL_RESCUE_CONTRACT = "rocketdict-stage12-illustration-label-rescue/2"
+ILLUSTRATION_LABEL_SELECTOR_CONTRACT = "rocketdict-stage12-illustration-label-selector/2"
 ILLUSTRATION_WORD_TARGET_FORM_CONTRACT = "rocketdict-stage12-illustration-word-target-form/1"
-ILLUSTRATION_LABEL_SELECTED_PHASE = "illustration-label-selected-v1"
+ILLUSTRATION_LABEL_SELECTED_PHASE = "illustration-label-selected-v2"
 ILLUSTRATION_LABEL_TRIGGER_CONTRACT = "rocketdict-stage12-illustration-label-hard-failure-trigger/1"
 DEFAULT_ENABLED = False
 ILLUSTRATION_WORD_SOURCE = "_Illustration._"
@@ -144,6 +145,7 @@ def _safety_flags() -> dict[str, bool]:
         "target_rewriting": False,
         "placeholders": False,
         "post_translation_literal_injection": False,
+        "automatic_n_best_cherry_picking": False,
     }
 
 
@@ -174,6 +176,8 @@ def _candidate_rows(
     hypotheses: list[dict[str, Any]], selected_rank: int,
     trigger: dict[str, Any], selection: dict[str, Any], generation: dict[str, int],
 ) -> list[dict[str, Any]]:
+    if selected_rank != 0:
+        raise ValueError("illustration-label rescue is rank0-only")
     if selected_rank < 0 or selected_rank >= len(hypotheses):
         raise ValueError("illustration-label rescue selected rank is outside hypotheses")
     target = str(hypotheses[selected_rank].get("text") or "")
@@ -392,7 +396,8 @@ def run_stage12(
             selected_rank: int | None = None
             selected_selection: dict[str, Any] | None = None
             evaluated: list[dict[str, Any]] = []
-            for rank, hypothesis in enumerate(hypotheses):
+            for index, hypothesis in enumerate(hypotheses):
+                rank = int(hypothesis.get("rank", index))
                 target = str(hypothesis.get("text") or "")
                 if not target.strip():
                     evaluated.append({"rank": rank, "target_text": target, "score": hypothesis.get("score"), "accepted": False, "reason": "empty_target"})
@@ -406,6 +411,13 @@ def run_stage12(
                 if selected_rank is None and selection["accepted"] is True:
                     selected_rank = rank
                     selected_selection = selection
+            rank0_choice = select_rank0_evaluation(evaluated)
+            if rank0_choice is None:
+                selected_rank = None
+                selected_selection = None
+            else:
+                selected_rank = 0
+                selected_selection = dict(rank0_choice["selection"])
             if selected_rank is None or selected_selection is None:
                 rejected[row_id] = {"reason": "selector_rejected", "evaluated_hypotheses": evaluated}
                 continue

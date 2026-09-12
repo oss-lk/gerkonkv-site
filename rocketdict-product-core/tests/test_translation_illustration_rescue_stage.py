@@ -154,7 +154,7 @@ def test_candidate_rows_preserve_source_bytes_raw_rank_and_provenance() -> None:
     structural = str(trigger["structural_source"])
     remainder = str(trigger["remainder_source"])
     hypotheses = [
-        {"text": "Пример.", "score": -0.1},
+        {"rank": 0, "text": "Иллюстрация.", "score": -0.1},
         {"text": "Примеры.", "score": -0.2},
         {"text": "Образец.", "score": -0.3},
         {"text": "Иллюстрация.", "score": -0.4},
@@ -176,7 +176,7 @@ def test_candidate_rows_preserve_source_bytes_raw_rank_and_provenance() -> None:
         normalized_model_input=True,
         candidate_kind="standalone_illustration_word",
         hypotheses=hypotheses,
-        selected_rank=3,
+        selected_rank=0,
         trigger=trigger,
         selection=selection,
         generation={"beam_size": 6, "num_hypotheses": 6},
@@ -185,7 +185,7 @@ def test_candidate_rows_preserve_source_bytes_raw_rank_and_provenance() -> None:
     assert rows[0]["source_text"] + rows[1]["source_text"] == row["source_text"]
     assert rows[0]["target_text"] == rows[0]["source_text"]
     assert rows[1]["target_text"] == "Иллюстрация."
-    assert rows[1]["payload"]["selected_rank"] == 3
+    assert rows[1]["payload"]["selected_rank"] == 0
     rescue = rows[1]["payload"]["illustration_label_rescue"]
     assert rescue["contract"] == ILLUSTRATION_LABEL_RESCUE_CONTRACT
     assert rescue["selector_contract"] == ILLUSTRATION_LABEL_SELECTOR_CONTRACT

@@ -24,12 +24,13 @@ from .database import connect, get_document, get_run, get_run_items
 from .emphasis_markup import compare_emphasis_markup_preservation
 from .stages import StageExecutionError, _complete, _fail, _start
 from .translation_rescue import evaluate_rescue_pair
+from .translation_rank0 import select_rank0_evaluation
 from .translation_tc_big_delimiter_rescue_stage import run_stage12 as run_base_stage12
 
-TC_BIG_FOOTNOTE_RESCUE_CONTRACT = "rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1"
-TC_BIG_FOOTNOTE_SELECTOR_CONTRACT = "rocketdict-stage12-tc-big-footnote-reference-lead-selector/1"
+TC_BIG_FOOTNOTE_RESCUE_CONTRACT = "rocketdict-stage12-tc-big-footnote-reference-lead-rescue/2"
+TC_BIG_FOOTNOTE_SELECTOR_CONTRACT = "rocketdict-stage12-tc-big-footnote-reference-lead-selector/2"
 TC_BIG_FOOTNOTE_TRIGGER_CONTRACT = "rocketdict-stage12-tc-big-footnote-reference-lead-trigger/1"
-TC_BIG_FOOTNOTE_SELECTED_PHASE = "tc-big-footnote-reference-lead-selected-v1"
+TC_BIG_FOOTNOTE_SELECTED_PHASE = "tc-big-footnote-reference-lead-selected-v2"
 DEFAULT_ENABLED = False
 BEAM_SIZE = 6
 NUM_HYPOTHESES = 6
@@ -144,6 +145,7 @@ def _safety_flags() -> dict[str, bool]:
         "target_rewriting": False,
         "placeholders": False,
         "post_translation_literal_injection": False,
+        "automatic_n_best_cherry_picking": False,
         "corpus_specific_target_patches": False,
     }
 
@@ -321,6 +323,15 @@ def run_stage12(
                     selected_rank = rank
                     selected_target = target
                     selected_selection = selection
+            rank0_choice = select_rank0_evaluation(evaluated)
+            if rank0_choice is None:
+                selected_rank = None
+                selected_target = None
+                selected_selection = None
+            else:
+                selected_rank = 0
+                selected_target = str(rank0_choice["target_text"])
+                selected_selection = dict(rank0_choice["selection"])
             if selected_rank is None or selected_target is None or selected_selection is None:
                 rejected.append({
                     "source_start": int(row["source_start"]),
