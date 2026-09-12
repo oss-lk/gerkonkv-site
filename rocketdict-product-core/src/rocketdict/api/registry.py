@@ -15,7 +15,7 @@ STAGE12_BLOCK_SECTION_IDENTIFIER_CONTRACT = "rocketdict-stage12-block-section-id
 STAGE12_REQUEST_BATCH_CONTRACT = "rocketdict-stage12-bounded-request-batch/1"
 STAGE12_WHOLE_CONTEXT_RESCUE_CONTRACT = "rocketdict-stage12-whole-context-rescue/1"
 STAGE12_WHOLE_CONTEXT_RESCUE_MAX_NLP_TOKENS = 160
-NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/5"
+NUMERIC_INTEGRITY_CONTRACT = "rocketdict-maintained-numeric-integrity/6"
 
 
 def _canon(value: Any) -> str:
