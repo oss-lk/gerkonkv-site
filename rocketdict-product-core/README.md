@@ -12,6 +12,12 @@ Recent source-defined research layers include bounded question-context and bound
 
 No rescue may perform source rewriting, target surgery, placeholders, post-translation literal injection, corpus-specific target patches, evaluator weakening or automatic n-best cherry-picking.
 
+## Numeric integrity contract
+
+The maintained Stage15 numeric/symbol hard gate is `rocketdict-maintained-numeric-integrity/6`. V6 keeps the existing literal, sign, grouping, ordinal, prime-notation and critical-symbol checks and adds only a conservative source-side licence for uninterrupted multiplicative English scale chains such as `ten hundred thousand` → `1000000`. It deliberately does not cross conjunction/disjunction boundaries such as `two and three hundred` or `three or four thousand`, so elliptical ranges do not collapse into invented compound values.
+
+This is evaluator-semantics refinement, not target repair. The exact run20 read-only replay (`34680865586`) retained the same 20 failing numeric rows with zero pass/fail drift. It changed spelled-number licences on only four persisted rows; the existing erroneous `100000` translation of `ten hundred thousand` remains a hard failure, while a hypothetical correct `1000000` is now recognized. Artifact `10293504260`, artifact digest `593c56e8096b9f96c2df2053779f86dfb7dccf8ccb6c3cdf8fd1477df6413725`.
+
 ## Current full-Opticks evidence
 
 The canonical heavy corpus is complete Project Gutenberg *Opticks*, normalized-text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` source characters.
@@ -24,9 +30,9 @@ Late persisted progression:
 - run `19`: **20/15/0**, 34 unique;
 - run `20`: **20/14/0**, 33 unique.
 
-Run `20` is the current best persisted **research** residual basis. It composes directly over run19 and accepts exactly one bounded parenthetical context (`1393`) as unmodified OPUS rank0. Workflow `34678965465`, artifact `10292783763`, ZIP SHA-256 `0e30b3d10cf263ef6256c422cf2c2003f0c81343ad59f13e1b3531e709b3f7cf`, final Stage12 output SHA-256 `e06aa1620410698bac09a4cc46632aaf3d1c3d45de0f798d29521f722367db85`, final text SHA-256 `16ab4a3c3ef192662604e90e428933ab23423b7872bae2bd6de3478b3a46f8c8`, final SQLite SHA-256 `879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d`, evidence SHA-256 `2f21b87327033aab76e5d3485c22cfbd6ea672cae9c4c5055a3d129b3f5054c1`.
+Run `20` is the current best persisted **research** residual basis. It composes directly over run19 and accepts exactly one bounded parenthetical context (`1393`) as unmodified OPUS rank0. Workflow `34678965465`, artifact `10292783763`, ZIP SHA-256 `0e30b3d63159a4f649d111da54f3d6eee10ad9ef3478374f748f940a6d4fc01e`, final Stage12 output SHA-256 `e06aa1620410698bac09a4cc46632aaf3d1c3d45de0f798d29521f722367db85`, final text SHA-256 `16ab4a3c3ef192662604e90e428933ab23423b7872bae2bd6de3478b3a46f8c8`, final SQLite SHA-256 `879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d`, evidence SHA-256 `2f21b87327033aab76e5d3485c22cfbd6ea672cae9c4c5055a3d129b3f5054c1`.
 
-The persisted run keeps 3340 other run19 rows source/target exact, reconstructs the complete source byte-exactly, and passes SQLite/FK integrity. Product CI `34678795359` is green for the wrapper including real Stage8→25/unified Product execution. This remains research evidence; Product defaults do not change.
+The persisted run keeps 3340 other run19 rows source/target exact, reconstructs the complete source byte-exactly, and passes SQLite/FK integrity. Product CI `34678795359` is green for the parenthetical wrapper including real Stage8→25/unified Product execution. This remains research evidence; Product defaults do not change.
 
 ## Negative square-bracket evidence
 
