@@ -17,15 +17,21 @@ def select_rank0_evaluation(
 ) -> dict[str, Any] | None:
     """Return accepted unique rank0 evidence, or ``None`` when rank0 fails.
 
-    Missing or duplicate rank0 evidence is a provenance/cardinality error.
-    Higher ranks remain diagnostic evidence and have no selection authority.
+    Missing, duplicate, or malformed rank evidence is a provenance/cardinality
+    error. Higher ranks remain diagnostic evidence and have no selection
+    authority.
     """
 
-    rank0 = [
-        row
-        for row in evaluated_hypotheses
-        if int(row.get("rank", -1)) == 0
-    ]
+    rank0: list[dict[str, Any]] = []
+    for row in evaluated_hypotheses:
+        try:
+            rank = int(row["rank"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise StageExecutionError(
+                "rank0-only rescue encountered malformed evaluated rank evidence"
+            ) from exc
+        if rank == 0:
+            rank0.append(row)
     if len(rank0) != 1:
         raise StageExecutionError(
             "rank0-only rescue requires exactly one evaluated rank0 hypothesis"
