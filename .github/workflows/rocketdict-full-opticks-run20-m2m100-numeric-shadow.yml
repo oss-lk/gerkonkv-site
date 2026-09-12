@@ -1,0 +1,131 @@
+name: RocketDict Full Opticks Run20 M2M100 Numeric Shadow
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_numeric_shadow.py'
+      - '.github/workflows/rocketdict-full-opticks-run20-m2m100-numeric-shadow.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run20-m2m100-numeric-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      BASE_RUN_ID: '34678965465'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-parenthetical-whole-context-rescue
+      BASE_DB_SHA256: 879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d
+      M2M100_REPO: facebook/m2m100_418M
+      M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+      ROCKETDICT_M2M100_MODEL_DIR: ${{ github.workspace }}/work/m2m100-418m
+      ROCKETDICT_RUN20_M2M100_NUMERIC_SHADOW_ROOT: ${{ github.workspace }}/work/run20-m2m100-numeric-shadow
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained research runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench \
+            'transformers==4.56.2' 'sentencepiece==0.2.1' 'huggingface_hub==0.34.4'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+      - name: Download exact persisted run20 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Stage and verify exact run20 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_RUN20_M2M100_NUMERIC_SHADOW_ROOT"
+          cp work/base/full-opticks-parenthetical-whole-context-rescue/rocketdict.sqlite "$ROCKETDICT_RUN20_M2M100_NUMERIC_SHADOW_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN20_M2M100_NUMERIC_SHADOW_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Restore pinned M2M100 snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/m2m100-418m
+          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+      - name: Obtain exact pinned M2M100 snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          path = snapshot_download(
+              repo_id=os.environ['M2M100_REPO'],
+              revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['ROCKETDICT_M2M100_MODEL_DIR'],
+              allow_patterns=[
+                  'config.json', 'generation_config.json', 'pytorch_model.bin',
+                  'sentencepiece.bpe.model', 'special_tokens_map.json',
+                  'tokenizer_config.json', 'vocab.json'
+              ],
+          )
+          print(path)
+          PY
+          test -s "$ROCKETDICT_M2M100_MODEL_DIR/pytorch_model.bin"
+          test -s "$ROCKETDICT_M2M100_MODEL_DIR/sentencepiece.bpe.model"
+          sha256sum "$ROCKETDICT_M2M100_MODEL_DIR"/pytorch_model.bin \
+            "$ROCKETDICT_M2M100_MODEL_DIR"/sentencepiece.bpe.model \
+            "$ROCKETDICT_M2M100_MODEL_DIR"/vocab.json | tee work/m2m100-critical-files.sha256
+      - name: Run exact read-only M2M100 numeric shadow
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_numeric_shadow.py
+      - name: Verify immutable shadow contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN20_M2M100_NUMERIC_SHADOW_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_RUN20_M2M100_NUMERIC_SHADOW_ROOT'])
+          evidence = json.loads((root/'full-opticks-run20-m2m100-numeric-shadow.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-run20-m2m100-numeric-shadow/1':
+              raise SystemExit('schema drift')
+          if evidence['failure_count'] != 20 or len(evidence['records']) != 20:
+              raise SystemExit('run20 residual scope drift')
+          if evidence['model']['revision'] != os.environ['M2M100_REVISION']:
+              raise SystemExit('M2M100 revision drift')
+          if evidence['model']['license'] != 'MIT':
+              raise SystemExit('M2M100 license identity drift')
+          if evidence['database_unchanged'] is not True or evidence['source_coverage_byte_exact'] is not True:
+              raise SystemExit('read-only invariant drift')
+          if evidence['promotion_allowed'] is not False or evidence['automatic_product_default_allowed'] is not False:
+              raise SystemExit('shadow unexpectedly authorizes promotion')
+          if evidence['n_best_cherry_picking'] is not False:
+              raise SystemExit('shadow unexpectedly enables n-best selection')
+          print('Run20 M2M100 numeric shadow verified.')
+          PY
+      - name: Record runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/run20-m2m100-runtime
+          python -VV > work/run20-m2m100-runtime/python.txt || true
+          python -m pip freeze | sort > work/run20-m2m100-runtime/pip-freeze.txt || true
+          cp work/m2m100-critical-files.sha256 work/run20-m2m100-runtime/ 2>/dev/null || true
+      - name: Upload shadow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-run20-m2m100-numeric-shadow
+          path: |
+            work/run20-m2m100-numeric-shadow/*.json
+            work/run20-m2m100-runtime/**
+          if-no-files-found: warn
+          retention-days: 90
