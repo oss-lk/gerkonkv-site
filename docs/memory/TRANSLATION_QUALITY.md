@@ -13,30 +13,40 @@ Durable translation-quality conclusions only. This is not a changelog and does n
 
 Pinned Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; `586543` chars.
 
-Authenticated rank0-clean replay workflow `34695164876`, artifact `10297359600`, artifact digest `sha256:e2d7549965d893c0b877cfe21057b8490134392a966e42fd72483ebb19836b4d` is the only forward promotion parent. Final run `41` has `3335` rows and **18 numeric/symbol / 16 punctuation / 0 length, 33 unique** hard failures. Translation-output SHA-256 `d8948e43158a126703a90e6ce1cd25725da8774e1db64410ca67e3ec7bb1a10f`; final-text SHA-256 `23170683ddbe183b4da6b4097d72cedc86b9c98044e9f3e1dee015015e16e15e`; SQLite SHA-256 `e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e`; replay evidence SHA-256 `e7504ef18ead81e9c437ab8236b787a7d59082c272ef102fcc9bae6e281deac1`; independent census evidence SHA-256 `b384ae0936f2ec792dd8ec6fbfcdf5da0dea1ba097df951c6049f2f2cbbb5319`.
+Authenticated rank0-clean replay workflow `34695164876`, artifact `10297359600`, is the only forward promotion parent. Final run `41` has `3335` rows and **18 numeric/symbol / 16 punctuation / 0 length, 33 unique** hard failures. Translation-output SHA `d8948e43158a126703a90e6ce1cd25725da8774e1db64410ca67e3ec7bb1a10f`; final-text SHA `23170683ddbe183b4da6b4097d72cedc86b9c98044e9f3e1dee015015e16e15e`; SQLite SHA `e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e`; replay evidence SHA `e7504ef18ead81e9c437ab8236b787a7d59082c272ef102fcc9bae6e281deac1`; independent census evidence SHA `b384ae0936f2ec792dd8ec6fbfcdf5da0dea1ba097df951c6049f2f2cbbb5319`.
 
 Historical run23 remains immutable evidence but is not legal promotion lineage because direct audit proved rank3 illustration selections and a rank2 short-DMS selection.
 
 ## Returned-family exact-source/rank0 DOE
 
-Workflow `34697653680` succeeded on engineering HEAD `bb63b48894555ca252cb52587b3dbd722ef23c4c`. Artifact `10298988451`, digest `sha256:b3a499d41da72d1039a943d55005ca79b7237b620a56f7f9a257ddf521b5ff09`; schema `rocketdict-full-opticks-clean-returned-family-geometry-doe/1`; canonical evidence SHA-256 `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7`.
+Workflow `34697653680`, artifact `10298988451`, evidence SHA `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7` authenticated exact run41 and used raw rank0 only.
 
-The DOE authenticated exact run41, remained read-only/source-byte-exact, generated raw rank0 only, and kept all prohibited-transform flags false. It tested 30 candidates across illustration starts `72401,90105` and short-DMS start `110881`.
+- Illustration seq `424/514`: exact label OPUS rank0 + exact `_Illustration._` TC-big rank0 can pass maintained gates, but the initial aggregate omitted source-owned `\n\n`; that candidate is rejected.
+- Short-DMS seq `638`: no tested exact-source/raw-rank0 whole-row or current split geometry passes. Do not repeat the same lead/measurement or degrees/prime formulations without materially new evidence.
+- Earlier illustration canonicalization/word experiments remain diagnostics only because they rewrote model input and/or selected non-rank0 beams.
 
-### Illustration pair (`seq 424`, `seq 514`)
+## Illustration source-owned structural-separator DOE
 
-Only four candidates passed maintained mechanical gates: two equivalent geometries per row using OPUS rank0 on exact source `[Illustration: FIG. N.]` and TC-big rank0 on exact source `_Illustration._`. Their aggregate targets were:
+Workflow `34698906048` is the current authoritative illustration geometry evidence. It succeeded at engineering HEAD `001ba055f47f059529aa4b876db8d5308ae957d7` on exact run41.
 
-- `[Иллюстрация: FIG. 21.]_Иллюстрация._`
-- `[Иллюстрация: FIG. 24.]_Иллюстрация._`
+- artifact `10299487345`;
+- artifact digest `sha256:87c38ebc60cea7b243e36e580f8908bd90f9f975186a96cc7342344528ce87de`;
+- schema `rocketdict-full-opticks-illustration-structural-separator-doe/1`;
+- canonical evidence SHA `0af3deb591aee8da0dd11ba7a59aeab64c65d2d2327e923ebbeb64b9b077e3ee`;
+- 8 candidates; only `illustration:72401:planned-separator:opus+tc_big` and `illustration:90105:planned-separator:opus+tc_big` pass maintained mechanical gates;
+- database remains unchanged, source coverage byte-exact, source plan created before MT, raw rank0 only;
+- `source_owned_structural_passthrough=true`; `source_bytes_rewritten=false`, `target_rewriting=false`, `placeholders=false`, `post_translation_literal_injection=false`, `corpus_specific_target_patches=false`, `evaluator_weakened=false`, `n_best_cherry_picking=false`, `automatic_n_best_cherry_picking=false`.
 
-These candidates are **not promotable as tested** because aggregation deletes the source-owned `\n\n` boundary between the figure label and emphasized illustration word. Mechanical gate success is insufficient when source structural boundaries regress. The next experiment may preserve that exact separator only if existing Product/source composition contracts establish that carrying a source-owned separator between independently translated chunks is legitimate structural composition rather than prohibited target literal injection.
+Passing geometry is generic and source-defined:
 
-Earlier illustration experiments do not satisfy current promotion invariants: feasibility `/2` rewrote `_Illustration._` before MT; feasibility `/3` and illustration-word DOE used automatic beam selection (the word DOE also changed model input to canonical alternatives such as `Illustration.`, `Figure.`, `Picture.`). Their positive outcomes remain diagnostics only.
+- exact source label `[Illustration: FIG. N.]` is translated by OPUS rank0;
+- exact source blank-line separator (matched before MT) is passed through structurally;
+- exact source `_Illustration._` suffix is translated by TC-big rank0;
+- exact trailing source whitespace is passed through structurally.
 
-### Short-DMS (`seq 638`)
+Representative result: `[Иллюстрация: FIG. 21.]\n\n_Иллюстрация._ `, preserving the square-bracket payload, figure number, source blank-line boundary, emphasis and trailing structural whitespace. The corresponding FIG.24 case is equivalent.
 
-No exact-source/raw-rank0 candidate passed under the tested whole-row and split geometries. Whole OPUS renders prime notation as feet; whole TC-big drops one double-prime. Tested mixed/model split variants around the lead/measurement and degrees/prime boundaries remain mechanically inadmissible. Do not repeat these formulations without materially new source-defined geometry or model evidence.
+This evidence establishes a mechanically clean geometry but does **not** alone prove that source-owned structural passthrough is an authorized Product composition operation. Before promotion, inspect accepted L3 precedent, especially `rocketdict-stage12-ascii-table-logical-rank0/1` and the Stage12 composition implementation/tests. If those establish that source-owned structural bytes planned before MT are preserved as structure rather than injected into model output, the illustration route may advance to a default-OFF wrapper and full replay. Otherwise reject it.
 
 ## Other durable negatives
 
@@ -50,5 +60,5 @@ No exact-source/raw-rank0 candidate passed under the tested whole-row and split 
 2. Preserve immutable source/model/config/result identities and exact predecessor lineage.
 3. Persist only deterministic unmodified raw rank0 model output; semantic/boundary review remains mandatory in addition to mechanical gates.
 4. New geometry/model use requires a generic source-defined trigger and must fail closed.
-5. A mechanically green aggregate that destroys source-owned structural boundaries is not promotable.
-6. Immediate next step: determine from Product code/contracts and accepted composition precedent whether exact source-owned separator passthrough is legitimate. If yes, run a separator-preserving illustration DOE before implementing any wrapper. If no, mark this illustration route exhausted and move to the next run41 residual family.
+5. Source-owned structural passthrough may be used only if it is demonstrably planned from immutable source before MT and is supported by existing Product composition contract/precedent; it must never become post-MT target repair.
+6. Immediate next step: audit the accepted structural-passthrough precedent. If compatible, implement the generic illustration wrapper and run full compose+census from exact run41. If incompatible, close this route and move to the next residual family.
