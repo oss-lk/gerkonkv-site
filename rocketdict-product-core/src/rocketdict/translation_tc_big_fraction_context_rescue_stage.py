@@ -28,7 +28,7 @@ from .database import connect, get_document, get_run, get_run_items
 from .emphasis_markup import compare_emphasis_markup_preservation
 from .numeric_integrity import extract_numeric_literals
 from .stages import StageExecutionError, _complete, _fail, _start
-from .translation_parenthetical_context_rescue_stage import run_stage12 as run_base_stage12
+from .translation_dense_figure_group_rescue_stage import run_stage12 as run_base_stage12
 from .translation_rescue import evaluate_rescue_pair
 
 TC_BIG_FRACTION_CONTEXT_RESCUE_CONTRACT = (
