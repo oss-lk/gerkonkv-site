@@ -1,0 +1,173 @@
+name: RocketDict Full Opticks Illustration Structural Separator DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_illustration_structural_separator_doe.py'
+      - '.github/workflows/rocketdict-full-opticks-illustration-structural-separator-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  illustration-structural-separator-doe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASE_WORKFLOW_RUN_ID: '34695164876'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-rank0-clean-replay
+      BASE_DB_SHA256: e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e
+      BASE_REPLAY_EVIDENCE_SHA256: e7504ef18ead81e9c437ab8236b787a7d59082c272ef102fcc9bae6e281deac1
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_ILLUSTRATION_SEPARATOR_DOE_ROOT: ${{ github.workspace }}/work/illustration-structural-separator-doe
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install asset builders
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' 'transformers==4.56.2' \
+            'sacremoses==0.1.1' 'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Download exact run41 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+
+      - name: Authenticate and stage run41 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_ILLUSTRATION_SEPARATOR_DOE_ROOT"
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          base=Path('work/base')
+          ep=list(base.rglob('full-opticks-rank0-clean-replay.json'))
+          dbs=[p for p in base.rglob('rocketdict.sqlite') if p.parent.name == 'full-opticks-rank0-clean-replay']
+          if len(ep)!=1 or len(dbs)!=1: raise SystemExit(f'base artifact cardinality drift: {ep=} {dbs=}')
+          e=json.loads(ep[0].read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if recorded != os.environ['BASE_REPLAY_EVIDENCE_SHA256'] or actual != recorded: raise SystemExit('run41 evidence drift')
+          dbsha=hashlib.sha256(dbs[0].read_bytes()).hexdigest()
+          if dbsha != os.environ['BASE_DB_SHA256'] or e.get('final_database_sha256') != dbsha: raise SystemExit('run41 DB drift')
+          if e.get('final_translation_run_id') != 41: raise SystemExit('run41 id drift')
+          out=Path(os.environ['ROCKETDICT_ILLUSTRATION_SEPARATOR_DOE_ROOT'])/'rocketdict.sqlite'
+          out.write_bytes(dbs[0].read_bytes())
+          print(json.dumps({'database_sha256':dbsha,'evidence_sha256':recorded},indent=2))
+          PY
+          echo "$BASE_DB_SHA256  $ROCKETDICT_ILLUSTRATION_SEPARATOR_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and verify OPUS
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus.tmp
+            echo "$OPUS_SHA256  work/opus.tmp" | sha256sum -c -
+            mv work/opus.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/illustration-separator-opus.json
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain and build pinned TC-big
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(repo_id=os.environ['TC_BIG_REPO'], revision=os.environ['TC_BIG_REVISION'], local_dir=os.environ['TC_BIG_SNAPSHOT'], allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'])
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/illustration-separator-tc-big.json
+
+      - name: Build torch-free DOE runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/doe-venv
+          work/doe-venv/bin/python -m pip install --upgrade pip
+          work/doe-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/doe-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None: raise SystemExit('torch leaked into inference runtime')
+          PY
+
+      - name: Run read-only structural-separator DOE
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/doe-venv/bin/python -u rocketdict-workbench/tests/real_translation_full_opticks_illustration_structural_separator_doe.py
+          echo "$BASE_DB_SHA256  $ROCKETDICT_ILLUSTRATION_SEPARATOR_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Verify DOE evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_ILLUSTRATION_SEPARATOR_DOE_ROOT'])/'full-opticks-illustration-structural-separator-doe.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema']!='rocketdict-full-opticks-illustration-structural-separator-doe/1': raise SystemExit('schema drift')
+          if e['base_translation_run_id']!=41 or e['base_database_sha256']!=os.environ['BASE_DB_SHA256']: raise SystemExit('base drift')
+          if e['illustration_source_starts'] != [72401,90105] or e['candidate_count'] != 8: raise SystemExit('cohort/cardinality drift')
+          if not (e['database_unchanged'] and e['source_coverage_byte_exact'] and e['source_plan_created_before_mt'] and e['raw_rank0_only'] and e['source_owned_structural_passthrough']): raise SystemExit('source-plan invariant drift')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag {flag}')
+          c=dict(e); r=c.pop('evidence_sha256'); a=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if a!=r: raise SystemExit('evidence SHA drift')
+          print(json.dumps({'passed':e['mechanically_passed_candidate_ids'],'evidence_sha256':r},indent=2,ensure_ascii=False))
+          PY
+
+      - name: Upload DOE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-illustration-structural-separator-doe
+          path: |
+            work/illustration-separator-opus.json
+            work/illustration-separator-tc-big.json
+            work/illustration-structural-separator-doe/*.json
+          if-no-files-found: warn
+          retention-days: 90
