@@ -31,7 +31,9 @@ def _planner() -> dict[str, object]:
     }
 
 
-def _context(sequence: int, source: str, *, start: int, token_count: int) -> dict[str, object]:
+def _context(
+    sequence: int, source: str, *, start: int, token_count: int
+) -> dict[str, object]:
     return {
         "id": 100 + sequence,
         "sequence_number": sequence,
@@ -64,28 +66,45 @@ def _row(
 
 
 def _fixture() -> tuple[str, list[dict[str, object]], list[dict[str, object]]]:
+    """Mirror the real run20 geometry with a deliberate row-local 8G omission.
+
+    The first Stage12 member crosses the Stage10 boundary exactly as the real
+    planner group does.  Keeping the split points explicit prevents the fixture
+    from accidentally moving the intended omission into a different member.
+    """
     first_context = "[Illustration: FIG. 2.]\n\n"
-    second_context = (
-        "Let A1 A2 B3 4C 5D 6E 7F 8G 9H 10I and 11J mark the rays; "
-        "the light returns through A1 and 4C."
-    )
+    first_member_tail = "Let A1 A2 B3 4C mark the rays; "
+    second_member = "let 5D 6E 7F 8G 9H 10I and 11J mark more rays; "
+    third_member = "the light returns through A1 and 4C."
+    second_context = first_member_tail + second_member + third_member
     content = first_context + second_context
-    cut1 = len(first_context) + 30
-    cut2 = len(first_context) + 67
-    parts = [content[:cut1], content[cut1:cut2], content[cut2:]]
+
+    parts = [
+        first_context + first_member_tail,
+        second_member,
+        third_member,
+    ]
     targets = [
         parts[0].replace("[Illustration:", "[Иллюстрация:"),
-        parts[1].replace("7F 8G", "7F"),
+        parts[1].replace("8G ", ""),
         parts[2],
     ]
     rows: list[dict[str, object]] = []
     cursor = 0
-    for row_id, (source, target) in enumerate(zip(parts, targets, strict=True), start=1):
+    for row_id, (source, target) in enumerate(
+        zip(parts, targets, strict=True), start=1
+    ):
         rows.append(_row(row_id, source, target, start=cursor))
         cursor += len(source)
+
     contexts = [
         _context(10, first_context, start=0, token_count=5),
-        _context(11, second_context, start=len(first_context), token_count=60),
+        _context(
+            11,
+            second_context,
+            start=len(first_context),
+            token_count=60,
+        ),
     ]
     return content, contexts, rows
 
@@ -99,14 +118,18 @@ def test_base_parameters_strip_only_dense_figure_controls() -> None:
         "dense_figure_label_group_trigger_contract": DENSE_FIGURE_GROUP_TRIGGER_CONTRACT,
         "dense_figure_label_group_max_nlp_tokens": MAX_GROUP_NLP_TOKENS,
     }
-    assert _base_parameters(parameters) == {"enable_parenthetical_whole_context_rescue": True}
+    assert _base_parameters(parameters) == {
+        "enable_parenthetical_whole_context_rescue": True
+    }
 
 
 def test_trigger_accepts_dense_cross_context_missing_only_group() -> None:
     content, contexts, rows = _fixture()
     trigger = evaluate_dense_figure_group_trigger(
         content=content,
-        context_by_sequence={int(row["sequence_number"]): row for row in contexts},
+        context_by_sequence={
+            int(row["sequence_number"]): row for row in contexts
+        },
         primary_rows=rows,
     )
     assert trigger["eligible"] is True
@@ -116,28 +139,55 @@ def test_trigger_accepts_dense_cross_context_missing_only_group() -> None:
     assert trigger["technical_label_distinct_count"] >= 8
     assert trigger["single_source_illustration_marker"] is True
     assert trigger["exactly_one_missing_only_numeric_failure"] is True
+    profile = trigger["numeric_omission_profile"]
+    assert profile["failure_count"] == 1
+    assert profile["failures"][0]["sequence_number"] == 1
 
 
 def test_trigger_rejects_sparse_and_over_cap() -> None:
-    content, contexts, rows = _fixture()
-    sparse_content = content.replace(" A2 B3 4C 5D 6E 7F 8G 9H 10I and 11J", "")
     first_context = "[Illustration: FIG. 2.]\n\n"
+    sparse_second = "Let A1 A2 B3 mark rays; the light returns through A1."
+    sparse_content = first_context + sparse_second
+    cut = len(first_context) + 18
+    sparse_rows = [
+        _row(
+            1,
+            sparse_content[:cut],
+            sparse_content[:cut].replace("[Illustration:", "[Иллюстрация:"),
+            start=0,
+        ),
+        _row(
+            2,
+            sparse_content[cut:],
+            sparse_content[cut:].replace("B3 ", ""),
+            start=cut,
+        ),
+    ]
     sparse_contexts = [
         _context(10, first_context, start=0, token_count=5),
-        _context(11, sparse_content[len(first_context):], start=len(first_context), token_count=20),
-    ]
-    cut = len(sparse_content) // 2
-    sparse_rows = [
-        _row(1, sparse_content[:cut], sparse_content[:cut], start=0),
-        _row(2, sparse_content[cut:], sparse_content[cut:].replace("4C", ""), start=cut),
+        _context(
+            11,
+            sparse_second,
+            start=len(first_context),
+            token_count=20,
+        ),
     ]
     assert evaluate_dense_figure_group_trigger(
         content=sparse_content,
-        context_by_sequence={int(row["sequence_number"]): row for row in sparse_contexts},
+        context_by_sequence={
+            int(row["sequence_number"]): row for row in sparse_contexts
+        },
         primary_rows=sparse_rows,
     )["eligible"] is False
 
-    over = [dict(contexts[0]), {**contexts[1], "payload": {"sentence_index": 11, "token_count": 188}}]
+    content, contexts, rows = _fixture()
+    over = [
+        dict(contexts[0]),
+        {
+            **contexts[1],
+            "payload": {"sentence_index": 11, "token_count": 188},
+        },
+    ]
     assert evaluate_dense_figure_group_trigger(
         content=content,
         context_by_sequence={int(row["sequence_number"]): row for row in over},
@@ -149,24 +199,32 @@ def test_candidate_requires_exact_label_sequence_illustration_and_content_volume
     content, _contexts, rows = _fixture()
     primary = "".join(str(row["target_text"]) for row in rows)
     good = content.replace("[Illustration:", "[Иллюстрация:")
-    selection = evaluate_dense_figure_group_candidate(content, good, primary_target=primary)
+    selection = evaluate_dense_figure_group_candidate(
+        content, good, primary_target=primary
+    )
     assert selection["accepted"] is True
     assert selection["technical_label_sequence_exact"] is True
     assert selection["illustration_payload_exact"] is True
     assert selection["target_alpha_non_decreasing"] is True
 
     reordered = good.replace("8G 9H", "9H 8G")
-    bad_order = evaluate_dense_figure_group_candidate(content, reordered, primary_target=primary)
+    bad_order = evaluate_dense_figure_group_candidate(
+        content, reordered, primary_target=primary
+    )
     assert bad_order["technical_label_sequence_exact"] is False
     assert bad_order["accepted"] is False
 
     no_marker = good.replace("[Иллюстрация: FIG. 2.]", "FIG. 2.")
-    bad_marker = evaluate_dense_figure_group_candidate(content, no_marker, primary_target=primary)
+    bad_marker = evaluate_dense_figure_group_candidate(
+        content, no_marker, primary_target=primary
+    )
     assert bad_marker["illustration_payload_exact"] is False
     assert bad_marker["accepted"] is False
 
 
-def test_disabled_run_delegates_without_opus_runtime(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+def test_disabled_run_delegates_without_opus_runtime(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
     expected = {"translation_run_id": 20}
     observed: dict[str, object] = {}
 
@@ -178,7 +236,9 @@ def test_disabled_run_delegates_without_opus_runtime(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(
         stage,
         "OpusTranslator",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("OPUS must not be constructed")),
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("OPUS runtime must not be constructed")
+        ),
     )
     result = stage.run_stage12(
         tmp_path / "rocketdict.sqlite",
@@ -189,7 +249,9 @@ def test_disabled_run_delegates_without_opus_runtime(monkeypatch: pytest.MonkeyP
         },
     )
     assert result is expected
-    assert observed["parameters"] == {"enable_parenthetical_whole_context_rescue": True}
+    assert observed["parameters"] == {
+        "enable_parenthetical_whole_context_rescue": True
+    }
 
 
 def test_enabled_run_merges_only_source_defined_dense_group(
@@ -201,11 +263,25 @@ def test_enabled_run_merges_only_source_defined_dense_group(
         "document_version_id": 7,
         "model_request_count": 600,
     }
-    base_run = {"id": 20, "output": base_output, "output_sha256": "a" * 64}
-    document = {"id": 7, "content_text": content, "text_sha256": "b" * 64}
+    base_run = {
+        "id": 20,
+        "output": base_output,
+        "output_sha256": "a" * 64,
+    }
+    document = {
+        "id": 7,
+        "content_text": content,
+        "text_sha256": "b" * 64,
+    }
 
-    monkeypatch.setattr(stage, "run_base_stage12", lambda *args, **kwargs: dict(base_output))
-    monkeypatch.setattr(stage, "connect", lambda *args, **kwargs: nullcontext(SimpleNamespace()))
+    monkeypatch.setattr(
+        stage, "run_base_stage12", lambda *args, **kwargs: dict(base_output)
+    )
+    monkeypatch.setattr(
+        stage,
+        "connect",
+        lambda *args, **kwargs: nullcontext(SimpleNamespace()),
+    )
     monkeypatch.setattr(stage, "get_run", lambda connection, run_id: base_run)
 
     def fake_items(connection, run_id, *, kind):  # type: ignore[no-untyped-def]
@@ -216,7 +292,11 @@ def test_enabled_run_merges_only_source_defined_dense_group(
         raise AssertionError((run_id, kind))
 
     monkeypatch.setattr(stage, "get_run_items", fake_items)
-    monkeypatch.setattr(stage, "get_document", lambda connection, document_version_id: document)
+    monkeypatch.setattr(
+        stage,
+        "get_document",
+        lambda connection, document_version_id: document,
+    )
     monkeypatch.setattr(stage, "_start", lambda *args, **kwargs: (21, None))
     completed: dict[str, object] = {}
 
@@ -232,7 +312,14 @@ def test_enabled_run_merges_only_source_defined_dense_group(
         def __init__(self, *, device: str, compute_type: str) -> None:
             assert device == "cpu" and compute_type == "float32"
 
-        def translate(self, texts, *, beam_size, num_hypotheses, max_decoding_length):  # type: ignore[no-untyped-def]
+        def translate(
+            self,
+            texts,
+            *,
+            beam_size,
+            num_hypotheses,
+            max_decoding_length,
+        ):  # type: ignore[no-untyped-def]
             assert texts == [content]
             assert beam_size == 6 and num_hypotheses == 1
             return [[{"rank": 0, "text": raw_target, "score": -0.1}]]
