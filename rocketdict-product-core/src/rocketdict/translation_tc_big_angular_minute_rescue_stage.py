@@ -2,17 +2,11 @@ from __future__ import annotations
 
 """Opt-in Stage12 rescue for one-degree/arcminute prime mistranslation family.
 
-The trigger is source-defined rather than corpus-position-defined.  A row must
-exactly cover one Stage10 context, already fail a maintained Product hard gate,
-and contain exactly one English angular expression of the form
-``N Degree[s] M'`` whose numeric prime signature is not preserved by the
-current target.  Only unmodified raw hypotheses from the independently pinned
-TC-big runtime are eligible.
-
-Mechanical prime preservation is necessary but not sufficient: the Russian raw
-candidate must also preserve the same degree/minute values in an explicit
-``N градус... M'`` angular phrase.  This semantic anchor prevents the wrapper
-from reviving the unsafe generic prime fallback/decomposition family.
+The trigger is source-defined: a row must exactly cover one Stage10 context,
+already fail a maintained Product hard gate, and contain exactly one English
+angular expression ``N Degree[s] M'`` whose prime signature is not preserved.
+Only the unmodified raw rank-0 TC-big hypothesis is selection-authorized;
+higher beam hypotheses are retained as diagnostic evidence only.
 """
 
 from pathlib import Path
@@ -26,10 +20,10 @@ from .stages import StageExecutionError, _complete, _fail, _start
 from .translation_rescue import evaluate_rescue_pair
 from .translation_tc_big_equals_addition_rescue_stage import run_stage12 as run_base_stage12
 
-TC_BIG_ANGULAR_MINUTE_RESCUE_CONTRACT = "rocketdict-stage12-tc-big-angular-minute-prime-rescue/1"
-TC_BIG_ANGULAR_MINUTE_SELECTOR_CONTRACT = "rocketdict-stage12-tc-big-angular-minute-prime-selector/1"
+TC_BIG_ANGULAR_MINUTE_RESCUE_CONTRACT = "rocketdict-stage12-tc-big-angular-minute-prime-rescue/2"
+TC_BIG_ANGULAR_MINUTE_SELECTOR_CONTRACT = "rocketdict-stage12-tc-big-angular-minute-prime-selector/2"
 TC_BIG_ANGULAR_MINUTE_TRIGGER_CONTRACT = "rocketdict-stage12-tc-big-angular-minute-prime-trigger/1"
-TC_BIG_ANGULAR_MINUTE_SELECTED_PHASE = "tc-big-angular-minute-prime-selected-v1"
+TC_BIG_ANGULAR_MINUTE_SELECTED_PHASE = "tc-big-angular-minute-prime-selected-v2"
 DEFAULT_ENABLED = False
 BEAM_SIZE = 6
 NUM_HYPOTHESES = 6
@@ -132,7 +126,8 @@ def evaluate_tc_big_angular_minute_trigger(
         "contract": TC_BIG_ANGULAR_MINUTE_TRIGGER_CONTRACT,
         "eligible": eligible,
         "exact_stage10_single_row_context": bool(exact_stage10_context),
-        "contains_current_product_hard_failure": verdict.get("product_hard_passed") is not True,
+        "contains_current_product_hard_failure": verdict.get("product_hard_passed")
+        is not True,
         "source_angle": angle,
         "source_single_minute_prime_shape": exact_prime_shape,
         "current_prime_notation_passed": prime.get("passed") is True,
@@ -140,7 +135,9 @@ def evaluate_tc_big_angular_minute_trigger(
     }
 
 
-def evaluate_tc_big_angular_minute_candidate(source: str, target: str) -> dict[str, Any]:
+def evaluate_tc_big_angular_minute_candidate(
+    source: str, target: str
+) -> dict[str, Any]:
     angle = _source_angle(source)
     verdict = evaluate_rescue_pair(source, target)
     prime = _prime_verdict(verdict)
@@ -179,6 +176,40 @@ def evaluate_tc_big_angular_minute_candidate(source: str, target: str) -> dict[s
     }
 
 
+def _evaluate_rank0_hypotheses(
+    source: str, hypotheses: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], str | None, dict[str, Any] | None]:
+    evaluated: list[dict[str, Any]] = []
+    rank0_target: str | None = None
+    rank0_selection: dict[str, Any] | None = None
+    rank0_count = 0
+    for hypothesis in hypotheses:
+        rank = int(hypothesis["rank"])
+        target = str(hypothesis.get("text") or "")
+        selection = evaluate_tc_big_angular_minute_candidate(source, target)
+        evaluated.append(
+            {
+                "rank": rank,
+                "target_text": target,
+                "score": hypothesis.get("score"),
+                "accepted": selection["accepted"],
+                "selection": selection,
+                "selection_authorized": rank == 0,
+            }
+        )
+        if rank == 0:
+            rank0_count += 1
+            rank0_target = target
+            rank0_selection = selection
+    if rank0_count != 1 or rank0_target is None or rank0_selection is None:
+        raise StageExecutionError(
+            f"TC-big angular-minute rank-0 cardinality drift: {rank0_count}"
+        )
+    if rank0_selection["accepted"] is not True:
+        return evaluated, None, None
+    return evaluated, rank0_target, rank0_selection
+
+
 def _safety_flags() -> dict[str, bool]:
     return {
         "source_bytes_rewritten": False,
@@ -186,6 +217,7 @@ def _safety_flags() -> dict[str, bool]:
         "placeholders": False,
         "post_translation_literal_injection": False,
         "corpus_specific_target_patches": False,
+        "automatic_n_best_cherry_picking": False,
     }
 
 
@@ -210,7 +242,10 @@ def _copy_base_row(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _eligible_rows(
-    *, content: str, base_rows: list[dict[str, Any]], context_rows: list[dict[str, Any]]
+    *,
+    content: str,
+    base_rows: list[dict[str, Any]],
+    context_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     by_sequence = {int(row["sequence_number"]): row for row in context_rows}
     attempts: list[dict[str, Any]] = []
@@ -227,7 +262,9 @@ def _eligible_rows(
             except KeyError:
                 source_rows = []
             if source_rows:
-                context_source = "".join(str(item.get("source_text") or "") for item in source_rows)
+                context_source = "".join(
+                    str(item.get("source_text") or "") for item in source_rows
+                )
                 start = int(source_rows[0]["source_start"])
                 end = int(source_rows[-1]["source_end"])
                 if context_source != content[start:end]:
@@ -303,11 +340,15 @@ def run_stage12(
             "tc_big_angular_minute_rescue_phase is internal and may not be overridden"
         )
 
-    effective["enable_tc_big_angular_minute_rescue"] = True
-    effective["tc_big_angular_minute_rescue_contract"] = TC_BIG_ANGULAR_MINUTE_RESCUE_CONTRACT
-    effective["tc_big_angular_minute_selector_contract"] = TC_BIG_ANGULAR_MINUTE_SELECTOR_CONTRACT
-    effective["tc_big_angular_minute_trigger_contract"] = TC_BIG_ANGULAR_MINUTE_TRIGGER_CONTRACT
-    effective["tc_big_angular_minute_rescue_phase"] = TC_BIG_ANGULAR_MINUTE_SELECTED_PHASE
+    effective.update(
+        {
+            "enable_tc_big_angular_minute_rescue": True,
+            "tc_big_angular_minute_rescue_contract": TC_BIG_ANGULAR_MINUTE_RESCUE_CONTRACT,
+            "tc_big_angular_minute_selector_contract": TC_BIG_ANGULAR_MINUTE_SELECTOR_CONTRACT,
+            "tc_big_angular_minute_trigger_contract": TC_BIG_ANGULAR_MINUTE_TRIGGER_CONTRACT,
+            "tc_big_angular_minute_rescue_phase": TC_BIG_ANGULAR_MINUTE_SELECTED_PHASE,
+        }
+    )
 
     base_output = run_base_stage12(
         database,
@@ -318,8 +359,12 @@ def run_stage12(
     base_run_id = int(base_output["translation_run_id"])
     with connect(database, readonly=True) as connection:
         base_run = get_run(connection, base_run_id)
-        base_rows = get_run_items(connection, base_run_id, kind="translation_segment")
-        context_rows = get_run_items(connection, int(context_run_id), kind="context_sentence")
+        base_rows = get_run_items(
+            connection, base_run_id, kind="translation_segment"
+        )
+        context_rows = get_run_items(
+            connection, int(context_run_id), kind="context_sentence"
+        )
         stored_output = dict(base_run.get("output") or {})
         document = get_document(connection, int(stored_output["document_version_id"]))
 
@@ -369,34 +414,14 @@ def run_stage12(
         rejected: list[dict[str, Any]] = []
         for attempt, hypotheses in zip(attempts, generated, strict=True):
             row = attempt["row"]
-            evaluated: list[dict[str, Any]] = []
-            selected_rank: int | None = None
-            selected_target: str | None = None
-            selected_selection: dict[str, Any] | None = None
-            for hypothesis in hypotheses:
-                rank = int(hypothesis["rank"])
-                target = str(hypothesis.get("text") or "")
-                selection = evaluate_tc_big_angular_minute_candidate(
-                    str(row["source_text"]), target
-                )
-                evaluated.append(
-                    {
-                        "rank": rank,
-                        "target_text": target,
-                        "score": hypothesis.get("score"),
-                        "accepted": selection["accepted"],
-                        "selection": selection,
-                    }
-                )
-                if selected_rank is None and selection["accepted"] is True:
-                    selected_rank = rank
-                    selected_target = target
-                    selected_selection = selection
-            if selected_rank is None or selected_target is None or selected_selection is None:
+            evaluated, selected_target, selected_selection = _evaluate_rank0_hypotheses(
+                str(row["source_text"]), hypotheses
+            )
+            if selected_target is None or selected_selection is None:
                 rejected.append(
                     {
                         "source_start": int(row["source_start"]),
-                        "reason": "selector_rejected",
+                        "reason": "rank0_selector_rejected",
                         "evaluated_hypotheses": evaluated,
                     }
                 )
@@ -404,7 +429,7 @@ def run_stage12(
 
             payload = dict(row.get("payload") or {})
             payload["hypotheses"] = hypotheses
-            payload["selected_rank"] = selected_rank
+            payload["selected_rank"] = 0
             payload["tc_big_angular_minute_rescue"] = {
                 "contract": TC_BIG_ANGULAR_MINUTE_RESCUE_CONTRACT,
                 "selector_contract": TC_BIG_ANGULAR_MINUTE_SELECTOR_CONTRACT,
@@ -415,17 +440,19 @@ def run_stage12(
                 "base_translation_run_id": base_run_id,
                 "base_translation_segment_id": int(row["id"]),
                 "raw_model_selected": True,
+                "raw_model_selected_rank": 0,
                 "generation": {
                     "beam_size": BEAM_SIZE,
                     "num_hypotheses": NUM_HYPOTHESES,
                     "max_decoding_length": MAX_DECODING_LENGTH,
+                    "selection_authorized_ranks": [0],
                 },
                 **_safety_flags(),
             }
             accepted[int(row["id"])] = {
                 "source_start": int(row["source_start"]),
                 "target_text": selected_target,
-                "selected_rank": selected_rank,
+                "selected_rank": 0,
                 "payload": payload,
             }
 
