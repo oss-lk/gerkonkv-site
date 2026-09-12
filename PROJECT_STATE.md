@@ -5,7 +5,7 @@
 ## Current state
 
 - Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- L3/engineering state incorporated through `bb63b48894555ca252cb52587b3dbd722ef23c4c` (`Run rank0 clean returned-family geometry DOE`); mandatory L2 synchronization is incorporated through memory commit `6f2247d2aca707ad278c37499299b6b55b2d6d66`.
+- L3/engineering state incorporated through `001ba055f47f059529aa4b876db8d5308ae957d7` (`Run illustration structural separator DOE`).
 - Authoritative Product contract: `rocketdict/PRODUCT_TARGET.md`. Release still requires **0 unresolved numeric/symbol, punctuation and length hard failures** on the complete 90k+ corpus, then learner/export coverage and Windows clean-install validation.
 - Historical run23 remains immutable research evidence only; it is not legal promotion lineage because historical rank3/rank2 automatic beam selections were proven.
 - Authenticated rank0-clean run41 is the **only forward promotion parent**.
@@ -16,7 +16,7 @@ Follow `AGENTS.md`: compare current HEAD with the checkpoint above, then route t
 
 ## Canonical run41 baseline
 
-Full Project Gutenberg *Opticks* source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; `586543` chars.
+Full Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; `586543` chars.
 
 Rank0-clean replay workflow `34695164876`, artifact `10297359600`, final run `41`:
 
@@ -32,18 +32,41 @@ Persisted rescue selection is unique raw rank0 only; no source rewriting, target
 
 ## Returned-family DOE
 
-Workflow `34697653680` succeeded on exact run41 at engineering HEAD `bb63b48894555ca252cb52587b3dbd722ef23c4c`. Artifact `10298988451`, digest `sha256:b3a499d41da72d1039a943d55005ca79b7237b620a56f7f9a257ddf521b5ff09`; evidence SHA `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7`. The DOE was read-only, source-byte-exact and raw-rank0-only.
+Workflow `34697653680`, artifact `10298988451`, evidence SHA `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7` established:
 
-Findings:
+- illustration seq `424/514`: OPUS rank0 on exact `[Illustration: FIG. N.]` + TC-big rank0 on exact `_Illustration._` passes mechanical gates, but the first aggregation incorrectly dropped source-owned `\n\n`; that aggregate is rejected;
+- short-DMS seq `638`: tested exact-source/raw-rank0 whole/split geometries are exhausted and inadmissible;
+- historical illustration canonicalization/beam experiments are diagnostic only because they rewrote model input and/or selected rank>0.
 
-- illustration seq `424/514`: OPUS rank0 on exact `[Illustration: FIG. N.]` + TC-big rank0 on exact `_Illustration._` passes current mechanical gates, but the tested aggregation **drops the source-owned `\n\n` boundary**, yielding `[Иллюстрация: FIG. N.]_Иллюстрация._`. This is not promotable as tested.
-- short-DMS seq `638`: no tested exact-source/raw-rank0 whole-row or current split geometry passes. Do not repeat the same lead/measurement or degrees/prime formulations without materially new evidence.
-- historical illustration word/canonicalization experiments are diagnostics only because they rewrote model input and/or selected non-rank0 beams.
+## Illustration structural-separator DOE
 
-## Durable blockers / next actions
+Workflow `34698906048` succeeded on exact run41 at engineering HEAD `001ba055f47f059529aa4b876db8d5308ae957d7`.
 
-1. Before modifying illustration translation, inspect `PRODUCT_TARGET.md`, Stage12/source segmentation and accepted composition wrappers to determine whether preserving an exact **source-owned separator** between independently translated chunks is legitimate structural composition or prohibited post-translation literal injection.
-2. If source-owned separator passthrough is already authorized by existing contracts/precedent, run a read-only separator-preserving illustration DOE from exact run41. Do **not** implement a wrapper first.
-3. If that DOE passes hard gates plus semantic/boundary review, implement a generic source-defined default-OFF rank0-only wrapper and replay full compose+census from run41.
-4. If separator passthrough is not authorized or the DOE fails, close this illustration route; short-DMS current geometries are already exhausted. Advance to the next run41 residual cluster.
+- artifact `10299487345`;
+- artifact digest `sha256:87c38ebc60cea7b243e36e580f8908bd90f9f975186a96cc7342344528ce87de`;
+- schema `rocketdict-full-opticks-illustration-structural-separator-doe/1`;
+- evidence SHA-256 `0af3deb591aee8da0dd11ba7a59aeab64c65d2d2327e923ebbeb64b9b077e3ee`;
+- exact run41 DB authenticated and unchanged; source coverage byte-exact; source plan created before MT; raw rank0 only;
+- `source_owned_structural_passthrough=true`; all unsafe flags remain false, including `post_translation_literal_injection=false` and both n-best flags false;
+- 8 candidates tested; exactly two pass maintained mechanical gates:
+  - `illustration:72401:planned-separator:opus+tc_big`
+  - `illustration:90105:planned-separator:opus+tc_big`.
+
+The passing geometry is source-defined before MT:
+
+1. exact label `[Illustration: FIG. N.]` → OPUS raw rank0;
+2. exact source-owned blank-line separator `\n\n` is structural passthrough;
+3. exact suffix `_Illustration._` → TC-big raw rank0;
+4. exact trailing source whitespace is structural passthrough.
+
+Representative aggregate: `[Иллюстрация: FIG. 21.]\n\n_Иллюстрация._ `, with square delimiters, emphasis, punctuation, numeric identity and source structural boundary all preserved.
+
+This DOE resolves the **mechanical geometry** question. It does not by itself authorize promotion: implementation still requires confirming that existing accepted Product composition precedent treats pre-MT-planned source-owned structural bytes as legitimate passthrough rather than target injection.
+
+## Active next actions
+
+1. Inspect the accepted `rocketdict-stage12-ascii-table-logical-rank0/1` (and relevant Stage12 composition code/tests) to establish the structural-passthrough precedent from L3, not from the DOE's self-description.
+2. If that precedent confirms pre-MT source-owned structural passthrough is legal, implement a generic source-defined, default-OFF illustration structural-separator wrapper using only OPUS rank0 + TC-big rank0 and exact source-owned separator/trailing bytes; add fail-closed unit/regression tests.
+3. Replay the wrapper from exact run41 and run an independent residual census. Expected arithmetic improvement if and only if the two illustration failures disappear without regressions is 18 numeric / 14 punctuation / 0 length, 31 unique; do not accept this expectation without full evidence.
+4. If full compose/census succeeds, make the new run the only forward parent and update all mandatory memory with exact identities. If the precedent is incompatible or replay regresses, reject the route and move to the next run41 residual family.
 5. Continue to zero hard failures, then complete learner/export and Windows release validation.
