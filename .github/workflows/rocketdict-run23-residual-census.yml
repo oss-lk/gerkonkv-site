@@ -54,7 +54,7 @@ jobs:
           UPSTREAM_DB="work/base/full-opticks-emphasized-modifier-boundary-rescue/rocketdict.sqlite"
           test -s "$UPSTREAM_EVIDENCE"
           test -s "$UPSTREAM_DB"
-          DB_SHA="$(python - "$UPSTREAM_EVIDENCE" <<'PY'
+          read -r DB_SHA OUTPUT_SHA < <(python - "$UPSTREAM_EVIDENCE" <<'PY'
           import hashlib, json, os, re, sys
           from pathlib import Path
 
@@ -68,6 +68,8 @@ jobs:
               raise SystemExit('upstream run23 segment-count drift')
           if evidence.get('final_hard_gate_counts') != {'numeric_symbol': 17, 'punctuation': 14, 'length': 0, 'unique': 30}:
               raise SystemExit(f"upstream run23 hard-gate drift: {evidence.get('final_hard_gate_counts')!r}")
+          if evidence.get('source_text_sha256') != '436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a':
+              raise SystemExit('upstream run23 source identity drift')
           if evidence.get('source_coverage_byte_exact') is not True:
               raise SystemExit('upstream run23 source coverage drift')
           if evidence.get('database_integrity_check') != 'ok' or evidence.get('foreign_key_violation_count') != 0:
@@ -84,12 +86,16 @@ jobs:
           if recorded != pinned or actual != pinned:
               raise SystemExit(f'upstream run23 canonical evidence SHA drift: recorded={recorded} actual={actual}')
           database_sha = str(evidence.get('final_database_sha256') or '')
+          output_sha = str(evidence.get('final_translation_output_sha256') or '')
           if re.fullmatch(r'[0-9a-f]{64}', database_sha) is None:
               raise SystemExit('upstream run23 database SHA missing/invalid')
-          print(database_sha)
+          if re.fullmatch(r'[0-9a-f]{64}', output_sha) is None:
+              raise SystemExit('upstream run23 output SHA missing/invalid')
+          print(database_sha, output_sha)
           PY
-          )"
+          )
           echo "ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256=$DB_SHA" >> "$GITHUB_ENV"
+          echo "ROCKETDICT_RESIDUAL_EXPECTED_OUTPUT_SHA256=$OUTPUT_SHA" >> "$GITHUB_ENV"
           cp "$UPSTREAM_EVIDENCE" "$ROCKETDICT_RESIDUAL_CENSUS_ROOT/upstream-run23-evidence.json"
           cp "$UPSTREAM_DB" "$ROCKETDICT_RESIDUAL_CENSUS_DB"
           echo "$DB_SHA  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
@@ -109,7 +115,7 @@ jobs:
           e=json.loads((root/'translation-residual-census.json').read_text(encoding='utf-8'))
           if e['schema'] != 'rocketdict-translation-residual-census/1': raise SystemExit('schema drift')
           if e['translation_run_id'] != 23: raise SystemExit('run-id drift')
-          if e['translation_output_sha256'] != '976a7a392752990454bd93a156e8d6ddc2d99c596928979e0093441630928b97': raise SystemExit('run23 output SHA drift')
+          if e['translation_output_sha256'] != os.environ['ROCKETDICT_RESIDUAL_EXPECTED_OUTPUT_SHA256']: raise SystemExit('run23 output SHA drift')
           if e['database_sha256'] != os.environ['ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256']: raise SystemExit('database SHA drift')
           if e['source_text_sha256'] != '436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a': raise SystemExit('source SHA drift')
           if e['hard_gate_counts'] != {'numeric_symbol':17,'punctuation':14,'length':0,'unique':30}: raise SystemExit(f"count drift: {e['hard_gate_counts']!r}")
