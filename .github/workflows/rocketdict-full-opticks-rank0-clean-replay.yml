@@ -125,7 +125,7 @@ jobs:
           rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
           rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/rank0-clean-tc-big-asset-build.json
 
-      - name: Run exact post-run8 rank0-clean full Opticks replay
+      - name: Run exact rank0-clean full Opticks replay
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_rank0_clean_replay.py
 
       - name: Verify persisted rank0-clean replay and publish census inputs
@@ -137,14 +137,19 @@ jobs:
           from pathlib import Path
           root = Path(os.environ['ROCKETDICT_RANK0_CLEAN_REPLAY_ROOT'])
           e = json.loads((root/'full-opticks-rank0-clean-replay.json').read_text(encoding='utf-8'))
-          if e['schema'] != 'rocketdict-full-opticks-rank0-clean-lineage-replay/1': raise SystemExit('schema drift')
-          if e['historical_translation_run_id'] != 23 or e['clean_start_run_id'] != 8: raise SystemExit('historical/clean-start lineage drift')
-          if e['clean_start_reused_exactly'] is not True: raise SystemExit('clean-start cache was not reused exactly')
-          if e['first_new_run_id'] != 24 or e['final_translation_run_id'] != 38 or e['new_run_count'] != 15: raise SystemExit('new lineage cardinality drift')
-          if len(e['new_lineage']) != 15: raise SystemExit('lineage record cardinality drift')
-          expected_base = 8
+          if e['schema'] != 'rocketdict-full-opticks-rank0-clean-lineage-replay/2': raise SystemExit('schema drift')
+          if e['historical_translation_run_id'] != 23 or e['replay_root_run_id'] != 4 or e['clean_boundary_run_id'] != 8: raise SystemExit('historical/replay-root/boundary lineage drift')
+          if e['clean_boundary_translation_reproduced_exactly'] is not True: raise SystemExit('clean boundary translation was not reproduced exactly')
+          expected_equivalence = [(6,24),(7,25),(8,26)]
+          actual_equivalence = [(r['historical_run_id'],r['replay_run_id']) for r in e['clean_boundary_equivalence']]
+          if actual_equivalence != expected_equivalence: raise SystemExit(f'boundary equivalence drift: {actual_equivalence!r}')
+          if not all(r['source_target_geometry_identical'] is True for r in e['clean_boundary_equivalence']): raise SystemExit('boundary translation identity drift')
+          if e['clean_boundary_recomputed_run_id'] != 26 or e['first_post_boundary_run_id'] != 27: raise SystemExit('effective clean-boundary run drift')
+          if e['first_new_run_id'] != 24 or e['final_translation_run_id'] != 41 or e['new_run_count'] != 18: raise SystemExit('new lineage cardinality drift')
+          if len(e['new_lineage']) != 18: raise SystemExit('lineage record cardinality drift')
+          expected_base = 4
           for record in e['new_lineage']:
-              if record['base_translation_run_id'] != expected_base: raise SystemExit('lineage base drift')
+              if record['base_translation_run_id'] != expected_base: raise SystemExit(f"lineage base drift at {record['run_id']}: {record['base_translation_run_id']} != {expected_base}")
               expected_base = record['run_id']
               for ranks in record['selected_rank_outputs'].values():
                   if any(rank != 0 for rank in ranks): raise SystemExit('non-rank0 selection persisted')
@@ -166,7 +171,7 @@ jobs:
               f.write(f"ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256={e['final_database_sha256']}\n")
               f.write(f"ROCKETDICT_CLEAN_EXPECTED_OUTPUT_SHA256={e['final_translation_output_sha256']}\n")
               f.write(f"ROCKETDICT_CLEAN_EXPECTED_COUNTS={json.dumps(e['final_hard_gate_counts'],separators=(',',':'))}\n")
-          print(json.dumps({'run':e['final_translation_run_id'],'counts':e['final_hard_gate_counts'],'segments':e['final_segment_count'],'changed_rank_gt0_spans':[k for k,v in e['historical_rank_gt0_span_audit'].items() if v['target_changed']],'database_sha256':e['final_database_sha256'],'evidence_sha256':e['evidence_sha256']}, indent=2, ensure_ascii=False))
+          print(json.dumps({'run':e['final_translation_run_id'],'counts':e['final_hard_gate_counts'],'segments':e['final_segment_count'],'boundary_equivalence':e['clean_boundary_equivalence'],'changed_rank_gt0_spans':[k for k,v in e['historical_rank_gt0_span_audit'].items() if v['target_changed']],'database_sha256':e['final_database_sha256'],'evidence_sha256':e['evidence_sha256']}, indent=2, ensure_ascii=False))
           PY
 
       - name: Run residual census over rank0-clean final run
@@ -178,7 +183,7 @@ jobs:
           set -euo pipefail
           echo "$ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
           python - <<'PY'
-          import json, os
+          import hashlib, json, os
           from pathlib import Path
           root=Path(os.environ['ROCKETDICT_RESIDUAL_CENSUS_ROOT'])
           e=json.loads((root/'translation-residual-census.json').read_text(encoding='utf-8'))
@@ -187,6 +192,9 @@ jobs:
           if e['translation_output_sha256'] != os.environ['ROCKETDICT_CLEAN_EXPECTED_OUTPUT_SHA256']: raise SystemExit('clean output SHA mismatch')
           if e['database_sha256'] != os.environ['ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256']: raise SystemExit('clean database SHA mismatch')
           if e['source_coverage_byte_exact'] is not True or e['database_unchanged'] is not True: raise SystemExit('census immutability drift')
+          canonical=dict(e); recorded=canonical.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if actual != recorded: raise SystemExit('clean census canonical evidence SHA drift')
           print(json.dumps({'counts':e['hard_gate_counts'],'residual_sequences':e['residual_sequences'],'numeric_classes':e['numeric_defect_class_counts'],'source_features':e['source_feature_counts'],'evidence_sha256':e['evidence_sha256']}, indent=2, ensure_ascii=False))
           PY
 
