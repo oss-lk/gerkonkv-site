@@ -1,0 +1,178 @@
+name: RocketDict Full Opticks TC-big Fraction Context Product Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/translation_tc_big_fraction_context_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_translation_tc_big_fraction_context_rescue_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_fraction_context_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-fraction-context-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  full-opticks-tc-big-fraction-context-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASE_RUN_ID: '34678965465'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-parenthetical-whole-context-rescue
+      BASE_DB_SHA256: 879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT: ${{ github.workspace }}/work/full-opticks-tc-big-fraction-context-rescue
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install builder and test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core \
+            'pytest>=8,<9' 'ctranslate2==4.8.2' 'sentencepiece==0.2.1' 'transformers==4.56.2' \
+            'sacremoses==0.1.1' 'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Run fraction-context wrapper unit regressions
+        run: python -m pytest -q rocketdict-product-core/tests/test_translation_tc_big_fraction_context_rescue_stage.py
+
+      - name: Download immutable run20 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+
+      - name: Stage exact run20 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT"
+          cp work/base/full-opticks-parenthetical-whole-context-rescue/rocketdict.sqlite "$ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/fraction-context-asset-build.json
+
+      - name: Build torch-free product-audit runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/fraction-context-runtime-venv
+          work/fraction-context-runtime-venv/bin/python -m pip install --upgrade pip
+          work/fraction-context-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench
+          work/fraction-context-runtime-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in fraction-context inference runtime')
+          PY
+
+      - name: Run exact run20 fraction-context rescue and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/fraction-context-runtime-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_tc_big_fraction_context_product_rescue.py
+
+      - name: Verify persisted evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT'])
+          evidence_path = root/'full-opticks-tc-big-fraction-context-rescue.json'
+          summary_path = root/'summary.json'
+          db_path = root/'rocketdict.sqlite'
+          out_path = root/'full-opticks-tc-big-fraction-context-rescue.txt'
+          for path in (evidence_path, summary_path, db_path, out_path):
+              if not path.is_file() or path.stat().st_size <= 0:
+                  raise SystemExit(f'missing persisted artifact: {path}')
+          e = json.loads(evidence_path.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-tc-big-fraction-context-rescue-optin/1': raise SystemExit('schema drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':20,'punctuation':14,'length':0,'unique':33}: raise SystemExit('base count drift')
+          if e['final_hard_gate_counts'] != {'numeric_symbol':19,'punctuation':14,'length':0,'unique':32}: raise SystemExit(f"final count drift: {e['final_hard_gate_counts']!r}")
+          if e['context_sequence'] != 1460 or e['member_sequences'] != [1570,1571]: raise SystemExit('context/member drift')
+          if e['final_segment_count'] != 3340 or e['untouched_row_count'] != 3339: raise SystemExit('segment/untouched drift')
+          if e['untouched_source_target_exact'] is not True or e['source_coverage_byte_exact'] is not True: raise SystemExit('coverage proof missing')
+          if e['replacement_target'] != 'Это стекло, положенное на то же самое простое стекло, диаметр пятого из темных колец, когда черное пятно в их центре появляется явно, не нажимая на очки, было по мерке компасов на верхних частях стекла 121/600 дюйма, и, следовательно, между стеклами было 1222/6000: ибо верхнее стекло было толщиной 1/8 дюйма, и мой глаз был удален от него на 8 дюймов.': raise SystemExit('raw rank0 target drift')
+          if e['semantic_review']['all_diagnostic_anchors'] is not True or e['semantic_review']['candidate_split_join_artifact_absent'] is not True: raise SystemExit('semantic diagnostics drift')
+          if e['semantic_review']['product_default_promotion_allowed'] is not False or e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('unsafe promotion flags')
+          if e['database_integrity_check'] != 'ok' or e['foreign_key_violation_count'] != 0: raise SystemExit('database integrity drift')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag drift: {flag}')
+          def sha(path):
+              h=hashlib.sha256(); h.update(path.read_bytes()); return h.hexdigest()
+          if sha(db_path) != e['final_database_sha256'] or sha(out_path) != e['final_text_sha256']: raise SystemExit('persisted SHA drift')
+          canonical = dict(e); expected = canonical.pop('evidence_sha256')
+          actual = hashlib.sha256(json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(',',':'), allow_nan=False).encode('utf-8')).hexdigest()
+          if actual != expected: raise SystemExit('canonical evidence SHA drift')
+          print(json.dumps({'run': e['final_translation_run_id'], 'counts': e['final_hard_gate_counts'], 'database_sha256': e['final_database_sha256'], 'evidence_sha256': e['evidence_sha256']}, indent=2))
+          PY
+
+      - name: Record runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/fraction-context-runtime
+          python -VV > work/fraction-context-runtime/python.txt || true
+          work/fraction-context-runtime-venv/bin/python -m pip freeze | sort > work/fraction-context-runtime/pip-freeze.txt || true
+          if [ -s "$ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT/full-opticks-tc-big-fraction-context-rescue.json" ]; then
+            sha256sum "$ROCKETDICT_TC_BIG_FRACTION_CONTEXT_PRODUCT_ROOT/full-opticks-tc-big-fraction-context-rescue.json" > work/fraction-context-runtime/evidence-file.sha256
+          fi
+
+      - name: Upload persisted fraction-context evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-fraction-context-rescue
+          path: |
+            work/fraction-context-asset-build.json
+            work/full-opticks-tc-big-fraction-context-rescue/**
+            work/fraction-context-runtime/**
+          if-no-files-found: error
+          retention-days: 90
