@@ -5,12 +5,12 @@
 ## Current state
 
 - Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- Engineering/L3 checkpoint incorporated here: `1152705abfbce59b70dc84cd3968a019318d5dd7` (`Refresh translation-quality memory through run23`), which includes verified product/research HEAD `56a76bead0f6df0226f82496ef96c4a796d60d9b` plus the L2 refresh.
+- Engineering/L3 checkpoint incorporated here: `fe36ad8cf865ef45cba1a0eecd43b970c8a22858` (`Derive run23 census output identity from evidence`).
 - Maintained Product Core + Workbench remain the forward implementation. Authoritative contract: `rocketdict/PRODUCT_TARGET.md`.
 - Final approved 90k+ evidence still requires **0 unresolved numeric/symbol, punctuation and length hard failures**, semantic acceptance and the complete learner/export path.
 - Current best persisted **research** translation basis is run `23`: **17 numeric/symbol / 14 punctuation / 0 length, 30 unique hard-failing sequences** over `3337` rows.
 - Product/default Stage10 remains V1. Broad Stage10-v2 and all current rescue layers remain explicit research evidence only, default OFF/not public-wired/non-promoting.
-- The immediate blocker is not translation inference: the run23 residual-census workflow failed before analysis because it carried an incorrect duplicated SQLite SHA. The full run23 replay itself is green and its persisted database/evidence identities are verified.
+- The run23 residual census is now a successful read-only persisted audit. The earlier failure was an orchestration/provenance defect caused by independently duplicated derived hashes, not a translation regression.
 
 ## Recovery protocol
 
@@ -32,20 +32,24 @@ Current persisted research basis, run `23`:
 - workflow run `34688874921` (`RocketDict Full Opticks Emphasized Modifier Boundary Rescue`), success;
 - artifact `rocketdict-full-opticks-emphasized-modifier-boundary-rescue`, artifact ID `10296696335`, ZIP SHA-256 `0df0625406349c4569df5a08f7cbd9952fe881b9c0a659e98ce643e8b4cca997`;
 - SQLite SHA-256 `75ec63ea1b8b905af17a757a2a0dcd2697718945a6e9d354d494bb05d2364ca8`;
+- translation output SHA-256 `976a7a39928cceda2459ab1b5d04f6996a4b2443efd31cbac6456c2c2e948493`;
 - final text SHA-256 `ebb85aa3646b24c210eb6448e5938661550acaec851d83f9882889a45d77d0b6`;
-- evidence SHA-256 `0cdb6154289fc176cc75d1baad5a8607222bb92f8340295f5558ab46689ed40c`;
+- canonical run23 evidence SHA-256 `0cdb6154289fc176cc75d1baad5a8607222bb92f8340295f5558ab46689ed40c`;
 - exact predecessor run22: **18/14/0,31**, `3338` rows; run23: **17/14/0,30**, `3337` rows;
 - attempted emphasized-modifier groups `[[2496,2497],[2633,2634]]`; accepted `[[2496,2497]]`; rejected `[[2633,2634]]`;
 - `3336` untouched rows remain source/target exact; source reconstruction is byte-exact; SQLite integrity `ok`; FK violations `0`;
 - focused composed regressions: `21 passed`; replay runtime verified torch-free;
 - `promotion_allowed=false`; `automatic_product_default_allowed=false`; unsafe rewrite/injection/cherry-pick/evaluator-weakening flags all false.
 
-## Current verification and blocker
+## Verified run23 residual census
 
-- Full run23 replay `34688874921` is green and persisted the identities above.
-- Run23 residual-census workflow `34689198589` failed at the pre-census database verification step and therefore produced **no residual census**. It expected the incorrect duplicated digest `75ec63eadd2a48d9fd8d68dde4ef16debf396aa8188324397d2a3f0b299b8495`; the persisted run23 evidence and actual database identify `75ec63ea1b8b905af17a757a2a0dcd2697718945a6e9d354d494bb05d2364ca8`.
-- Treat this as an orchestration/provenance defect. Repair the census to authenticate the pinned upstream run23 evidence contract and derive/check the database identity from that evidence rather than maintaining an independent hand-copied digest.
-- Do not infer the makeup of the remaining 30 residual sequences from stale run20/run22 censuses; rerun the read-only census first.
+- Workflow run `34690365432` succeeded against the exact persisted run23 artifact after authenticating its canonical evidence instead of trusting independently copied derived hashes.
+- Census artifact ID `10296887793`; artifact ZIP SHA-256 `8cc7ea22a12f27ee0105767bfc7b13c39a9493e945e6d32508b847151c986393`.
+- Census evidence SHA-256 `55848393832fd777d7ab23f03f36d8fb2eb1031748faa0d2a096a35ea781ed58`.
+- Database remained byte-identical and source coverage remained byte-exact.
+- Residual sequences: `[325,641,642,644,646,650,743,750,751,752,1499,1579,1755,1788,2110,2290,2346,2357,2375,2591,2721,2741,2889,2997,3000,3007,3011,3083,3211,3305]`.
+- Numeric defect classes: `critical_symbol=1`, `duplicate_required=1`, `missing_literal=2`, `missing_literal+unlicensed_addition=4`, `prime_notation=4`, `prime_notation+missing_literal+unlicensed_addition=4`, `unlicensed_addition=1`.
+- Source features among residuals include `numeric_prime_notation=10`, `round_parenthesis=10`, `fraction=5`, `big_integer=4`, `square_bracket=3`, `angle_word=3`, `apostrophe_decimal=2`, `ascii_x=1`, `formula_suffix=1`.
 
 ## Durable guardrails
 
@@ -54,11 +58,13 @@ Current persisted research basis, run `23`:
 - No target repair, literal injection, source rewriting, placeholders, corpus-specific target patches, automatic n-best cherry-picking or evaluator weakening.
 - Punctuation/numeric work remains defect-family-specific; a persisted improvement never authorizes a Product default by itself.
 - New selectors must be source-defined and fail closed; raw-model output remains immutable selection evidence.
+- Large-integer source canonicalization/n-best feasibility previously rescued **0** baseline hard failures; do not repeat that direction without materially new evidence.
+- Nonliteral numeric n-best can mechanically rescue isolated rows only via automatic beam selection; that path remains disallowed as n-best cherry-picking.
 - Rejected run23 group `[2633,2634]` remains unchanged unless materially new evidence/geometry is tested.
 
 ## Active next actions
 
-1. Repair the run23 residual-census provenance gate without weakening evidence: pin/authenticate upstream run23 evidence, then derive and verify the SQLite identity from it.
-2. Rerun the read-only census against exact run23 and require its database-unchanged/source-coverage/canonical-evidence invariants.
-3. Use the resulting **30-sequence** residual census to select a materially new source-defined hard-failure family; do not repeat exhausted generic whole-context, TC-big, prime/thousands or n-best ideas.
-4. Continue research replay + semantic/mechanical verification until all hard failures are eliminated, then resume downstream heavy learner/export and Windows release validation.
+1. Investigate residual sequence `325` against the existing source-defined TC-big figure-reference rescue; determine from source/tests/CI why `[in _Fig._ 16.]` remains hard-failing while another figure-reference case succeeds.
+2. If L3 confirms the existing figure-reference stage exhausts whole-row candidates, test a materially new **source-defined split geometry** for the bracketed figure-reference prefix, using only unmodified raw rank0 MT outputs, exact source coverage and fail-closed acceptance.
+3. Replay any accepted rescue over exact run23, require strict hard-gate improvement with no new failures plus semantic review, then persist immutable evidence as the next research run.
+4. Continue through the residual census until all hard failures are eliminated, then resume downstream heavy learner/export and Windows release validation.
