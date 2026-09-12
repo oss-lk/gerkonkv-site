@@ -33,10 +33,10 @@ jobs:
           PY
           rm .github/workflows/rocketdict-one-shot-bind-numeric-v6.yml
           git diff --check
-          git diff --exit-code -- rocketdict-product-core/src/rocketdict/api/registry.py >/dev/null && {
+          if git diff --quiet -- rocketdict-product-core/src/rocketdict/api/registry.py; then
             echo 'registry did not change' >&2
             exit 1
-          }
+          fi
       - name: Commit exact registry propagation
         shell: bash
         run: |
