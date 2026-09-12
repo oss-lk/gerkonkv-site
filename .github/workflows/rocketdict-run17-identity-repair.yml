@@ -1,0 +1,65 @@
+name: RocketDict Run17 Identity Repair
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-run17-identity-repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+
+      - name: Replace stale run17 artifact identities only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path('PROJECT_STATE.md'),
+              Path('docs/memory/TRANSLATION_QUALITY.md'),
+              Path('docs/memory/DECISIONS.md'),
+              Path('rocketdict-product-core/README.md'),
+          ]
+          replacements = {
+              'e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581': '339b71584f35f6981e1bcfa2dfcd391f98807d12f864ffae3070d6737356387d',
+              '5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd': 'f7c04209d9e8d7ffab673a2987b0024c334f24fee59736466597ea99125f7ff1',
+              '00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53': '2cbf20b39168003e494b2fb73c9b9baea427283def04a076a673e5023d7346a4',
+              'd52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057': 'a5d786f4d25ee35917014aae7e435ad1f311c1ffb80744a3a60cacd4c62d6843',
+          }
+
+          for path in paths:
+              text = path.read_text(encoding='utf-8')
+              for old, new in replacements.items():
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f'{path}: expected exactly one {old[:12]} occurrence, found {count}')
+                  text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git diff -- PROJECT_STATE.md docs/memory/TRANSLATION_QUALITY.md docs/memory/DECISIONS.md rocketdict-product-core/README.md
+
+      - name: Commit repair and remove one-shot workflow
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/rocketdict-run17-identity-repair.yml
+          git add PROJECT_STATE.md docs/memory/TRANSLATION_QUALITY.md docs/memory/DECISIONS.md rocketdict-product-core/README.md
+          git diff --cached --check
+          git commit -m "Correct run17 persisted artifact identities"
+          git push origin HEAD:chatgpt/product-core-forward
