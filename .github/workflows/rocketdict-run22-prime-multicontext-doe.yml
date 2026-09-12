@@ -1,0 +1,201 @@
+name: RocketDict Run22 Prime Multi-context DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_run22_prime_multicontext_doe.py'
+      - '.github/workflows/rocketdict-run22-prime-multicontext-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run22-prime-multicontext-doe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      BASE_RUN_ID: '34687351187'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-dense-fraction-composed-rescue
+      BASE_DB_SHA256: 5cc0bec1d8ab1c9b0eadb9441819d84676f005a5a3bbb3a068745338469b3206
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT: ${{ github.workspace }}/work/run22-prime-multicontext-doe
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install asset builders
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' \
+            'transformers==4.56.2' 'sacremoses==0.1.1' \
+            'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Download exact persisted run22 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+
+      - name: Stage and verify exact run22 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT"
+          cp work/base/full-opticks-dense-fraction-composed-rescue/rocketdict.sqlite "$ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and verify official OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+
+      - name: Build verified offline OPUS asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/prime-multicontext-opus-asset-build.json
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/prime-multicontext-tc-big-asset-build.json
+
+      - name: Build torch-free DOE runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/prime-multicontext-runtime-venv
+          work/prime-multicontext-runtime-venv/bin/python -m pip install --upgrade pip
+          work/prime-multicontext-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/prime-multicontext-runtime-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in prime multi-context inference runtime')
+          print('Torch-free OPUS/TC-big DOE runtime verified.')
+          PY
+
+      - name: Run exact read-only prime multi-context DOE
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/prime-multicontext-runtime-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_run22_prime_multicontext_doe.py
+
+      - name: Verify immutable DOE contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT/rocketdict.sqlite" | sha256sum -c -
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT'])
+          path = root/'run22-prime-multicontext-doe.json'
+          e = json.loads(path.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-run22-prime-multicontext-doe/1': raise SystemExit('schema drift')
+          if e['base_translation_run_id'] != 22: raise SystemExit('run-id drift')
+          if e['base_translation_output_sha256'] != '41cb94e6a2732aee597d8e630cc248487d6e0b7ce5fb9a794d01ecda7f2edb48': raise SystemExit('run22 output SHA drift')
+          expected = {
+              'angle_derivation_a':[590,591],
+              'angle_derivation_b':[593,594,595],
+              'telescope_arcseconds':[674,675,676],
+              'english_miles_boundary':[2496,2497],
+          }
+          if e['groups'] != expected or len(e['cases']) != 4: raise SystemExit('group cohort drift')
+          for case in e['cases']:
+              if len(case['opus']['hypotheses']) != 6 or len(case['tc_big']['hypotheses']) != 6:
+                  raise SystemExit(f"n-best cardinality drift: {case['name']}")
+          if e['database_unchanged'] is not True or e['source_coverage_byte_exact'] is not True: raise SystemExit('immutability drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False or e['n_best_cherry_picking'] is not False: raise SystemExit('unsafe promotion flag')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag drift: {flag}')
+          canonical=dict(e); expected_sha=canonical.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')).hexdigest()
+          if actual != expected_sha: raise SystemExit('canonical evidence SHA drift')
+          print(json.dumps({'rank0':e['rank0_mechanically_admissible'],'evidence_sha256':e['evidence_sha256']}, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Record runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/prime-multicontext-runtime
+          work/prime-multicontext-runtime-venv/bin/python -VV > work/prime-multicontext-runtime/python.txt || true
+          work/prime-multicontext-runtime-venv/bin/python -m pip freeze | sort > work/prime-multicontext-runtime/pip-freeze.txt || true
+          if [ -s "$ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT/run22-prime-multicontext-doe.json" ]; then
+            sha256sum "$ROCKETDICT_RUN22_PRIME_MULTICONTEXT_ROOT/run22-prime-multicontext-doe.json" > work/prime-multicontext-runtime/evidence-file.sha256
+          fi
+
+      - name: Upload prime multi-context DOE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run22-prime-multicontext-doe
+          path: |
+            work/prime-multicontext-opus-asset-build.json
+            work/prime-multicontext-tc-big-asset-build.json
+            work/run22-prime-multicontext-doe/*.json
+            work/prime-multicontext-runtime/**
+          if-no-files-found: error
+          retention-days: 90
