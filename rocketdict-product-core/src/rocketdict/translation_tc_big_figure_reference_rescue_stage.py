@@ -7,15 +7,18 @@ exactly cover its original Stage10 context, already fail a Product hard gate,
 and start with a Gutenberg reference of the form ``[in _Fig._ N.]`` whose
 leading reference shape is no longer preserved by the current target.
 
-Only unmodified raw hypotheses from the pinned TC-big runtime are considered.
-A selected candidate must pass all maintained strict mechanical checks,
-preserve Gutenberg emphasis, preserve a leading square-bracket reference with
-the same source-owned figure number and an emphasized translated label, and
-stay inside a conservative source-relative alphabetic-volume range.
+Only the unmodified raw rank-0 hypothesis from the pinned TC-big runtime may
+be selected.  Additional generated hypotheses are retained as diagnostic
+model evidence only and can never affect selection.  The rank-0 candidate
+must pass all maintained strict mechanical checks, preserve Gutenberg
+emphasis, preserve a leading square-bracket reference with the same
+source-owned figure number and an emphasized translated label, and stay
+inside a conservative source-relative alphabetic-volume range.
 
 This wrapper is disabled by default and composes above the TC-big footnote
 reference wrapper.  It performs no source/target rewriting, placeholder
-insertion, post-translation literal injection, or corpus-specific whitelisting.
+insertion, post-translation literal injection, corpus-specific whitelisting,
+or automatic n-best cherry-picking.
 """
 
 from pathlib import Path
@@ -29,10 +32,10 @@ from .stages import StageExecutionError, _complete, _fail, _start
 from .translation_rescue import evaluate_rescue_pair
 from .translation_tc_big_footnote_reference_rescue_stage import run_stage12 as run_base_stage12
 
-TC_BIG_FIGURE_RESCUE_CONTRACT = "rocketdict-stage12-tc-big-figure-reference-lead-rescue/1"
-TC_BIG_FIGURE_SELECTOR_CONTRACT = "rocketdict-stage12-tc-big-figure-reference-lead-selector/1"
+TC_BIG_FIGURE_RESCUE_CONTRACT = "rocketdict-stage12-tc-big-figure-reference-lead-rescue/2"
+TC_BIG_FIGURE_SELECTOR_CONTRACT = "rocketdict-stage12-tc-big-figure-reference-lead-selector/2"
 TC_BIG_FIGURE_TRIGGER_CONTRACT = "rocketdict-stage12-tc-big-figure-reference-lead-trigger/1"
-TC_BIG_FIGURE_SELECTED_PHASE = "tc-big-figure-reference-lead-selected-v1"
+TC_BIG_FIGURE_SELECTED_PHASE = "tc-big-figure-reference-lead-selected-v2"
 DEFAULT_ENABLED = False
 BEAM_SIZE = 6
 NUM_HYPOTHESES = 6
@@ -188,6 +191,48 @@ def evaluate_tc_big_figure_candidate(
     }
 
 
+def _evaluate_rank0_hypotheses(
+    source: str,
+    hypotheses: list[dict[str, Any]],
+    *,
+    figure_number: str,
+) -> tuple[list[dict[str, Any]], str | None, dict[str, Any] | None]:
+    """Evaluate every raw hypothesis for evidence, but select rank0 only."""
+    evaluated: list[dict[str, Any]] = []
+    rank0_target: str | None = None
+    rank0_selection: dict[str, Any] | None = None
+    rank0_count = 0
+    for hypothesis in hypotheses:
+        rank = int(hypothesis["rank"])
+        target = str(hypothesis.get("text") or "")
+        selection = evaluate_tc_big_figure_candidate(
+            source,
+            target,
+            figure_number=figure_number,
+        )
+        evaluated.append(
+            {
+                "rank": rank,
+                "target_text": target,
+                "score": hypothesis.get("score"),
+                "accepted": selection["accepted"],
+                "selection": selection,
+                "selection_authorized": rank == 0,
+            }
+        )
+        if rank == 0:
+            rank0_count += 1
+            rank0_target = target
+            rank0_selection = selection
+    if rank0_count != 1 or rank0_target is None or rank0_selection is None:
+        raise StageExecutionError(
+            f"TC-big figure-reference rank-0 cardinality drift: {rank0_count}"
+        )
+    if rank0_selection["accepted"] is not True:
+        return evaluated, None, None
+    return evaluated, rank0_target, rank0_selection
+
+
 def _safety_flags() -> dict[str, bool]:
     return {
         "source_bytes_rewritten": False,
@@ -195,6 +240,7 @@ def _safety_flags() -> dict[str, bool]:
         "placeholders": False,
         "post_translation_literal_injection": False,
         "corpus_specific_target_patches": False,
+        "automatic_n_best_cherry_picking": False,
     }
 
 
@@ -392,42 +438,23 @@ def run_stage12(
         for attempt, hypotheses in zip(attempts, generated, strict=True):
             row = attempt["row"]
             figure_number = str(attempt["trigger"]["source_figure_number"])
-            evaluated: list[dict[str, Any]] = []
-            selected_rank: int | None = None
-            selected_target: str | None = None
-            selected_selection: dict[str, Any] | None = None
-            for hypothesis in hypotheses:
-                rank = int(hypothesis["rank"])
-                target = str(hypothesis.get("text") or "")
-                selection = evaluate_tc_big_figure_candidate(
-                    str(row["source_text"]),
-                    target,
-                    figure_number=figure_number,
-                )
-                evaluated.append(
-                    {
-                        "rank": rank,
-                        "target_text": target,
-                        "score": hypothesis.get("score"),
-                        "accepted": selection["accepted"],
-                        "selection": selection,
-                    }
-                )
-                if selected_rank is None and selection["accepted"] is True:
-                    selected_rank = rank
-                    selected_target = target
-                    selected_selection = selection
-            if selected_rank is None or selected_target is None or selected_selection is None:
+            evaluated, selected_target, selected_selection = _evaluate_rank0_hypotheses(
+                str(row["source_text"]),
+                hypotheses,
+                figure_number=figure_number,
+            )
+            if selected_target is None or selected_selection is None:
                 rejected.append(
                     {
                         "source_start": int(row["source_start"]),
                         "source_figure_number": figure_number,
-                        "reason": "selector_rejected",
+                        "reason": "rank0_selector_rejected",
                         "evaluated_hypotheses": evaluated,
                     }
                 )
                 continue
 
+            selected_rank = 0
             payload = dict(row.get("payload") or {})
             payload["hypotheses"] = hypotheses
             payload["selected_rank"] = selected_rank
@@ -442,10 +469,12 @@ def run_stage12(
                 "base_translation_run_id": base_run_id,
                 "base_translation_segment_id": int(row["id"]),
                 "raw_model_selected": True,
+                "raw_model_selected_rank": 0,
                 "generation": {
                     "beam_size": BEAM_SIZE,
                     "num_hypotheses": NUM_HYPOTHESES,
                     "max_decoding_length": MAX_DECODING_LENGTH,
+                    "selection_authorized_ranks": [0],
                 },
                 **_safety_flags(),
             }
