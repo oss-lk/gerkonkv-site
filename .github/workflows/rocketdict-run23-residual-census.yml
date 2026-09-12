@@ -1,0 +1,93 @@
+name: RocketDict Run23 Residual Census
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/audit_translation_residual_census.py'
+      - '.github/workflows/rocketdict-run23-residual-census.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run23-residual-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_RUN_ID: '34688874921'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-emphasized-modifier-boundary-rescue
+      ROCKETDICT_RESIDUAL_CENSUS_ROOT: ${{ github.workspace }}/work/run23-residual-census
+      ROCKETDICT_RESIDUAL_CENSUS_DB: ${{ github.workspace }}/work/run23-residual-census/rocketdict.sqlite
+      ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID: '23'
+      ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256: 75ec63eadd2a48d9fd8d68dde4ef16debf396aa8188324397d2a3f0b299b8495
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install maintained audit runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+
+      - name: Download exact persisted run23 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+
+      - name: Stage and verify exact run23 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_RESIDUAL_CENSUS_ROOT"
+          cp work/base/full-opticks-emphasized-modifier-boundary-rescue/rocketdict.sqlite "$ROCKETDICT_RESIDUAL_CENSUS_DB"
+          echo "$ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
+
+      - name: Run read-only residual census
+        run: python -u rocketdict-workbench/tests/audit_translation_residual_census.py
+
+      - name: Verify run23 census invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_RESIDUAL_CENSUS_ROOT'])
+          e=json.loads((root/'translation-residual-census.json').read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-translation-residual-census/1': raise SystemExit('schema drift')
+          if e['translation_run_id'] != 23: raise SystemExit('run-id drift')
+          if e['translation_output_sha256'] != '976a7a392752990454bd93a156e8d6ddc2d99c596928979e0093441630928b97': raise SystemExit('run23 output SHA drift')
+          if e['database_sha256'] != os.environ['ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256']: raise SystemExit('database SHA drift')
+          if e['source_text_sha256'] != '436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a': raise SystemExit('source SHA drift')
+          if e['hard_gate_counts'] != {'numeric_symbol':17,'punctuation':14,'length':0,'unique':30}: raise SystemExit(f"count drift: {e['hard_gate_counts']!r}")
+          if e['translation_segment_count'] != 3337: raise SystemExit('segment-count drift')
+          if e['source_coverage_byte_exact'] is not True or e['database_unchanged'] is not True: raise SystemExit('immutability drift')
+          if e['evaluator_weakened'] is not False or e['source_bytes_rewritten'] is not False or e['target_rewriting'] is not False: raise SystemExit('unsafe audit flag')
+          if len(e['records']) != 30 or len(e['residual_sequences']) != 30: raise SystemExit('residual cardinality drift')
+          canonical=dict(e); expected=canonical.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')).hexdigest()
+          if actual != expected: raise SystemExit('canonical evidence SHA drift')
+          print(json.dumps({'counts':e['hard_gate_counts'],'numeric_classes':e['numeric_defect_class_counts'],'features':e['source_feature_counts'],'numeric_sequences':[r['sequence_number'] for r in e['records'] if 'numeric_symbol' in r['hard_failure_classes']],'evidence_sha256':e['evidence_sha256']}, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload residual census
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run23-residual-census
+          path: |
+            work/run23-residual-census/translation-residual-census.json
+            work/run23-residual-census/summary.json
+          if-no-files-found: error
+          retention-days: 90
