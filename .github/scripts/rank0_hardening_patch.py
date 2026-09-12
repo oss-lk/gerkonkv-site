@@ -1,0 +1,268 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+root = Path("rocketdict-product-core")
+src = root / "src" / "rocketdict"
+tests = root / "tests"
+
+
+def replace_once(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(
+            f"{path}: expected exactly one occurrence, found {count}: {old!r}"
+        )
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+helper = '''from __future__ import annotations
+
+"""Shared fail-closed policy for diagnostic n-best rescue evidence.
+
+Rescue wrappers may retain and evaluate multiple raw model hypotheses for
+research, but automatic Product/research persistence is authorized only by the
+unique raw rank-0 hypothesis. A later beam can never rescue a rejected rank0.
+"""
+
+from typing import Any
+
+from .stages import StageExecutionError
+
+
+def select_rank0_evaluation(
+    evaluated_hypotheses: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Return accepted unique rank0 evidence, or ``None`` when rank0 fails.
+
+    Missing or duplicate rank0 evidence is a provenance/cardinality error.
+    Higher ranks remain diagnostic evidence and have no selection authority.
+    """
+
+    rank0 = [
+        row
+        for row in evaluated_hypotheses
+        if int(row.get("rank", -1)) == 0
+    ]
+    if len(rank0) != 1:
+        raise StageExecutionError(
+            "rank0-only rescue requires exactly one evaluated rank0 hypothesis"
+        )
+    choice = rank0[0]
+    if choice.get("accepted") is not True:
+        return None
+    selection = choice.get("selection")
+    if not isinstance(selection, dict):
+        raise StageExecutionError(
+            "accepted rank0 rescue evaluation is missing selector evidence"
+        )
+    return choice
+'''
+(src / "translation_rank0.py").write_text(helper, encoding="utf-8")
+
+files = {
+    "translation_illustration_rescue_stage.py": (
+        "ILLUSTRATION_LABEL_RESCUE_CONTRACT = \"rocketdict-stage12-illustration-label-rescue/1\"",
+        "ILLUSTRATION_LABEL_RESCUE_CONTRACT = \"rocketdict-stage12-illustration-label-rescue/2\"",
+        "ILLUSTRATION_LABEL_SELECTOR_CONTRACT = \"rocketdict-stage12-illustration-label-selector/1\"",
+        "ILLUSTRATION_LABEL_SELECTOR_CONTRACT = \"rocketdict-stage12-illustration-label-selector/2\"",
+        "ILLUSTRATION_LABEL_SELECTED_PHASE = \"illustration-label-selected-v1\"",
+        "ILLUSTRATION_LABEL_SELECTED_PHASE = \"illustration-label-selected-v2\"",
+    ),
+    "translation_tc_big_delimiter_rescue_stage.py": (
+        "TC_BIG_DELIMITER_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-target-delimiter-context-rescue/1\"",
+        "TC_BIG_DELIMITER_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-target-delimiter-context-rescue/2\"",
+        "TC_BIG_DELIMITER_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-target-delimiter-context-selector/1\"",
+        "TC_BIG_DELIMITER_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-target-delimiter-context-selector/2\"",
+        "TC_BIG_DELIMITER_SELECTED_PHASE = \"tc-big-target-delimiter-context-selected-v1\"",
+        "TC_BIG_DELIMITER_SELECTED_PHASE = \"tc-big-target-delimiter-context-selected-v2\"",
+    ),
+    "translation_tc_big_footnote_reference_rescue_stage.py": (
+        "TC_BIG_FOOTNOTE_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-footnote-reference-lead-rescue/1\"",
+        "TC_BIG_FOOTNOTE_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-footnote-reference-lead-rescue/2\"",
+        "TC_BIG_FOOTNOTE_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-footnote-reference-lead-selector/1\"",
+        "TC_BIG_FOOTNOTE_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-footnote-reference-lead-selector/2\"",
+        "TC_BIG_FOOTNOTE_SELECTED_PHASE = \"tc-big-footnote-reference-lead-selected-v1\"",
+        "TC_BIG_FOOTNOTE_SELECTED_PHASE = \"tc-big-footnote-reference-lead-selected-v2\"",
+    ),
+    "translation_tc_big_semicolon_question_rescue_stage.py": (
+        "TC_BIG_SEMICOLON_QUESTION_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1\"",
+        "TC_BIG_SEMICOLON_QUESTION_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/2\"",
+        "TC_BIG_SEMICOLON_QUESTION_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-semicolon-question-substitution-selector/1\"",
+        "TC_BIG_SEMICOLON_QUESTION_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-semicolon-question-substitution-selector/2\"",
+        "TC_BIG_SEMICOLON_QUESTION_SELECTED_PHASE = \"tc-big-semicolon-question-substitution-selected-v1\"",
+        "TC_BIG_SEMICOLON_QUESTION_SELECTED_PHASE = \"tc-big-semicolon-question-substitution-selected-v2\"",
+    ),
+    "translation_tc_big_equals_addition_rescue_stage.py": (
+        "TC_BIG_EQUALS_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1\"",
+        "TC_BIG_EQUALS_RESCUE_CONTRACT = \"rocketdict-stage12-tc-big-target-only-equals-addition-rescue/2\"",
+        "TC_BIG_EQUALS_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-target-only-equals-addition-selector/1\"",
+        "TC_BIG_EQUALS_SELECTOR_CONTRACT = \"rocketdict-stage12-tc-big-target-only-equals-addition-selector/2\"",
+        "TC_BIG_EQUALS_SELECTED_PHASE = \"tc-big-target-only-equals-addition-selected-v1\"",
+        "TC_BIG_EQUALS_SELECTED_PHASE = \"tc-big-target-only-equals-addition-selected-v2\"",
+    ),
+}
+
+tc_files = [
+    "translation_tc_big_delimiter_rescue_stage.py",
+    "translation_tc_big_footnote_reference_rescue_stage.py",
+    "translation_tc_big_semicolon_question_rescue_stage.py",
+    "translation_tc_big_equals_addition_rescue_stage.py",
+]
+
+for filename, replacements in files.items():
+    path = src / filename
+    for old, new in zip(replacements[0::2], replacements[1::2], strict=True):
+        replace_once(path, old, new)
+    replace_once(
+        path,
+        "from .translation_rescue import evaluate_rescue_pair\n",
+        "from .translation_rescue import evaluate_rescue_pair\n"
+        "from .translation_rank0 import select_rank0_evaluation\n",
+    )
+    replace_once(
+        path,
+        '        "post_translation_literal_injection": False,\n',
+        '        "post_translation_literal_injection": False,\n'
+        '        "automatic_n_best_cherry_picking": False,\n',
+    )
+
+illustration = src / "translation_illustration_rescue_stage.py"
+replace_once(
+    illustration,
+    "v3-proven canonical ``Illustration.`` beam6/n6 raw-hypothesis selector. Other\n"
+    "suffixes use exact source input and beam6/rank0.",
+    "canonical ``Illustration.`` model input with beam6/n6 diagnostic evidence, but\n"
+    "only the unique raw rank0 may be persisted. Other suffixes use exact source input and rank0.",
+)
+replace_once(
+    illustration,
+    "    if selected_rank < 0 or selected_rank >= len(hypotheses):\n",
+    "    if selected_rank != 0:\n"
+    '        raise ValueError("illustration-label rescue is rank0-only")\n'
+    "    if selected_rank < 0 or selected_rank >= len(hypotheses):\n",
+)
+replace_once(
+    illustration,
+    "            for rank, hypothesis in enumerate(hypotheses):\n"
+    '                target = str(hypothesis.get("text") or "")\n',
+    "            for index, hypothesis in enumerate(hypotheses):\n"
+    '                rank = int(hypothesis.get("rank", index))\n'
+    '                target = str(hypothesis.get("text") or "")\n',
+)
+replace_once(
+    illustration,
+    "            if selected_rank is None or selected_selection is None:\n",
+    "            rank0_choice = select_rank0_evaluation(evaluated)\n"
+    "            if rank0_choice is None:\n"
+    "                selected_rank = None\n"
+    "                selected_selection = None\n"
+    "            else:\n"
+    "                selected_rank = 0\n"
+    '                selected_selection = dict(rank0_choice["selection"])\n'
+    "            if selected_rank is None or selected_selection is None:\n",
+)
+
+tc_guard = (
+    "            rank0_choice = select_rank0_evaluation(evaluated)\n"
+    "            if rank0_choice is None:\n"
+    "                selected_rank = None\n"
+    "                selected_target = None\n"
+    "                selected_selection = None\n"
+    "            else:\n"
+    "                selected_rank = 0\n"
+    '                selected_target = str(rank0_choice["target_text"])\n'
+    '                selected_selection = dict(rank0_choice["selection"])\n'
+)
+tc_reject = (
+    "            if selected_rank is None or selected_target is None or "
+    "selected_selection is None:\n"
+)
+for filename in tc_files:
+    replace_once(src / filename, tc_reject, tc_guard + tc_reject)
+
+illustration_test = tests / "test_translation_illustration_rescue_stage.py"
+replace_once(
+    illustration_test,
+    '        {"text": "Пример.", "score": -0.1},\n',
+    '        {"rank": 0, "text": "Иллюстрация.", "score": -0.1},\n',
+)
+replace_once(
+    illustration_test,
+    "        selected_rank=3,\n",
+    "        selected_rank=0,\n",
+)
+replace_once(
+    illustration_test,
+    '    assert rows[1]["payload"]["selected_rank"] == 3\n',
+    '    assert rows[1]["payload"]["selected_rank"] == 0\n',
+)
+
+policy_test = '''from __future__ import annotations
+
+import inspect
+
+import pytest
+
+from rocketdict.stages import StageExecutionError
+from rocketdict.translation_rank0 import select_rank0_evaluation
+import rocketdict.translation_illustration_rescue_stage as illustration
+import rocketdict.translation_tc_big_delimiter_rescue_stage as delimiter
+import rocketdict.translation_tc_big_footnote_reference_rescue_stage as footnote
+import rocketdict.translation_tc_big_semicolon_question_rescue_stage as semicolon_question
+import rocketdict.translation_tc_big_equals_addition_rescue_stage as equals_addition
+
+
+def _row(rank: int, accepted: bool) -> dict[str, object]:
+    row: dict[str, object] = {
+        "rank": rank,
+        "target_text": f"candidate-{rank}",
+        "accepted": accepted,
+    }
+    if accepted:
+        row["selection"] = {"accepted": True, "rank": rank}
+    return row
+
+
+def test_rank0_policy_rejects_good_later_beam() -> None:
+    evaluated = [_row(0, False), _row(1, True), _row(2, True)]
+    assert select_rank0_evaluation(evaluated) is None
+
+
+def test_rank0_policy_accepts_only_good_rank0_and_preserves_diagnostics() -> None:
+    evaluated = [_row(0, True), _row(1, True)]
+    selected = select_rank0_evaluation(evaluated)
+    assert selected is evaluated[0]
+    assert evaluated[1]["accepted"] is True
+
+
+def test_rank0_policy_fails_closed_on_missing_or_duplicate_rank0() -> None:
+    with pytest.raises(StageExecutionError):
+        select_rank0_evaluation([_row(1, True)])
+    with pytest.raises(StageExecutionError):
+        select_rank0_evaluation([_row(0, True), _row(0, False)])
+
+
+@pytest.mark.parametrize(
+    ("module", "rescue_contract", "selector_contract"),
+    [
+        (illustration, illustration.ILLUSTRATION_LABEL_RESCUE_CONTRACT, illustration.ILLUSTRATION_LABEL_SELECTOR_CONTRACT),
+        (delimiter, delimiter.TC_BIG_DELIMITER_RESCUE_CONTRACT, delimiter.TC_BIG_DELIMITER_SELECTOR_CONTRACT),
+        (footnote, footnote.TC_BIG_FOOTNOTE_RESCUE_CONTRACT, footnote.TC_BIG_FOOTNOTE_SELECTOR_CONTRACT),
+        (semicolon_question, semicolon_question.TC_BIG_SEMICOLON_QUESTION_RESCUE_CONTRACT, semicolon_question.TC_BIG_SEMICOLON_QUESTION_SELECTOR_CONTRACT),
+        (equals_addition, equals_addition.TC_BIG_EQUALS_RESCUE_CONTRACT, equals_addition.TC_BIG_EQUALS_SELECTOR_CONTRACT),
+    ],
+)
+def test_nbest_rescue_modules_are_structurally_rank0_only(
+    module, rescue_contract: str, selector_contract: str
+) -> None:  # type: ignore[no-untyped-def]
+    assert rescue_contract.endswith("/2")
+    assert selector_contract.endswith("/2")
+    source = inspect.getsource(module.run_stage12)
+    assert "select_rank0_evaluation(evaluated)" in source
+    assert "automatic_n_best_cherry_picking" in inspect.getsource(module._safety_flags)
+'''
+(tests / "test_translation_rank0_selection_policy.py").write_text(
+    policy_test, encoding="utf-8"
+)
