@@ -1,0 +1,88 @@
+name: RocketDict Run22 Residual Census
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/audit_translation_residual_census.py'
+      - '.github/workflows/rocketdict-run22-residual-census.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run22-residual-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_RUN_ID: '34687351187'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-dense-fraction-composed-rescue
+      ROCKETDICT_RESIDUAL_CENSUS_ROOT: ${{ github.workspace }}/work/run22-residual-census
+      ROCKETDICT_RESIDUAL_CENSUS_DB: ${{ github.workspace }}/work/run22-residual-census/rocketdict.sqlite
+      ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID: '22'
+      ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256: 5cc0bec1d8ab1c9b0eadb9441819d84676f005a5a3bbb3a068745338469b3206
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install maintained audit runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+
+      - name: Download exact persisted run22 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_RUN_ID }}
+
+      - name: Stage and verify exact run22 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_RESIDUAL_CENSUS_ROOT"
+          cp work/base/full-opticks-dense-fraction-composed-rescue/rocketdict.sqlite "$ROCKETDICT_RESIDUAL_CENSUS_DB"
+          echo "$ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
+
+      - name: Run read-only residual census
+        run: python -u rocketdict-workbench/tests/audit_translation_residual_census.py
+
+      - name: Verify run22 census invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256  $ROCKETDICT_RESIDUAL_CENSUS_DB" | sha256sum -c -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_RESIDUAL_CENSUS_ROOT'])
+          e=json.loads((root/'translation-residual-census.json').read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-translation-residual-census/1': raise SystemExit('schema drift')
+          if e['translation_run_id'] != 22: raise SystemExit('run-id drift')
+          if e['translation_output_sha256'] != '41cb94e6a2732aee597d8e630cc248487d6e0b7ce5fb9a794d01ecda7f2edb48': raise SystemExit('run22 output SHA drift')
+          if e['hard_gate_counts'] != {'numeric_symbol':18,'punctuation':14,'length':0,'unique':31}: raise SystemExit(f"count drift: {e['hard_gate_counts']!r}")
+          if e['translation_segment_count'] != 3338: raise SystemExit('segment-count drift')
+          if e['source_coverage_byte_exact'] is not True or e['database_unchanged'] is not True: raise SystemExit('immutability drift')
+          if e['evaluator_weakened'] is not False or e['source_bytes_rewritten'] is not False or e['target_rewriting'] is not False: raise SystemExit('unsafe audit flag')
+          if len(e['records']) != 31 or len(e['residual_sequences']) != 31: raise SystemExit('residual cardinality drift')
+          print(json.dumps({'counts':e['hard_gate_counts'],'numeric_classes':e['numeric_defect_class_counts'],'features':e['source_feature_counts'],'evidence_sha256':e['evidence_sha256']}, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload residual census
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run22-residual-census
+          path: |
+            work/run22-residual-census/translation-residual-census.json
+            work/run22-residual-census/summary.json
+          if-no-files-found: error
+          retention-days: 90
