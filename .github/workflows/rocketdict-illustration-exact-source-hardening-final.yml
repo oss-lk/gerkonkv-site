@@ -1,0 +1,53 @@
+name: RocketDict Illustration Exact Source Hardening Final
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-illustration-exact-source-hardening-final.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/product-core-forward
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reuse reviewed exact-source patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+          workflow = Path('.github/workflows/rocketdict-illustration-exact-source-hardening.yml').read_text(encoding='utf-8')
+          marker = "          python - <<'PY'\n"
+          patch = workflow.split(marker, 1)[1].split("\n          PY", 1)[0]
+          exec(compile(textwrap.dedent(patch), '<illustration-exact-source-patch>', 'exec'))
+          test = Path('rocketdict-product-core/tests/test_translation_illustration_rescue_stage.py')
+          text = test.read_text(encoding='utf-8')
+          text = text.replace('    ILLUSTRATION_WORD_MODEL_INPUT,\n', '    ILLUSTRATION_WORD_MODEL_INPUT,\n    ILLUSTRATION_WORD_SOURCE,\n')
+          test.write_text(text, encoding='utf-8')
+          PY
+      - name: Run targeted regressions
+        shell: bash
+        run: |
+          python -m pip install pytest
+          python -m pip install -e ./rocketdict-product-core
+          python -m pytest -q rocketdict-product-core/tests/test_translation_illustration_rescue_stage.py
+      - name: Commit exact-source hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rocketdict-product-core/src/rocketdict/translation_illustration_rescue_stage.py rocketdict-product-core/tests/test_translation_illustration_rescue_stage.py
+          git diff --cached --check
+          git commit -m "Enforce exact-source illustration model input"
+          git push origin HEAD:chatgpt/product-core-forward
