@@ -6,62 +6,85 @@ Store only conclusions expensive or risky to rediscover. Git/L3 remains chronolo
 
 **Decision.** Quality cannot be traded for speed/storage/convenience. No fake MT, silent truncation, evaluator weakening, target literal injection, source rewriting, target surgery, placeholders, corpus-specific target patches or automatic n-best cherry-picking. Final approved 90k+ evidence needs zero unresolved numeric/symbol, punctuation and length failures plus semantic/downstream acceptance.
 
-## Current persisted research basis: run23
+## Historical run23 is not rank0-clean promotion lineage
 
-**Decision.** Run `23` remains the current best accepted persisted **research** translation basis: **17 numeric/symbol / 14 punctuation / 0 length, 30 unique hard-failing sequences** over `3337` rows. Exact predecessor run22 is **18/14/0,31** over `3338` rows.
+**Decision.** Historical run `23` remains the lowest-hard-failure full Opticks translation currently persisted (**17 numeric/symbol / 14 punctuation / 0 length; 30 unique failing sequences; 3337 rows**) and remains valuable immutable research evidence. It is **not** the clean parent for future promotion because direct audit of its SQLite lineage found historical automatic n-best selections that violate the current rank0-only rescue policy.
 
-Run23 identities: workflow `34688874921`; artifact ID `10296696335`; ZIP SHA `0df0625406349c4569df5a08f7cbd9952fe881b9c0a659e98ce643e8b4cca997`; SQLite SHA `75ec63ea1b8b905af17a757a2a0dcd2697718945a6e9d354d494bb05d2364ca8`; translation-output SHA `976a7a39928cceda2459ab1b5d04f6996a4b2443efd31cbac6456c2c2e948493`; final-text SHA `ebb85aa3646b24c210eb6448e5938661550acaec851d83f9882889a45d77d0b6`; canonical evidence SHA `0cdb6154289fc176cc75d1baad5a8607222bb92f8340295f5558ab46689ed40c`.
+Exact run23 identities remain: workflow `34688874921`; artifact ID `10296696335`; ZIP SHA `0df0625406349c4569df5a08f7cbd9952fe881b9c0a659e98ce643e8b4cca997`; SQLite SHA `75ec63ea1b8b905af17a757a2a0dcd2697718945a6e9d354d494bb05d2364ca8`; translation-output SHA `976a7a39928cceda2459ab1b5d04f6996a4b2443efd31cbac6456c2c2e948493`; final-text SHA `ebb85aa3646b24c210eb6448e5938661550acaec851d83f9882889a45d77d0b6`; canonical evidence SHA `0cdb6154289fc176cc75d1baad5a8607222bb92f8340295f5558ab46689ed40c`.
 
-The run23 emphasized-modifier rescue accepted `[2496,2497]`, rejected `[2633,2634]`, preserved `3336` untouched rows exactly, reconstructed source byte-exactly and passed SQLite/FK integrity. It is research-only: `promotion_allowed=false`, `automatic_product_default_allowed=false`.
+Lineage audit facts:
 
-## Run23 residual census and provenance
+- run9 `illustration_label_rescue/1` accepted three groups with selected ranks `[3,3,0]`; the rank3 groups are source spans `72401:72443` (`FIG. 21`) and `90105:90147` (`FIG. 24`), represented by split rows `424/425` and `515/516` in the resulting lineage;
+- inherited `tc_big_short_angular_dms_rescue/1` accepted seq `640` / source start `110881` from rank2;
+- run23 local evidence flags for the final emphasized-modifier layer do not certify every earlier predecessor wrapper. A local `automatic_n_best...=false` flag must never be interpreted as lineage-wide proof unless the evidence explicitly audits predecessors.
 
-**Decision.** Corrected read-only census workflow `34690365432` is authoritative for choosing the next hard-failure family. Artifact ID `10296887793`, ZIP SHA `8cc7ea22a12f27ee0105767bfc7b13c39a9493e945e6d32508b847151c986393`, census evidence SHA `55848393832fd777d7ab23f03f36d8fb2eb1031748faa0d2a096a35ea781ed58`. It verified exact run23 without mutation and preserved byte-exact source coverage.
+Do not mutate or rewrite run23 to hide this. Build a new replay with rank0-only forward contracts and preserve run23 as historical evidence.
 
-The earlier census `34689198589` failed because a derived SQLite digest was copied independently and incorrectly. Derived identities should be authenticated/derived from pinned canonical upstream evidence instead of maintained as duplicated hand-copied constants whenever possible.
+## Rank0-only rescue selection is a forward structural invariant
 
-Residual sequences: `[325,641,642,644,646,650,743,750,751,752,1499,1579,1755,1788,2110,2290,2346,2357,2375,2591,2721,2741,2889,2997,3000,3007,3011,3083,3211,3305]`.
+**Decision.** Current rescue selectors may not automatically choose a lower-ranked beam when rank0 fails. Generated rank1+ candidates may be retained for diagnostics/research comparison only; a persisted rescue target must be the unique unmodified rank0 output. Missing or duplicate rank0 fails closed.
 
-## Rank0-only rescue selection is structural
+The following TC-big wrappers are already hardened to this rule:
 
-**Decision.** Current research rescue selectors may not use automatic beam cherry-picking. The TC-big figure-reference wrapper is tightened to `rocketdict-stage12-tc-big-figure-reference-lead-rescue/2` / selector `/2`: all generated hypotheses may be retained as raw diagnostic evidence, but only the unique `rank==0` hypothesis is selection-authorized. If rank0 fails, the rescue fails closed even when rank1+ pass mechanical checks. Missing or duplicate rank0 cardinality is a StageExecutionError.
+- figure-reference rescue/selector `/2`;
+- short-angular-DMS rescue/selector `/2` (commit `41b7319` + regression `bda00c9`);
+- angular-minute rescue/selector `/2` (commit `7d0f02f` + regression `f8512e5`).
 
-This change does not rewrite historical evidence; it hardens the forward implementation to match the safety property of the actually persisted successful figure-reference replay, whose accepted case selected rank0. Product Core CI `34692166640` is green on commit `58654b801ed93562001b08479e194256af601fbc`, including explicit regressions for rank1 rejection and rank0 cardinality failure.
+Product Core CI run `34693256404` is green on the angular hardening. Remaining active n-best wrappers must be audited and hardened before constructing the clean heavy baseline, with `illustration_label_rescue` first because historical persisted evidence proves rank3 selection occurred there.
+
+## Run23 residual census is historical-family evidence, not the next clean parent
+
+**Decision.** Corrected census workflow `34690365432` remains authoritative for describing exact historical run23 residuals and choosing hypotheses to study. Artifact ID `10296887793`; ZIP SHA `8cc7ea22a12f27ee0105767bfc7b13c39a9493e945e6d32508b847151c986393`; evidence SHA `55848393832fd777d7ab23f03f36d8fb2eb1031748faa0d2a096a35ea781ed58`.
+
+Residual sequences are `[325,641,642,644,646,650,743,750,751,752,1499,1579,1755,1788,2110,2290,2346,2357,2375,2591,2721,2741,2889,2997,3000,3007,3011,3083,3211,3305]`.
+
+Because a rank0-clean replay can reintroduce failures or alter segmentation where historical rank>0 rescues were applied, rerun the full hard-gate/residual census on the new clean baseline before using its counts as the forward promotion frontier.
+
+## Sequence 2346 angle-list geometries are exhausted under current models
+
+**Decision.** Do not promote or repeat the four tested source split geometries for historical run23 seq `2346` without materially new evidence.
+
+DOE workflow `34693396634` (artifact `10298311979`, evidence SHA `094140b1add91c3cdb6294319cfc691d38d488f97966c5cb41a9ae2386d055d6`) tested `whole_row`, `three_way`, `lead_clause_then_suffix`, and `prefix_then_clause_suffix` with raw rank0 OPUS and TC-big. All eight aggregate candidates are inadmissible.
+
+TC-big can preserve all four angular `M' S''` pairs in two geometries, but in both it changes `100000000` to `10000000`. This is a real numeric regression and the maintained gate must reject it. No evaluator relaxation or target digit repair is permitted.
 
 ## Figure-reference sequence 325 is closed under tested geometries
 
-**Decision.** Do not turn sequence `325` into a rescue from the existing split/boundary experiments.
-
-- Figure-lead split DOE `34683173809` isolates `[in _Fig._ 16.]` from the following body. Raw rank0 OPUS and TC-big become mechanically admissible, but reconstructed full-context syntax/boundary quality is broken; the translation joins the preceding clause into a `...Призма DH[в рис. 16.] быть...`-class result. This is not semantically acceptable evidence.
-- Figure-boundary-pair DOE `34683394207` restores the preceding incomplete phrase. Rank0 OPUS preserves the figure concept but damages Gutenberg emphasis/reference form; rank0 TC-big drops the figure reference. Both are inadmissible under maintained checks and any repair would violate the no-target-surgery rule.
-
-Therefore the tested `figure lead | whitespace | body` and preceding-boundary-pair formulations are exhausted. A future revisit requires materially new source-defined geometry/model evidence, not a repackaging of either DOE.
+**Decision.** Do not turn sequence `325` into a rescue from the existing figure-lead split or preceding-boundary-pair experiments. Isolated splitting can make mechanical checks green while breaking full-context syntax; restoring the syntactic boundary makes rank0 candidates inadmissible. A future revisit requires materially new source-defined geometry/model evidence.
 
 ## Source-defined parenthetical rescue
 
-**Decision.** `rocketdict-stage12-parenthetical-whole-context-rescue/1` remains an accepted default-OFF research layer only because a corpus-wide source predicate distinguished the safe rank0 case from unsafe siblings without offset/text whitelisting.
-
-Eligibility requires one complete split Stage10 context, `<=160` NLP tokens, exactly one short balanced source parenthetical pair (`<=8` alpha words), both parentheses absent from aggregate current target, other hard punctuation exact and unrelated member diagnostics clean. Only raw OPUS rank0 is eligible, with strict hard/research/emphasis/punctuation/content-volume vetoes.
+**Decision.** `rocketdict-stage12-parenthetical-whole-context-rescue/1` remains accepted default-OFF research evidence because its corpus-wide source predicate distinguished a safe rank0 case from unsafe siblings without offset/text whitelisting. This acceptance does not exempt it from future complete-lineage replay validation.
 
 ## Inline `[G]` is not a simple resegmentation defect
 
-**Decision.** Do not create an inline-footnote wrapper for context `598` under current model/search evidence. Corrected whole-context DOE `34679178153` tested six OPUS and six TC-big hypotheses on the exact 115-token Stage10 source. All twelve omit `[G]`; no hypothesis is mechanically admissible.
-
-The first DOE `34679083884` is orchestration-only: it checked the wrong snapshot filename (`pytorch_model.bin`). Commit `6b90cc75` corrected provisioning to the pinned `model.safetensors`/proven snapshot pattern without changing model or acceptance criteria.
+**Decision.** Do not create an inline-footnote wrapper for context `598` under current model/search evidence. Corrected whole-context DOE `34679178153` tested six OPUS and six TC-big hypotheses on the exact source; all omit `[G]` and none is mechanically admissible.
 
 ## Generic fallbacks remain rejected
 
 **Decision.** Product/default Stage10 stays V1. Broad V2 resegmentation, generic row-local TC-big punctuation fallback, generic OPUS/TC-big whole-context fallback, generic bounded-parenthesis fallback and broad square-bracket repair remain rejected because mechanically clean alternatives have demonstrated semantic loss.
 
-## Numeric/symbol frontier remains family-specific
+## Numeric/symbol work remains family-specific
 
-**Decision.** Start new work from exact run23 and its verified 30-sequence census. With sequence `325` closed under tested figure geometries, inspect the `numeric_prime_notation` cluster next because it is the largest identified residual source feature (`10` hits). First recover exact affected rows, defect-subclass overlaps and prior prime-notation experiments; do not assume one mechanism fits all ten.
+**Decision.** The historical run23 prime feature cluster is heterogeneous: eight true angular prime/double-prime cases and two apostrophe-decimal cases. Do not treat all ten as one rescue family.
 
-Do not repeat tested large-integer source canonicalization/n-best feasibility (0 baseline rescues) or nonliteral numeric beam selection (mechanical rescues only through disallowed automatic n-best choice) without materially new source/model geometry or evidence.
+Large-integer source canonicalization/n-best feasibility rescued zero baseline failures; nonliteral numeric beam selection requires disallowed automatic n-best choice. Do not repeat either without materially new geometry/model evidence.
 
 ## Audit/orchestration classification
 
-**Decision.** A red workflow does not justify Product changes until failure is classified. Harness/provisioning/provenance defects are repaired without weakening Product criteria. The `[G]` snapshot-filename failure and first run23 census digest mismatch are concrete examples.
+**Decision.** A red workflow does not justify Product changes until failure is classified. Harness/provisioning/provenance defects are repaired without weakening Product criteria. Derived identities should be authenticated from canonical upstream evidence rather than duplicated manually when practical.
+
+## Forward replay decision
+
+**Decision.** The immediate critical path is now:
+
+1. audit all maintained rescue wrappers for automatic rank>0 selection and harden every active offender;
+2. start the full Opticks replay from an exact predecessor before the first historical rank>0 rescue (run8 is the current identified boundary before `illustration_label_rescue` run9);
+3. reapply the maintained source-defined rescue chain using current rank0-only contracts and immutable model/source identities;
+4. compute a new complete hard-gate/residual census and semantic diff;
+5. only then resume residual-family promotion work from that clean baseline.
+
+A lower hard-failure count from historical run23 is not sufficient reason to retain disallowed lineage.
 
 ## Memory protocol
 
