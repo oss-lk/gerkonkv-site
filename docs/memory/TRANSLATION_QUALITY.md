@@ -17,7 +17,7 @@ Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05
 
 Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → run `16` **20/18/0,37** → run `17` **20/17/0,36**.
 
-Run `17` is the best accepted persisted **research** translation basis. Workflow `34656818930`; artifact `10285447200`; artifact ZIP SHA-256 `e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581`; output SHA `5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd`; SQLite SHA `00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53`; evidence SHA `d52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057`.
+Run `17` is the best accepted persisted **research** translation basis. Workflow `34656818930`; artifact `10285447200`; artifact ZIP SHA-256 `339b71584f35f6981e1bcfa2dfcd391f98807d12f864ffae3070d6737356387d`; output SHA `f7c04209d9e8d7ffab673a2987b0024c334f24fee59736466597ea99125f7ff1`; SQLite SHA `2cbf20b39168003e494b2fb73c9b9baea427283def04a076a673e5023d7346a4`; evidence SHA `a5d786f4d25ee35917014aae7e435ad1f311c1ffb80744a3a60cacd4c62d6843`.
 
 Run17 directly composes over exact run16. One source-defined punctuation-only false-boundary pair at `522572` is replaced by raw TC-big rank0; 3342 other base rows have zero source/target drift. Source reconstruction is byte-exact, SQLite integrity `ok`, FK violations zero. The accepted pair passes maintained strict/research/emphasis checks and diagnostic semantic anchors. This makes run17 a research basis only; it does not promote TC-big or the wrapper into Product defaults.
 

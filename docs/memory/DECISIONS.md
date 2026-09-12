@@ -22,7 +22,7 @@ Exact source spans may be replacement units only when representable by complete 
 
 ## Run-17 research basis
 
-**Decision.** Run `17` supersedes run16 as the best accepted persisted **research** translation basis: **20 numeric / 17 punctuation / 0 length, 36 unique**. Identities: workflow `34656818930`, artifact `10285447200`, artifact ZIP SHA `e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581`, output SHA `5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd`, SQLite SHA `00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53`, evidence SHA `d52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057`.
+**Decision.** Run `17` supersedes run16 as the best accepted persisted **research** translation basis: **20 numeric / 17 punctuation / 0 length, 36 unique**. Identities: workflow `34656818930`, artifact `10285447200`, artifact ZIP SHA `339b71584f35f6981e1bcfa2dfcd391f98807d12f864ffae3070d6737356387d`, output SHA `f7c04209d9e8d7ffab673a2987b0024c334f24fee59736466597ea99125f7ff1`, SQLite SHA `2cbf20b39168003e494b2fb73c9b9baea427283def04a076a673e5023d7346a4`, evidence SHA `a5d786f4d25ee35917014aae7e435ad1f311c1ffb80744a3a60cacd4c62d6843`.
 
 It composes directly over exact run16, merges one independently proven punctuation-only false-boundary pair into raw TC-big rank0, leaves 3342 other run16 rows source/target exact, reconstructs the complete source byte-exactly and passes SQLite/FK integrity. The accepted pair passed maintained strict/research/emphasis checks and focused semantic review. This is still default-OFF research evidence, not Product promotion.
 
