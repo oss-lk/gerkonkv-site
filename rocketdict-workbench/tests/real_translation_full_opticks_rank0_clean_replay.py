@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-"""Rebuild the post-run8 full-Opticks rescue lineage under current rank0-only contracts.
+"""Rebuild the full-Opticks rescue lineage under current rank0-only contracts.
 
-The exact historical run23 SQLite is copied byte-for-byte by CI.  Runs 1..23 are
-immutable historical evidence.  This replay intentionally starts from the cached
-run8 boundary (citation + length + numeric-hard rescues), then re-executes every
-later enabled wrapper with current contracts.  Any lower-ranked beam may remain
-in diagnostic evidence, but no rescue may persist it.
+The exact historical run23 SQLite is copied byte-for-byte by CI. Runs 1..23 are
+immutable historical evidence. Current contract sanitization causes the safe
+length -> citation -> numeric-hard prefix to recompute from historical run4
+before the post-run8 rescue chain is rebuilt. This harness therefore certifies
+that the recomputed prefix is translation-identical to historical runs 6..8,
+then requires every persisted rescue selection in the rebuilt suffix to be raw
+rank0 only.
 """
 
 import hashlib
@@ -22,14 +24,17 @@ from rocketdict.translation_emphasized_modifier_boundary_rescue_stage import (
 )
 from rocketdict.translation_rescue import evaluate_rescue_pair
 
-SCHEMA = "rocketdict-full-opticks-rank0-clean-lineage-replay/1"
+SCHEMA = "rocketdict-full-opticks-rank0-clean-lineage-replay/2"
 HISTORICAL_DATABASE_SHA256 = "75ec63ea1b8b905af17a757a2a0dcd2697718945a6e9d354d494bb05d2364ca8"
 SOURCE_TEXT_SHA256 = "436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a"
 HISTORICAL_FINAL_RUN_ID = 23
 HISTORICAL_FINAL_OUTPUT_SHA256 = "976a7a39928cceda2459ab1b5d04f6996a4b2443efd31cbac6456c2c2e948493"
-CLEAN_START_RUN_ID = 8
-CLEAN_START_OUTPUT_SHA256 = "d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346"
-EXPECTED_NEW_RUN_COUNT = 15
+REPLAY_ROOT_RUN_ID = 4
+REPLAY_ROOT_OUTPUT_SHA256 = "b5c42141767a9760495c84023349402bf637b6591f3fa60d723d42c7d5760e22"
+CLEAN_BOUNDARY_RUN_ID = 8
+CLEAN_BOUNDARY_OUTPUT_SHA256 = "d3b97f349a7983dc34ed9d8cbd8e64a98c8e237eefa508f4d2d88b62ec547346"
+EXPECTED_NEW_RUN_COUNT = 18
+EXPECTED_BOUNDARY_HISTORY = (6, 7, 8)
 HISTORICAL_COUNTS = {"numeric_symbol": 17, "punctuation": 14, "length": 0, "unique": 30}
 HISTORICAL_SEGMENT_COUNT = 3337
 
@@ -42,11 +47,11 @@ AUDIT_SPANS = {
 
 
 def _sha(path: Path) -> str:
-    h = hashlib.sha256()
+    digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
-            h.update(block)
-    return h.hexdigest()
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _canonical_sha(value: Any) -> str:
@@ -103,7 +108,43 @@ def _hard_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
     return {**counts, "unique": unique}
 
 
-def _span_target(rows: list[dict[str, Any]], start: int, end: int) -> tuple[str, list[dict[str, Any]]]:
+def _translation_identity(rows: list[dict[str, Any]]) -> list[list[Any]]:
+    return [
+        [
+            int(row["sequence_number"]),
+            int(row["source_start"]),
+            int(row["source_end"]),
+            str(row.get("source_text") or ""),
+            str(row.get("target_text") or ""),
+        ]
+        for row in _ordered(rows)
+    ]
+
+
+def _translation_identity_sha(rows: list[dict[str, Any]]) -> str:
+    return _canonical_sha(_translation_identity(rows))
+
+
+def _assert_translation_identity(
+    historical_rows: list[dict[str, Any]],
+    replay_rows: list[dict[str, Any]],
+    *,
+    label: str,
+) -> str:
+    historical_identity = _translation_identity(historical_rows)
+    replay_identity = _translation_identity(replay_rows)
+    if historical_identity != replay_identity:
+        raise RuntimeError(f"{label}: recomputed translation identity drift")
+    historical_sha = _canonical_sha(historical_identity)
+    replay_sha = _canonical_sha(replay_identity)
+    if historical_sha != replay_sha:
+        raise RuntimeError(f"{label}: canonical translation identity SHA drift")
+    return historical_sha
+
+
+def _span_target(
+    rows: list[dict[str, Any]], start: int, end: int
+) -> tuple[str, list[dict[str, Any]]]:
     members = [
         row
         for row in _ordered(rows)
@@ -161,9 +202,11 @@ def _selected_rank_audit(output: dict[str, Any]) -> dict[str, list[int]]:
     return result
 
 
-def _new_lineage(database: Path, *, first_new_run_id: int, final_run_id: int) -> list[dict[str, Any]]:
+def _new_lineage(
+    database: Path, *, first_new_run_id: int, final_run_id: int
+) -> list[dict[str, Any]]:
     lineage: list[dict[str, Any]] = []
-    expected_base = CLEAN_START_RUN_ID
+    expected_base = REPLAY_ROOT_RUN_ID
     with connect(database, readonly=True) as connection:
         for run_id in range(first_new_run_id, final_run_id + 1):
             run = get_run(connection, run_id)
@@ -171,7 +214,8 @@ def _new_lineage(database: Path, *, first_new_run_id: int, final_run_id: int) ->
             base_run_id = int(output.get("base_translation_run_id") or -1)
             if base_run_id != expected_base:
                 raise RuntimeError(
-                    f"rank0-clean lineage break at run {run_id}: base={base_run_id}, expected={expected_base}"
+                    f"rank0-clean lineage break at run {run_id}: "
+                    f"base={base_run_id}, expected={expected_base}"
                 )
             rank_audit = _selected_rank_audit(output)
             unsafe_true = {
@@ -221,10 +265,10 @@ def main() -> int:
         historical_rows = get_run_items(
             connection, HISTORICAL_FINAL_RUN_ID, kind="translation_segment"
         )
-        clean_start_run = get_run(connection, CLEAN_START_RUN_ID)
-        clean_start_output = dict(clean_start_run.get("output") or {})
-        clean_start_rows = get_run_items(
-            connection, CLEAN_START_RUN_ID, kind="translation_segment"
+        replay_root_run = get_run(connection, REPLAY_ROOT_RUN_ID)
+        clean_boundary_run = get_run(connection, CLEAN_BOUNDARY_RUN_ID)
+        clean_boundary_rows = get_run_items(
+            connection, CLEAN_BOUNDARY_RUN_ID, kind="translation_segment"
         )
         document = get_document(
             connection, int(historical_output["document_version_id"])
@@ -232,13 +276,16 @@ def main() -> int:
 
     if str(historical_run.get("output_sha256") or "") != HISTORICAL_FINAL_OUTPUT_SHA256:
         raise RuntimeError("historical run23 output identity drift")
-    if str(clean_start_run.get("output_sha256") or "") != CLEAN_START_OUTPUT_SHA256:
-        raise RuntimeError("clean-start run8 output identity drift")
+    if str(replay_root_run.get("output_sha256") or "") != REPLAY_ROOT_OUTPUT_SHA256:
+        raise RuntimeError("replay-root run4 output identity drift")
+    if str(clean_boundary_run.get("output_sha256") or "") != CLEAN_BOUNDARY_OUTPUT_SHA256:
+        raise RuntimeError("historical clean-boundary run8 output identity drift")
     if str(document.get("text_sha256") or "") != SOURCE_TEXT_SHA256:
         raise RuntimeError("immutable source identity drift")
+
     content = str(document["content_text"])
     _coverage(historical_rows, content, label="historical run23")
-    _coverage(clean_start_rows, content, label="clean-start run8")
+    _coverage(clean_boundary_rows, content, label="historical clean-boundary run8")
     if _hard_counts(historical_rows) != HISTORICAL_COUNTS:
         raise RuntimeError("historical run23 hard-gate census drift")
     if len(historical_rows) != HISTORICAL_SEGMENT_COUNT:
@@ -264,23 +311,81 @@ def main() -> int:
     new_run_count = final_run_id - max_run_before
     if new_run_count != EXPECTED_NEW_RUN_COUNT:
         raise RuntimeError(
-            f"rank0-clean replay created {new_run_count} runs, expected {EXPECTED_NEW_RUN_COUNT}"
+            f"rank0-clean replay created {new_run_count} runs, "
+            f"expected {EXPECTED_NEW_RUN_COUNT}"
         )
+
     first_new_run_id = max_run_before + 1
     lineage = _new_lineage(
         database,
         first_new_run_id=first_new_run_id,
         final_run_id=final_run_id,
     )
-    if lineage[0]["base_translation_run_id"] != CLEAN_START_RUN_ID:
-        raise RuntimeError("first recomputed wrapper did not reuse exact clean-start run8")
+    if len(lineage) != EXPECTED_NEW_RUN_COUNT:
+        raise RuntimeError("rank0-clean lineage record cardinality drift")
+
     first_params = lineage[0]["parameters"]
-    if first_params.get("illustration_label_rescue_contract") != "rocketdict-stage12-illustration-label-rescue/2":
-        raise RuntimeError("first recomputed wrapper is not illustration rescue /2")
+    if first_params.get("length_failure_whole_context_rescue_contract") != (
+        "rocketdict-stage12-length-failure-whole-context-rescue/1"
+    ):
+        raise RuntimeError("first recomputed wrapper is not the safe length rescue")
+
+    boundary_equivalence: list[dict[str, Any]] = []
+    with connect(database, readonly=True) as connection:
+        for offset, historical_run_id in enumerate(EXPECTED_BOUNDARY_HISTORY):
+            replay_run_id = first_new_run_id + offset
+            historical_prefix_rows = get_run_items(
+                connection, historical_run_id, kind="translation_segment"
+            )
+            replay_prefix_rows = get_run_items(
+                connection, replay_run_id, kind="translation_segment"
+            )
+            _coverage(
+                historical_prefix_rows,
+                content,
+                label=f"historical boundary run{historical_run_id}",
+            )
+            _coverage(
+                replay_prefix_rows,
+                content,
+                label=f"recomputed boundary run{replay_run_id}",
+            )
+            identity_sha = _assert_translation_identity(
+                historical_prefix_rows,
+                replay_prefix_rows,
+                label=f"run{historical_run_id}->run{replay_run_id}",
+            )
+            boundary_equivalence.append(
+                {
+                    "historical_run_id": historical_run_id,
+                    "replay_run_id": replay_run_id,
+                    "translation_segment_count": len(replay_prefix_rows),
+                    "translation_identity_sha256": identity_sha,
+                    "source_target_geometry_identical": True,
+                }
+            )
+
+    recomputed_boundary_run_id = first_new_run_id + len(EXPECTED_BOUNDARY_HISTORY) - 1
+    if boundary_equivalence[-1]["historical_run_id"] != CLEAN_BOUNDARY_RUN_ID:
+        raise RuntimeError("clean boundary equivalence did not terminate at historical run8")
+    if _translation_identity_sha(clean_boundary_rows) != boundary_equivalence[-1][
+        "translation_identity_sha256"
+    ]:
+        raise RuntimeError("recomputed clean boundary identity differs from historical run8")
+
+    first_post_boundary = lineage[len(EXPECTED_BOUNDARY_HISTORY)]
+    if first_post_boundary["base_translation_run_id"] != recomputed_boundary_run_id:
+        raise RuntimeError("first post-boundary wrapper is not based on recomputed run8 identity")
+    if first_post_boundary["parameters"].get("illustration_label_rescue_contract") != (
+        "rocketdict-stage12-illustration-label-rescue/2"
+    ):
+        raise RuntimeError("first post-boundary wrapper is not illustration rescue /2")
 
     with connect(database, readonly=True) as connection:
         final_run = get_run(connection, final_run_id)
-        final_rows = get_run_items(connection, final_run_id, kind="translation_segment")
+        final_rows = get_run_items(
+            connection, final_run_id, kind="translation_segment"
+        )
     _coverage(final_rows, content, label="rank0-clean final")
     final_counts = _hard_counts(final_rows)
     final_selected_ranks = _selected_rank_audit(dict(final_run.get("output") or {}))
@@ -302,7 +407,9 @@ def main() -> int:
             "rank0_clean_verdict": evaluate_rescue_pair(source, new_target),
         }
 
-    final_text = "".join(str(row.get("target_text") or "") for row in _ordered(final_rows))
+    final_text = "".join(
+        str(row.get("target_text") or "") for row in _ordered(final_rows)
+    )
     final_text_path = root / "full-opticks-rank0-clean-replay.txt"
     final_text_path.write_text(final_text, encoding="utf-8")
 
@@ -314,7 +421,10 @@ def main() -> int:
 
     evidence: dict[str, Any] = {
         "schema": SCHEMA,
-        "purpose": "persisted full-Opticks post-run8 replay under current rank0-only rescue contracts",
+        "purpose": (
+            "persisted full-Opticks rank0-clean lineage replay with certified "
+            "translation-equivalent reconstruction of the historical run8 boundary"
+        ),
         "promotion_allowed": False,
         "automatic_product_default_allowed": False,
         "semantic_review_required": True,
@@ -323,11 +433,16 @@ def main() -> int:
         "historical_translation_output_sha256": HISTORICAL_FINAL_OUTPUT_SHA256,
         "historical_hard_gate_counts": HISTORICAL_COUNTS,
         "historical_segment_count": HISTORICAL_SEGMENT_COUNT,
-        "clean_start_run_id": CLEAN_START_RUN_ID,
-        "clean_start_output_sha256": CLEAN_START_OUTPUT_SHA256,
-        "clean_start_reused_exactly": True,
+        "replay_root_run_id": REPLAY_ROOT_RUN_ID,
+        "replay_root_output_sha256": REPLAY_ROOT_OUTPUT_SHA256,
+        "clean_boundary_run_id": CLEAN_BOUNDARY_RUN_ID,
+        "clean_boundary_output_sha256": CLEAN_BOUNDARY_OUTPUT_SHA256,
+        "clean_boundary_recomputed_run_id": recomputed_boundary_run_id,
+        "clean_boundary_translation_reproduced_exactly": True,
+        "clean_boundary_equivalence": boundary_equivalence,
         "source_text_sha256": SOURCE_TEXT_SHA256,
         "first_new_run_id": first_new_run_id,
+        "first_post_boundary_run_id": int(first_post_boundary["run_id"]),
         "final_translation_run_id": final_run_id,
         "final_translation_output_sha256": str(final_run.get("output_sha256") or ""),
         "new_run_count": new_run_count,
@@ -356,9 +471,13 @@ def main() -> int:
         json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
     summary = {
-        "clean_start_run_id": CLEAN_START_RUN_ID,
+        "replay_root_run_id": REPLAY_ROOT_RUN_ID,
+        "clean_boundary_run_id": CLEAN_BOUNDARY_RUN_ID,
+        "clean_boundary_recomputed_run_id": recomputed_boundary_run_id,
         "first_new_run_id": first_new_run_id,
+        "first_post_boundary_run_id": int(first_post_boundary["run_id"]),
         "final_translation_run_id": final_run_id,
         "new_run_count": new_run_count,
         "historical_hard_gate_counts": HISTORICAL_COUNTS,
@@ -368,6 +487,7 @@ def main() -> int:
         "changed_historical_rank_gt0_spans": [
             name for name, item in span_audit.items() if item["target_changed"]
         ],
+        "clean_boundary_equivalence": boundary_equivalence,
         "final_database_sha256": evidence["final_database_sha256"],
         "evidence_sha256": evidence["evidence_sha256"],
     }
