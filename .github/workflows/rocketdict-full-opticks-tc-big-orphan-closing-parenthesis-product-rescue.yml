@@ -1,0 +1,200 @@
+name: RocketDict Full Opticks TC-big Orphan Closing Parenthesis Rescue
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/translation_tc_big_orphan_closing_parenthesis_rescue_stage.py'
+      - 'rocketdict-product-core/tests/test_translation_tc_big_orphan_closing_parenthesis_rescue_stage.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_orphan_closing_parenthesis_product_rescue.py'
+      - '.github/workflows/rocketdict-full-opticks-tc-big-orphan-closing-parenthesis-product-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  full-opticks-orphan-closing-parenthesis-rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      RUN17_RUN_ID: '34656818930'
+      RUN17_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-boundary-pair-punctuation-rescue
+      RUN17_DB_SHA256: 2cbf20b39168003e494b2fb73c9b9baea427283def04a076a673e5023d7346a4
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT: ${{ github.workspace }}/work/full-opticks-tc-big-orphan-closing-parenthesis-rescue
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install TC-big asset builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[alt-mt]' \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' \
+            'transformers==4.56.2' 'sacremoses==0.1.1' \
+            'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Download immutable run17 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN17_ARTIFACT_NAME }}
+          path: work/run17
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN17_RUN_ID }}
+
+      - name: Stage exact run17 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_db=work/run17/full-opticks-tc-big-boundary-pair-punctuation-rescue/rocketdict.sqlite
+          test -s "$source_db"
+          echo "$RUN17_DB_SHA256  $source_db" | sha256sum -c -
+          mkdir -p "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT"
+          cp "$source_db" "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/rocketdict.sqlite"
+          echo "$RUN17_DB_SHA256  $ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" \
+            | tee work/orphan-parenthesis-tc-big-asset-build.json
+
+      - name: Build torch-free replay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/orphan-parenthesis-runtime
+          work/orphan-parenthesis-runtime/bin/python -m pip install --upgrade pip
+          work/orphan-parenthesis-runtime/bin/python -m pip install \
+            -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench
+          work/orphan-parenthesis-runtime/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in orphan-parenthesis inference runtime')
+          PY
+
+      - name: Run exact run17 orphan-parenthesis rescue and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/orphan-parenthesis-runtime/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_tc_big_orphan_closing_parenthesis_product_rescue.py \
+            | tee "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/summary.json"
+
+      - name: Verify persisted evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/orphan-parenthesis-runtime/bin/python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT'])
+          evidence = json.loads((root/'full-opticks-tc-big-orphan-closing-parenthesis-rescue.json').read_text(encoding='utf-8'))
+          if evidence['schema'] != 'rocketdict-full-opticks-tc-big-orphan-closing-parenthesis-rescue-optin/1':
+              raise SystemExit('schema drift')
+          if evidence['base_database_sha256'] != os.environ['RUN17_DB_SHA256']:
+              raise SystemExit('run17 database identity drift')
+          if evidence['base_hard_gate_counts'] != {'numeric_symbol':20,'punctuation':17,'length':0,'unique':36}:
+              raise SystemExit(f"base count drift: {evidence['base_hard_gate_counts']!r}")
+          if evidence['final_hard_gate_counts'] != {'numeric_symbol':20,'punctuation':16,'length':0,'unique':35}:
+              raise SystemExit(f"final count drift: {evidence['final_hard_gate_counts']!r}")
+          if evidence['base_segment_count'] != 3343 or evidence['final_segment_count'] != 3343:
+              raise SystemExit('segment count drift')
+          if evidence['attempt_count'] != 1 or evidence['accepted_count'] != 1 or evidence['rejected_count'] != 0:
+              raise SystemExit('attempt/acceptance drift')
+          if evidence['attempted_source_starts'] != [417917] or evidence['accepted_source_starts'] != [417917]:
+              raise SystemExit('accepted cohort drift')
+          if evidence['selected_ranks'] != [0]:
+              raise SystemExit('selector did not use raw rank0 only')
+          if len(evidence['changed_rows']) != 1 or evidence['untouched_base_row_count'] != 3342:
+              raise SystemExit('changed-row cardinality drift')
+          if evidence['untouched_target_drift_count'] != 0:
+              raise SystemExit('untouched target drift')
+          if evidence['source_character_count'] != 586543 or evidence['source_coverage_byte_exact'] is not True:
+              raise SystemExit('source coverage drift')
+          if evidence['database_integrity_check'] != 'ok' or evidence['foreign_key_violation_count'] != 0:
+              raise SystemExit('database integrity drift')
+          semantic = evidence['changed_rows'][0]['semantic_review']
+          if semantic['all_diagnostic_anchors'] is not True or semantic['numeric_symbol_clean'] is not True or semantic['punctuation_clean'] is not True or semantic['strict_research_clean'] is not True:
+              raise SystemExit('semantic/mechanical audit drift')
+          if any(evidence.get(flag) is not False for flag in (
+              'source_bytes_rewritten','target_rewriting','placeholders',
+              'post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened'
+          )):
+              raise SystemExit('unsafe evidence flag')
+          if evidence['promotion_allowed'] is not False or evidence['automatic_product_default_allowed'] is not False:
+              raise SystemExit('research-only promotion guard drift')
+          print(json.dumps({
+              'base': evidence['base_hard_gate_counts'],
+              'final': evidence['final_hard_gate_counts'],
+              'accepted_source_start': evidence['accepted_source_starts'][0],
+              'final_output_sha256': evidence['final_output_sha256'],
+              'final_database_sha256': evidence['final_database_sha256'],
+              'evidence_sha256': evidence['evidence_sha256'],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Record runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/runtime-evidence"
+          work/orphan-parenthesis-runtime/bin/python -VV > "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/runtime-evidence/python.txt" 2>&1
+          work/orphan-parenthesis-runtime/bin/python -m pip freeze | sort > "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/runtime-evidence/pip-freeze.txt" 2>&1
+          sha256sum "$TC_BIG_SNAPSHOT/model.safetensors" > "$ROCKETDICT_ORPHAN_PAREN_PRODUCT_ROOT/runtime-evidence/tc-big-weights.sha256" 2>&1
+
+      - name: Upload persisted orphan-parenthesis evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-tc-big-orphan-closing-parenthesis-rescue
+          path: |
+            work/full-opticks-tc-big-orphan-closing-parenthesis-rescue/full-opticks-tc-big-orphan-closing-parenthesis-rescue.json
+            work/full-opticks-tc-big-orphan-closing-parenthesis-rescue/summary.json
+            work/full-opticks-tc-big-orphan-closing-parenthesis-rescue/rocketdict.sqlite
+            work/full-opticks-tc-big-orphan-closing-parenthesis-rescue/runtime-evidence
+            work/orphan-parenthesis-tc-big-asset-build.json
+          if-no-files-found: warn
+          retention-days: 90
