@@ -1,0 +1,66 @@
+name: RocketDict Full Opticks Run20 Numeric V6 Audit
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-product-core/src/rocketdict/numeric_integrity.py'
+      - 'rocketdict-product-core/src/rocketdict/source_numeric_words.py'
+      - 'rocketdict-workbench/tests/audit_full_opticks_run20_numeric_v6.py'
+      - '.github/workflows/rocketdict-full-opticks-run20-numeric-v6-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run20-numeric-v6-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUN20_RUN_ID: '34678965465'
+      RUN20_ARTIFACT_NAME: rocketdict-full-opticks-parenthetical-whole-context-rescue
+      RUN20_DB_SHA256: 879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d
+      ROCKETDICT_RUN20_NUMERIC_V6_DB: ${{ github.workspace }}/work/run20/full-opticks-parenthetical-whole-context-rescue/rocketdict.sqlite
+      ROCKETDICT_RUN20_NUMERIC_V6_EVIDENCE: ${{ github.workspace }}/work/run20-numeric-v6-audit/run20-numeric-v6-audit.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained Product Core
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core'
+      - name: Download exact persisted run20 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN20_ARTIFACT_NAME }}
+          path: work/run20
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN20_RUN_ID }}
+      - name: Verify exact run20 database identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROCKETDICT_RUN20_NUMERIC_V6_DB"
+          echo "$RUN20_DB_SHA256  $ROCKETDICT_RUN20_NUMERIC_V6_DB" | sha256sum -c -
+      - name: Replay numeric-integrity v6 read-only
+        run: python -u rocketdict-workbench/tests/audit_full_opticks_run20_numeric_v6.py
+      - name: Re-verify immutable run20 database
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROCKETDICT_RUN20_NUMERIC_V6_DB"
+          echo "$RUN20_DB_SHA256  $ROCKETDICT_RUN20_NUMERIC_V6_DB" | sha256sum -c -
+      - name: Upload numeric-v6 replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-run20-numeric-v6-audit
+          path: work/run20-numeric-v6-audit/run20-numeric-v6-audit.json
+          if-no-files-found: error
+          retention-days: 90
