@@ -46,7 +46,11 @@ Passing geometry is generic and source-defined:
 
 Representative result: `[Иллюстрация: FIG. 21.]\n\n_Иллюстрация._ `, preserving the square-bracket payload, figure number, source blank-line boundary, emphasis and trailing structural whitespace. The corresponding FIG.24 case is equivalent.
 
-This evidence establishes a mechanically clean geometry but does **not** alone prove that source-owned structural passthrough is an authorized Product composition operation. Before promotion, inspect accepted L3 precedent, especially `rocketdict-stage12-ascii-table-logical-rank0/1` and the Stage12 composition implementation/tests. If those establish that source-owned structural bytes planned before MT are preserved as structure rather than injected into model output, the illustration route may advance to a default-OFF wrapper and full replay. Otherwise reject it.
+This evidence establishes a mechanically clean geometry. L3 architecture audit subsequently confirmed the required precedent: accepted `rocketdict-stage12-ascii-table-logical-rank0/1` plans immutable source groups before MT and its renderer copies source-owned whitespace/delimiters/numeric cells from original spans while only lexical groups receive model output. The illustration `separator`/`trailing` pieces are the same architectural class when discovered before inference.
+
+A separate persisted-run audit also proved run41 itself did not accept the latent historical `_Illustration._ → Illustration.` model-input normalization: `illustration_label_rescue_normalized_model_input_source_starts=[]`; only ordinary source start `203786` was accepted. Thus run41 remains an exact-source promotion parent.
+
+Forward illustration rescue is now `rocketdict-stage12-illustration-label-rescue/3` + selector `/3` (commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`). Every remainder is sent exactly as immutable source; normalized input raises; candidate construction requires `model_input == remainder_source`; output/payload records exact-input provenance. Targeted workflow `34703487403` passed before the commit. This hardening changes future capability, not the authenticated run41 translation, because run41 had accepted no normalized input.
 
 ## Other durable negatives
 
@@ -58,7 +62,7 @@ This evidence establishes a mechanically clean geometry but does **not** alone p
 
 1. Never weaken maintained evaluators or repair model output post hoc.
 2. Preserve immutable source/model/config/result identities and exact predecessor lineage.
-3. Persist only deterministic unmodified raw rank0 model output; semantic/boundary review remains mandatory in addition to mechanical gates.
+3. Persist only deterministic unmodified raw rank0 model output; exact lexical model input must equal its immutable source span; semantic/boundary review remains mandatory.
 4. New geometry/model use requires a generic source-defined trigger and must fail closed.
-5. Source-owned structural passthrough may be used only if it is demonstrably planned from immutable source before MT and is supported by existing Product composition contract/precedent; it must never become post-MT target repair.
-6. Immediate next step: audit the accepted structural-passthrough precedent. If compatible, implement the generic illustration wrapper and run full compose+census from exact run41. If incompatible, close this route and move to the next residual family.
+5. Source-owned structural passthrough is allowed only when planned entirely from immutable source before MT and rendered from those same source spans; the maintained table pipeline is the accepted precedent. It must never become post-MT target repair.
+6. Immediate next step: implement the generic illustration structural-separator wrapper, tests, Product Core CI and full compose+census from exact run41.

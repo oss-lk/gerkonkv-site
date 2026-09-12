@@ -35,9 +35,11 @@ The DOE creates the source plan **before MT** and translates only source-owned l
 
 Exactly two candidates pass, for the generic FIG.21/FIG.24 instances. Their aggregates preserve the bracketed label, figure number, `\n\n`, emphasis and trailing source whitespace. The DB remains byte-identical and all prohibited-transform flags are false.
 
-**Decision.** Do not equate structural passthrough with target literal injection merely because source bytes appear in the aggregate target, and do not declare it safe merely because the DOE labels it source-owned. The deciding criterion is L3 architecture: the separator/trailing bytes must be identified from immutable source before model inference and preserved as structural composition under an already accepted Product mechanism/contract. Inspect `rocketdict-stage12-ascii-table-logical-rank0/1` and associated Stage12 source/tests. Only if this precedent is genuinely equivalent may the illustration wrapper be implemented.
+**Decision.** The required structural-passthrough precedent is confirmed. `rocketdict-stage12-ascii-table-logical-rank0/1` uses a source-only pre-MT logical plan; `table_logical_structure.py` renders source-owned whitespace/delimiters/numeric cells from immutable source spans while lexical groups alone receive rank0 MT. Therefore illustration separator/trailing passthrough is legal when and only when it is planned the same way before inference.
 
-If precedent is compatible, the wrapper must be generic/source-defined, default OFF, exact-source, raw-rank0-only, fail closed, preserve exact structural bytes, and run full compose+census from run41. If precedent is incompatible, reject the route rather than special-case FIG.21/FIG.24.
+**Decision.** Direct audit of persisted run41 proved no accepted candidate used the old `_Illustration._ → Illustration.` model-input normalization (`illustration_label_rescue_normalized_model_input_source_starts=[]`). Run41 therefore remains an exact-source parent despite the latent capability that existed in `/2`. Forward code removes that capability entirely: illustration-label rescue/selector `/3` (commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`) uses exact remainder input, fails closed on normalization/non-equal model input, and records `model_input_source_rewritten=false`. Targeted workflow `34703487403` passed.
+
+The next wrapper must be generic/source-defined, default OFF, exact-source, raw-rank0-only, preserve exact structural spans, and then undergo Product Core CI plus full compose+census from run41.
 
 ## Durable rejected/closed directions
 
@@ -54,8 +56,8 @@ If precedent is compatible, the wrapper must be generic/source-defined, default 
 
 ## Forward decision
 
-1. Audit accepted structural-passthrough precedent in Product/Stage12 L3 code and tests, especially `rocketdict-stage12-ascii-table-logical-rank0/1`.
-2. If precedent is equivalent, implement a generic default-OFF illustration structural-separator rank0 wrapper and targeted fail-closed tests.
+1. Implement the generic default-OFF illustration structural-separator rank0 wrapper and targeted fail-closed tests using the confirmed source-planned structural precedent.
+2. Run maintained Product Core CI.
 3. Replay from exact run41 and run independent census. Arithmetic expectation for only two repaired punctuation failures is **18 numeric / 14 punctuation / 0 length, 31 unique**, but evidence, not expectation, decides acceptance.
 4. If full replay is clean and semantically acceptable, make the new run the only forward parent. Otherwise reject the wrapper and move to the next run41 residual cluster.
 5. Continue until zero hard failures, then finish learner/export and Windows clean-install/release validation.

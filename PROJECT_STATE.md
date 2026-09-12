@@ -5,7 +5,7 @@
 ## Current state
 
 - Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- L3/engineering state incorporated through `001ba055f47f059529aa4b876db8d5308ae957d7` (`Run illustration structural separator DOE`).
+- L3/engineering state incorporated through `a1b021a94c4a81800e0a2f771a1a93a2c5d96f06`; substantive code hardening commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2` (`Enforce exact-source illustration model input`).
 - Authoritative Product contract: `rocketdict/PRODUCT_TARGET.md`. Release still requires **0 unresolved numeric/symbol, punctuation and length hard failures** on the complete 90k+ corpus, then learner/export coverage and Windows clean-install validation.
 - Historical run23 remains immutable research evidence only; it is not legal promotion lineage because historical rank3/rank2 automatic beam selections were proven.
 - Authenticated rank0-clean run41 is the **only forward promotion parent**.
@@ -61,12 +61,17 @@ The passing geometry is source-defined before MT:
 
 Representative aggregate: `[Иллюстрация: FIG. 21.]\n\n_Иллюстрация._ `, with square delimiters, emphasis, punctuation, numeric identity and source structural boundary all preserved.
 
-This DOE resolves the **mechanical geometry** question. It does not by itself authorize promotion: implementation still requires confirming that existing accepted Product composition precedent treats pre-MT-planned source-owned structural bytes as legitimate passthrough rather than target injection.
+This DOE resolves the **mechanical geometry** question. Subsequent L3 audit also resolved the two remaining provenance questions:
+
+- direct read-only inspection of persisted run41 SQLite from artifact `10297359600` found `illustration_label_rescue_normalized_model_input_source_starts=[]` and only accepted source start `203786`; therefore run41 itself did **not** persist any candidate generated from normalized `_Illustration._ → Illustration.` input and remains a valid exact-source parent;
+- accepted `rocketdict-stage12-ascii-table-logical-rank0/1` (`table_stage12.py`, `table_logical_structure.py`, `test_table_stage12.py`) already plans immutable source structure before MT, translates lexical source groups only, and renders source-owned whitespace/delimiters/numeric cells from their original spans. This establishes the architectural precedent for the illustration blank-line/trailing structural passthrough; it is not post-hoc target injection.
+
+Forward illustration-label code is now contract `/3`: exact source remainder is the only legal model input, normalization is fail-closed, `model_input_source_rewritten=false`, and `_candidate_rows` rejects `model_input != remainder_source`. Targeted hardening workflow `34703487403` completed successfully before commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`; one-shot helper workflows were removed afterward.
 
 ## Active next actions
 
-1. Inspect the accepted `rocketdict-stage12-ascii-table-logical-rank0/1` (and relevant Stage12 composition code/tests) to establish the structural-passthrough precedent from L3, not from the DOE's self-description.
-2. If that precedent confirms pre-MT source-owned structural passthrough is legal, implement a generic source-defined, default-OFF illustration structural-separator wrapper using only OPUS rank0 + TC-big rank0 and exact source-owned separator/trailing bytes; add fail-closed unit/regression tests.
-3. Replay the wrapper from exact run41 and run an independent residual census. Expected arithmetic improvement if and only if the two illustration failures disappear without regressions is 18 numeric / 14 punctuation / 0 length, 31 unique; do not accept this expectation without full evidence.
-4. If full compose/census succeeds, make the new run the only forward parent and update all mandatory memory with exact identities. If the precedent is incompatible or replay regresses, reject the route and move to the next run41 residual family.
+1. Implement the now-authorized generic/default-OFF illustration structural-separator wrapper from the proven source-only plan: OPUS rank0 label + source-owned separator + TC-big rank0 exact suffix + source-owned trailing whitespace.
+2. Add fail-closed tests for exact source/model-input identity, unique rank0, exact structural spans, semantic target form and aggregate mechanical/emphasis checks.
+3. Run maintained Product Core CI, then replay the wrapper from exact run41 and run an independent residual census. The arithmetic expectation **18 numeric / 14 punctuation / 0 length, 31 unique** is not acceptance evidence.
+4. Promote a new parent only if the full replay proves byte-exact source coverage, no regressions/unsafe flags, semantic/boundary acceptance and the expected strict hard-gate improvement.
 5. Continue to zero hard failures, then complete learner/export and Windows release validation.
