@@ -12,28 +12,38 @@ Store only conclusions expensive or risky to rediscover. Git/L3 remains chronolo
 
 Historical run23 is immutable research evidence only; it cannot parent promotion because its ancestry includes automatic rank3 illustration and rank2 short-DMS selections.
 
-**Decision.** Rescue selection is structurally rank0-only. Persisted output must be the unique raw rank0 hypothesis; higher beams may be diagnostic only and missing/duplicate/malformed rank0 fails closed. A wrapper-local safety flag does not certify predecessor lineage unless the lineage is explicitly audited.
+**Decision.** Rescue selection is structurally rank0-only. Persisted model output must be unique raw rank0; higher beams are diagnostic only and missing/duplicate/malformed rank0 fails closed.
 
-## Returned-family DOE decision
+## Returned-family DOE
 
-**Decision.** Workflow `34697653680` (artifact `10298988451`, digest `sha256:b3a499d41da72d1039a943d55005ca79b7237b620a56f7f9a257ddf521b5ff09`, evidence SHA `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7`) is authoritative for the current seq `424/514/638` geometry investigation. It authenticated exact run41, remained read-only/source-byte-exact and used raw rank0 only.
+**Decision.** Workflow `34697653680` (artifact `10298988451`, evidence SHA `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7`) is authoritative for the first exact-source/rank0 investigation of seq `424/514/638`.
 
-For seq `424/514`, OPUS rank0 for exact `[Illustration: FIG. N.]` plus TC-big rank0 for exact `_Illustration._` passes existing mechanical gates, but the tested aggregate deletes the source-owned `\n\n`, producing `[Иллюстрация: FIG. N.]_Иллюстрация._`. **Do not promote this candidate.** Mechanical success cannot override a structural-boundary regression.
+For seq `424/514`, OPUS rank0 on exact `[Illustration: FIG. N.]` plus TC-big rank0 on exact `_Illustration._` can pass hard gates, but the first aggregate deleted source-owned `\n\n`; that aggregate is rejected. For seq `638`, tested exact-source/rank0 whole and current split geometries are exhausted.
 
-For seq `638`, no tested exact-source/raw-rank0 whole or current split geometry is admissible. Do not repeat the same lead/measurement or degrees/prime splits without materially new evidence.
+## Illustration structural-separator decision
 
-Older illustration feasibility is not promotion evidence under current rules: one formulation rewrote source text before MT; later formulations relied on beam selection, and the illustration-word DOE also changed model input to canonical alternatives.
+**Decision.** The source-owned-separator hypothesis is mechanically viable and has now passed a dedicated read-only DOE, but promotion remains conditional on L3 precedent proving the composition operation itself is legitimate.
 
-## Source-owned separator question
+Workflow `34698906048` at HEAD `001ba055f47f059529aa4b876db8d5308ae957d7` succeeded against exact run41. Artifact `10299487345`, digest `sha256:87c38ebc60cea7b243e36e580f8908bd90f9f975186a96cc7342344528ce87de`, evidence SHA `0af3deb591aee8da0dd11ba7a59aeab64c65d2d2327e923ebbeb64b9b077e3ee`.
 
-**Decision.** Do not classify source-owned separator passthrough as safe merely because it would repair the illustration aggregate. Before a separator-preserving DOE or wrapper, inspect the authoritative Product code/contracts and already accepted source-owned composition mechanisms. Determine whether carrying exact source whitespace/delimiter between independently translated chunks is normal structural composition or prohibited post-translation literal injection.
+The DOE creates the source plan **before MT** and translates only source-owned lexical chunks:
 
-Until that is proven, the illustration route remains blocked. If existing contracts clearly authorize separator passthrough, the next step is a read-only exact-source/raw-rank0 separator-preserving DOE; only after that succeeds mechanically and semantically may a default-OFF wrapper be considered. If no such authorization exists, mark the route exhausted rather than special-case the target.
+1. `[Illustration: FIG. N.]` → OPUS raw rank0;
+2. source-owned blank-line separator → unchanged structural passthrough;
+3. `_Illustration._` → TC-big raw rank0;
+4. source-owned trailing whitespace → unchanged structural passthrough.
+
+Exactly two candidates pass, for the generic FIG.21/FIG.24 instances. Their aggregates preserve the bracketed label, figure number, `\n\n`, emphasis and trailing source whitespace. The DB remains byte-identical and all prohibited-transform flags are false.
+
+**Decision.** Do not equate structural passthrough with target literal injection merely because source bytes appear in the aggregate target, and do not declare it safe merely because the DOE labels it source-owned. The deciding criterion is L3 architecture: the separator/trailing bytes must be identified from immutable source before model inference and preserved as structural composition under an already accepted Product mechanism/contract. Inspect `rocketdict-stage12-ascii-table-logical-rank0/1` and associated Stage12 source/tests. Only if this precedent is genuinely equivalent may the illustration wrapper be implemented.
+
+If precedent is compatible, the wrapper must be generic/source-defined, default OFF, exact-source, raw-rank0-only, fail closed, preserve exact structural bytes, and run full compose+census from run41. If precedent is incompatible, reject the route rather than special-case FIG.21/FIG.24.
 
 ## Durable rejected/closed directions
 
 - Sequence `325` figure-reference lead split / boundary pair is closed under tested geometries.
 - Historical seq `2346` angle-list DOE has no admissible raw-rank0 candidate; prime-preserving TC-big variants corrupt a large integer.
+- Seq `638` current short-DMS whole/split geometries are exhausted.
 - Inline `[G]` is not fixed by tested row-local/whole-context OPUS/TC-big geometry.
 - Large-integer canonicalization rescued zero baseline failures.
 - Generic whole-context/model fallback, broad V2 segmentation, generic bounded-parenthesis fallback, source rewriting, target repair/injection and automatic n-best selection remain rejected.
@@ -44,10 +54,10 @@ Until that is proven, the illustration route remains blocked. If existing contra
 
 ## Forward decision
 
-1. Audit separator composition legality in `PRODUCT_TARGET.md`, Stage12/source segmentation code and accepted rescue/composition implementations.
-2. If exact source-owned separator passthrough is already a legitimate structural operation, add a narrow separator-preserving illustration DOE from exact run41; do not implement a wrapper first.
-3. If the DOE passes boundary/semantic + hard gates, implement a generic-source-predicate default-OFF rank0-only wrapper and rerun full compose+census from run41.
-4. If the separator route is not legitimate or fails, close illustration and short-DMS returned families and advance to the next run41 residual cluster.
+1. Audit accepted structural-passthrough precedent in Product/Stage12 L3 code and tests, especially `rocketdict-stage12-ascii-table-logical-rank0/1`.
+2. If precedent is equivalent, implement a generic default-OFF illustration structural-separator rank0 wrapper and targeted fail-closed tests.
+3. Replay from exact run41 and run independent census. Arithmetic expectation for only two repaired punctuation failures is **18 numeric / 14 punctuation / 0 length, 31 unique**, but evidence, not expectation, decides acceptance.
+4. If full replay is clean and semantically acceptable, make the new run the only forward parent. Otherwise reject the wrapper and move to the next run41 residual cluster.
 5. Continue until zero hard failures, then finish learner/export and Windows clean-install/release validation.
 
 ## Memory protocol
