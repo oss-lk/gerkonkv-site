@@ -5,7 +5,7 @@ Durable translation-quality conclusions only. This is not a changelog and does n
 ## Maintained contracts
 
 - Production MT: pinned OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian `float32`.
-- Product Stage10 translation geometry remains V1 unless an explicit research implementation is requested. Research V2 is `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, policy `rocketdict-stage10-lowercase-continuation-coalescer/1`; raw Stage8 spaCy assignments remain immutable evidence.
+- Product/default Stage10 is `structural-entity-term-discourse-pronoun-v1`, schema `rocketdict-product-stage10/1`. Research V2 is `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, policy `rocketdict-stage10-lowercase-continuation-coalescer/1`; raw Stage8 spaCy assignments remain immutable evidence.
 - Stage12 planner: `rocketdict-stage12-protected-split/8`.
 - Numeric hard gate: `rocketdict-maintained-numeric-integrity/5`; Gutenberg emphasis diagnostic: `rocketdict-maintained-emphasis-markup-preservation/1`.
 - Independent TC-big comparator/rescue: `Helsinki-NLP/opus-mt-tc-big-en-zle` revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0, offline/Torch-free CTranslate2 asset.
@@ -15,9 +15,11 @@ Durable translation-quality conclusions only. This is not a changelog and does n
 
 Pinned complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`, normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`, `586543` chars.
 
-Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → run `16` **20/18/0,37**.
+Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → run `16` **20/18/0,37** → run `17` **20/17/0,36**.
 
-Run `16` remains the best accepted research translation basis: workflow `34645769684`, artifact `10282227627`, output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`, evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`.
+Run `17` is the best accepted persisted **research** translation basis. Workflow `34656818930`; artifact `10285447200`; artifact ZIP SHA-256 `e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581`; output SHA `5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd`; SQLite SHA `00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53`; evidence SHA `d52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057`.
+
+Run17 directly composes over exact run16. One source-defined punctuation-only false-boundary pair at `522572` is replaced by raw TC-big rank0; 3342 other base rows have zero source/target drift. Source reconstruction is byte-exact, SQLite integrity `ok`, FK violations zero. The accepted pair passes maintained strict/research/emphasis checks and diagnostic semantic anchors. This makes run17 a research basis only; it does not promote TC-big or the wrapper into Product defaults.
 
 ## Stage10 source-boundary research
 
@@ -25,22 +27,21 @@ Exact immutable run-16 Stage8 census establishes **38** V2 predicate matches. Se
 
 Planner-impact workflow `34651300446` proves V1 `3353` → V2 `3325` planned units and removes all 31 affected plan boundaries without invoking MT.
 
-Full exact real-MT replay workflow `34652579262` is green and persisted. Artifact `10284303389` has ZIP SHA-256 `7a477da19dbfea4e36c4f8c928e9c6e0b58213293aca0ec482e29c2d4f939db5`; evidence SHA `fdd823883fd5c9c89d13509915fca04dc9923a82247d321744f4dbe4edfe2f21`; replay SQLite SHA `ac4d438b63c8f008dd8331cc052e3daf9cd8343efe2fd78098dc8900d8a0dc00`; replay output SHA `fb893afbd0e6336e405874c29dd97236209f00d77d6c069248b9ef6c66504d48`.
+Full broad V2 real-MT replay workflow `34652579262` is mechanically green at **20/16/0,36**, with 3264 unchanged source geometries and zero target drift. But semantic review rejects broad V2 translation promotion: representative regressions on previously clean geometry include loss of `HEFK`, loss of `_in vacuo_`, and duplicated/garbled technical content. Therefore source-boundary correctness alone does not license wholesale MT resegmentation.
 
-Mechanical result is **20/18/0,37 → 20/16/0,36**, with `3264` unchanged source geometries and zero target drift. The aggregate numeric count hides a moved failure: `54796` is repaired but a new numeric failure appears at `204041`.
+Low-level `run_stage10()` default was realigned to V1 in commit `d438da03cbbd0882b34c3caea58a651a92058253`; V2 is now explicit research selection only.
 
-Semantic review rejects broad V2 translation promotion. Representative regressions on previously clean geometry include loss of `HEFK`, loss of `_in vacuo_`, and duplicated/garbled technical content. Therefore source-boundary correctness alone does not license wholesale MT resegmentation.
+## Boundary-pair punctuation rescue
 
-## Hard-pair real-MT feasibility
+Contract: `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1`, with matching selector/trigger `/1`; default OFF and not public-wired.
 
-Workflow `34654758870`, artifact `10285163599`, ZIP SHA-256 `6b422e41e9978547b8a1d5dbf3ab49ac169d1ec10941ae1a8561e8474cfa9f99`, evidence SHA `4296e96dbf280678645927bc073d2cf1e139e387ef061447f6efcb43d1f4525a`.
+Eligibility is generic and source-owned: exactly two adjacent complete unsplit V1 Stage12 rows, consecutive exact V1 Stage10 contexts, immutable Stage8 sentence evidence satisfying the V2 false-boundary predicate, at least one current punctuation hard failure, zero current numeric/symbol and length failures, and a conservative source complexity cap. Product code does not encode the corpus offset, `whence`, or an expected target phrase.
 
-The source-defined cohort is exactly three already-hard-failing adjacent run16 pairs whose boundary is independently proven by Stage10-v2: offsets `54796`, `112001`, `522572`.
+Only unmodified TC-big rank0 is considered. Strict maintained checks, Gutenberg emphasis preservation and source-relative completeness must all pass. Rejection leaves both rows exact. The wrapper composes over the existing run16 rescue stack; no source rewriting, target surgery, literals, placeholders or evaluator changes occur.
 
-- `54796`: OPUS can satisfy mechanical gates but fails technical/semantic diagnostics; TC-big has no safe selected candidate. Do not replace.
-- `112001`: no mechanically admissible OPUS or TC-big candidate. Do not replace.
-- `522572`: TC-big ranks `0..5` are mechanically admissible and satisfy the diagnostic anchors; this is the only current candidate family suitable for a deterministic default-OFF wrapper experiment.
-- The feasibility artifact explicitly forbids automatic candidate selection/Product promotion.
+Product CI workflow `34656258155` passed 301 Product Core tests, 213 Workbench tests (1 skipped) and real-runtime maintained Product execution. Terminal workflow `34656444553` also passed dependency-light and real-runtime jobs.
+
+The full corrected replay `34656818930` proves the one accepted pair improves run16 **20/18/0,37 → 20/17/0,36**, with 3342 untouched rows and zero target drift. The initial replay failure was audit-only: a beam-8 feasibility string was pinned while implementation uses beam6; the observed raw beam6 rank0 was independently inspected and the selector/gates were not changed.
 
 ## Earlier rescue evidence still binding
 
@@ -50,7 +51,8 @@ The source-defined cohort is exactly three already-hard-failing adjacent run16 p
 - run `13`: semicolon→question migration, **23/19/0,41 → 23/18/0,40**;
 - run `14`: target-only equals addition, **23/18/0,40 → 22/18/0,39**;
 - run `15`: angular-minute prime, **22/18/0,39 → 21/18/0,38**;
-- run `16`: short DMS over run15, **21/18/0,38 → 20/18/0,37**.
+- run `16`: short DMS over run15, **21/18/0,38 → 20/18/0,37**;
+- run `17`: punctuation-only false-boundary pair, **20/18/0,37 → 20/17/0,36**.
 
 Persisted success is research evidence, not automatic Product-default authorization.
 

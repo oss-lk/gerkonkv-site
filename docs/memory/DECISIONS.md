@@ -20,37 +20,40 @@ Production baseline is pinned OPUS EN→RU `opus-2020-02-11`, archive SHA-256 `7
 
 Exact source spans may be replacement units only when representable by complete current Stage12 rows; never slice target strings. Existing narrow TC-big wrappers remain default OFF/not public-wired; corpus improvement never automatically changes Product defaults.
 
-## Run-16 research basis
+## Run-17 research basis
 
-**Decision.** Run `16` remains the best accepted translation basis: **20 numeric / 18 punctuation / 0 length, 37 unique**. Identities: workflow `34645769684`, artifact `10282227627`, output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`, evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`.
+**Decision.** Run `17` supersedes run16 as the best accepted persisted **research** translation basis: **20 numeric / 17 punctuation / 0 length, 36 unique**. Identities: workflow `34656818930`, artifact `10285447200`, artifact ZIP SHA `e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581`, output SHA `5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd`, SQLite SHA `00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53`, evidence SHA `d52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057`.
+
+It composes directly over exact run16, merges one independently proven punctuation-only false-boundary pair into raw TC-big rank0, leaves 3342 other run16 rows source/target exact, reconstructs the complete source byte-exactly and passes SQLite/FK integrity. The accepted pair passed maintained strict/research/emphasis checks and focused semantic review. This is still default-OFF research evidence, not Product promotion.
 
 ## Stage10 V2 is research evidence, not Product translation default
 
-**Decision.** False spaCy sentence splits are valid upstream evidence, and Stage10-v2 correctly records/merges 38 source-defined lowercase-continuation boundaries. However, changing all 31 affected Stage12 translation geometries is **not** safe enough for Product/default use.
+**Decision.** False spaCy sentence splits are valid upstream evidence, and Stage10-v2 records/merges 38 source-defined lowercase-continuation boundaries. However, changing all 31 affected Stage12 translation geometries is **not** safe enough for Product/default use.
 
-Full replay workflow `34652579262` proves mechanical improvement to **20/16/0,36** with zero drift on `3264` unchanged source geometries, but semantic review finds material regressions on newly merged clean contexts, including loss of technical identifiers/content. Therefore Product/default translation geometry stays V1; V2 remains explicitly selectable research evidence.
+Full replay workflow `34652579262` proves mechanical improvement to **20/16/0,36** with zero drift on 3264 unchanged source geometries, but semantic review finds material regressions on newly merged clean contexts. Therefore Product/default translation geometry stays V1; V2 remains explicitly selectable research evidence.
 
-This supersedes the earlier decision that V2 itself should be the default Stage10 implementation for Product translation. Low-level API defaults must be aligned with Product Profile so accidental direct callers do not silently opt into broad V2 translation geometry.
+Low-level `run_stage10()` was aligned to this decision in commit `d438da03cbbd0882b34c3caea58a651a92058253`: default V1, explicit V2 only.
 
-## Source-defined boundary-pair rescue direction
+## Source-defined boundary-pair punctuation rescue
 
-**Decision.** The safe continuation of the Stage10-v2 finding is a narrow pair-level second-MT experiment, not wholesale V2 resegmentation.
+**Decision.** A narrow default-OFF pair-level second-MT rescue is the accepted research continuation of the Stage10-v2 finding; wholesale V2 resegmentation is not.
 
-A boundary-pair rescue may be attempted only when all of the following are true:
-- the boundary is independently proven by the generic Stage10-v2 source predicate;
-- the exact span is representable by two complete adjacent current Stage12 rows;
-- at least one of those rows already fails a maintained Product hard gate;
-- the combined source bytes equal the immutable source span exactly;
-- the second model sees only that exact combined source;
-- only an unmodified raw candidate may replace the pair;
-- strict maintained hard checks, emphasis/technical-preservation diagnostics and conservative completeness constraints pass;
-- otherwise the pair is left untouched.
+The `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1` trigger requires:
+- the boundary is independently proven by the generic Stage10-v2 source predicate from immutable Stage8 evidence;
+- exactly two complete adjacent unsplit current Stage12 rows map to two consecutive exact V1 contexts;
+- at least one current punctuation hard failure and **zero** current numeric/symbol or length failure across the pair;
+- the combined immutable source is within the conservative complexity cap;
+- only raw TC-big rank0 may be selected;
+- strict maintained hard/research checks, emphasis preservation and source-relative completeness pass;
+- otherwise both base rows remain exact.
 
-Feasibility workflow `34654758870` establishes three qualifying run16 pairs (`54796`, `112001`, `522572`). The first two must currently fail closed. At `522572` (`And whence is it | but from ...`) TC-big ranks `0..5` are mechanically admissible and satisfy the diagnostic anchors. The next implementation should deterministically test TC-big rank0 only; the feasibility artifact itself does not authorize Product promotion.
+The Product selector contains no corpus offset, `whence` source phrase or expected Russian target. Full replay workflow `34656818930` proves exactly one run16 pair is accepted at boundary `522572`, improving punctuation by one with no drift elsewhere. The initial beam6/beam8 expected-string audit mismatch was corrected only after inspecting the actual raw beam6 output; selector/gates were not changed.
 
 ## Residual defects stay family-specific
 
-**Decision.** No universal punctuation/numeric fixer. Current residuals mix source-owned labels/references, symbol corruption, target-only additions, prime/DMS notation, parser boundaries and long-context punctuation migration. A failed OPUS formulation does not forbid a materially different source-defined/model formulation; success on one narrow class does not license generic second-model fallback.
+**Decision.** No universal punctuation/numeric fixer. Current run17 residuals still mix source-owned labels/references, delimiter losses/additions, target-only questions, numeric-symbol corruption and long-context notation. A failed OPUS formulation does not forbid a materially different source-defined/model formulation; success on one narrow class does not license generic second-model fallback.
+
+Historical broad square-bracket-loss OPUS and generic TC-big directions remain rejected. Before implementing the next selector, inspect existing feasibility evidence and cluster the exact run17 residuals by source-owned defect family.
 
 ## Broad TC-big remains rejected
 
@@ -58,7 +61,7 @@ Feasibility workflow `34654758870` establishes three qualifying run16 pairs (`54
 
 ## Audit failures are classified before Product changes
 
-**Decision.** A red heavy workflow is not automatically a Product/model defect. Inspect persisted output/logs first. Repair harness-only defects without weakening Product acceptance semantics; never change evaluators merely to make a run green.
+**Decision.** A red heavy workflow is not automatically a Product/model defect. Inspect persisted output/logs first. Repair harness-only defects without weakening Product acceptance semantics; never change evaluators merely to make a run green. The run17 beam6 fixture correction is a concrete example: the first full replay failed on a stale expected target, while the produced raw candidate and invariants were independently inspected before the audit fixture changed.
 
 ## Acceptance order
 

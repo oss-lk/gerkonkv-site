@@ -5,12 +5,12 @@
 ## Current state
 
 - Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- Engineering/L3 checkpoint incorporated here: `1947e5518b0a284c6504cf6d55848a842593073d` (`Run Stage10 v2 hard-pair real-MT feasibility`).
+- Engineering/L3 checkpoint incorporated here: `4e9eaa2f68ebb4ff379e42fa35bceebb55c0b99c` (`Pin observed beam-6 boundary-pair rank0 evidence`).
 - Maintained Product Core + Workbench remain the forward implementation. Authoritative contract: `rocketdict/PRODUCT_TARGET.md`.
 - Final approved 90k+ evidence still requires **0 unresolved numeric/symbol, punctuation and length hard failures**, semantic acceptance and the complete learner/export path.
-- Current best persisted translation basis remains run `16`: **20 numeric/symbol / 18 punctuation / 0 length, 37 unique failures** over `3344` rows.
-- The broad Stage10-v2 translation replay is completed but **rejected for promotion** despite better mechanical counts because semantic regressions were found.
-- All narrow TC-big rescue layers remain default OFF/not public-wired and non-promoting.
+- Current best persisted research translation basis is run `17`: **20 numeric/symbol / 17 punctuation / 0 length, 36 unique failures** over `3343` rows.
+- Product/default Stage10 is V1. Broad Stage10-v2 remains explicit research evidence only and is rejected for wholesale translation geometry because semantic regressions were observed.
+- All TC-big rescue layers, including the new boundary-pair punctuation wrapper, remain default OFF/not public-wired and non-promoting.
 
 ## Recovery protocol
 
@@ -19,7 +19,7 @@ Follow `AGENTS.md`: compare HEAD with the checkpoint above, then route through `
 ## Maintained identities
 
 - OPUS: `opus-2020-02-11`, archive SHA-256 `798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677`, CTranslate2 Marian `float32`.
-- Product Stage10 must remain V1 translation geometry unless explicitly selecting the research V2 implementation. Research V2: `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, policy `rocketdict-stage10-lowercase-continuation-coalescer/1`.
+- Product Stage10/default: `structural-entity-term-discourse-pronoun-v1`, schema `rocketdict-product-stage10/1`. Research V2: `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, policy `rocketdict-stage10-lowercase-continuation-coalescer/1`.
 - Stage12 planner: `rocketdict-stage12-protected-split/8`; numeric gate: `rocketdict-maintained-numeric-integrity/5`; emphasis diagnostic: `rocketdict-maintained-emphasis-markup-preservation/1`.
 - TC-big: `Helsinki-NLP/opus-mt-tc-big-en-zle`, revision `708be1d372fe4c358a352f404e6dc9ca0126ba48`, weights SHA-256 `e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416`, CC-BY-4.0; offline asset manifest `85cf11ceb2eb401c83d1820672baaf745267e8b5edd71015a5a18e5bb49b752b`, payload tree `b725060c5d95ccc1f0082c0152e5ec79dd7815684ce89d6f658e5b97aeb2cba1`.
 
@@ -27,30 +27,27 @@ Follow `AGENTS.md`: compare HEAD with the checkpoint above, then route through `
 
 Complete Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized text SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; `586543` chars.
 
-Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → `16` **20/18/0,37**.
+Persisted progression: run `4` **30/34/5,64** → `7` **29/34/0,59** → `8` **25/33/0,55** → `9` **24/30/0,52** → `10` **24/25/0,47** → `11` **24/20/0,42** → `12` **23/19/0,41** → `13` **23/18/0,40** → `14` **22/18/0,39** → `15` **21/18/0,38** → `16` **20/18/0,37** → `17` **20/17/0,36**.
 
-Run-16 identities: workflow `34645769684`; artifact `10282227627`; artifact SHA-256 `92b2ad3fa98af1d12c27eeb4ee749071d5152464b34c4ac1f3bf40ed7cc02e14`; output SHA `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`; SQLite SHA `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11`; evidence SHA `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d`.
+Run-17 persisted identities: workflow `34656818930`; artifact `10285447200`; artifact ZIP SHA-256 `e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581`; output SHA `5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd`; SQLite SHA `00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53`; evidence SHA `d52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057`.
 
-## Stage10-v2 full replay conclusion
+Run17 composes directly over exact run16 and applies one default-OFF `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1` replacement at source boundary `522572`. Two adjacent base rows become one raw TC-big rank0 row; **3342** other run16 rows remain source/target exact. Full source reconstruction is byte-exact; SQLite integrity is `ok`; FK violations `0`. The accepted candidate passes maintained strict/research/emphasis checks and diagnostic semantic anchors for relation/attractive power/water/salt/heat. Product promotion remains explicitly forbidden by the persisted evidence.
 
-Immutable run-16 Stage8 evidence proves **38** raw spaCy boundaries satisfy the V2 source predicate; 7 are already absorbed by Stage12 protected-span planning and 31 change Stage12 geometry.
+## Stage10/default verification
 
-The exact full replay workflow `34652579262` is green. Artifact `10284303389`, ZIP SHA-256 `7a477da19dbfea4e36c4f8c928e9c6e0b58213293aca0ec482e29c2d4f939db5`; evidence SHA `fdd823883fd5c9c89d13509915fca04dc9923a82247d321744f4dbe4edfe2f21`; replay SQLite SHA `ac4d438b63c8f008dd8331cc052e3daf9cd8343efe2fd78098dc8900d8a0dc00`; replay output SHA `fb893afbd0e6336e405874c29dd97236209f00d77d6c069248b9ef6c66504d48`.
+Low-level Stage10 default was realigned from V2 to V1 in commit `d438da03cbbd0882b34c3caea58a651a92058253`; migration workflow `34655882413` passed. V2 remains explicitly selectable.
 
-Mechanical result: run16 **20/18/0,37 → 20/16/0,36**; `3264` unchanged source geometries have **0 target drift**; SQLite integrity is `ok` with `0` FK violations. `whence` punctuation and the `[Fig.16]` failure are mechanically repaired, but a numeric failure moves to source start `204041`.
+The exact broad V2 census is **38** predicate matches; 7 are already absorbed by Stage12 protected spans and 31 change Stage12 geometry. Full replay workflow `34652579262` mechanically reached **20/16/0,36** with zero drift on 3264 unchanged geometries, but semantic regressions on changed clean contexts reject broad promotion.
 
-Semantic review rejects broad V2 promotion: changed clean geometries include material regressions such as loss of `HEFK`, loss of `_in vacuo_`, and duplicated/garbled technical content. Therefore broad V2 is research evidence only, not Product/default translation geometry.
+## Boundary-pair punctuation rescue verification
 
-## Hard-pair feasibility conclusion
+Implementation commit `53c06e4308edc0fafff0f34b7979ff31c36d2590`. Trigger is generic/source-defined: two complete adjacent V1 rows, exact Stage10 contexts, independent Stage8/V2 false-boundary proof, existing punctuation-only hard failure, conservative source complexity. Product code contains no `whence`, corpus offset or expected Russian target selector.
 
-Read-only real-MT feasibility workflow `34654758870` is green on HEAD `1947e551...`; artifact `10285163599`, ZIP SHA-256 `6b422e41e9978547b8a1d5dbf3ab49ac169d1ec10941ae1a8561e8474cfa9f99`, evidence SHA `4296e96dbf280678645927bc073d2cf1e139e387ef061447f6efcb43d1f4525a`.
+Only raw TC-big rank0 is eligible; strict maintained checks, emphasis and source-relative completeness must pass. Any failure leaves both base rows unchanged. Wrapper is default OFF/not public-wired.
 
-Cohort is source-defined: exact Stage10-v2 boundary + adjacent complete run16 Stage12 rows + existing Product hard failure. Three boundaries qualify: `54796`, `112001`, `522572`.
+Product CI workflow `34656258155` passed `301` Product Core tests plus `213` Workbench tests (`1` skipped) and real-runtime Stage8→25/unified Product path. Terminal-head Product CI workflow `34656444553` also passed dependency-light and real-runtime jobs.
 
-- `54796`: OPUS has mechanically admissible hypotheses but semantic/technical diagnostics reject them; TC-big does not yield a safe candidate. Leave unchanged.
-- `112001`: neither OPUS nor TC-big yields a mechanically admissible candidate. Leave unchanged.
-- `522572` (`And whence is it | but from ...`): TC-big ranks `0..5` pass maintained mechanical checks and diagnostic anchors; rank0 is the intended deterministic research candidate for the next wrapper.
-- No automatic candidate selection or Product/default promotion is authorized by the feasibility artifact itself.
+Corrected full replay workflow `34656818930` is green. The first replay intentionally failed closed when an audit fixture expected a beam-8 feasibility target but the implemented beam-6 rank0 differed; the selector/gates were not weakened. The persisted corrected beam-6 candidate preserves the source future tense (`will not distil` → `не будет ...`) and all maintained checks.
 
 ## Durable guardrails
 
@@ -61,8 +58,7 @@ Cohort is source-defined: exact Stage10-v2 boundary + adjacent complete run16 St
 
 ## Active next actions
 
-1. Make low-level Stage10 default consistent with Product Profile: V1 by default; V2 explicit research implementation only.
-2. Add a default-OFF source-defined TC-big boundary-pair rescue using exact adjacent V1 Stage12 rows and the independent Stage10-v2 predicate; fail closed unless TC-big rank0 passes all maintained checks and conservative semantic-independent completeness constraints.
-3. Add unit/regression tests proving clean rows and non-qualifying pairs remain byte/target exact.
-4. Run Product Core + Workbench CI and real-runtime gates.
-5. Run a full persisted *Opticks* replay over run16. Expected research direction is removal of the `whence` punctuation failure without changing other source geometry; do not claim **20/17/0,36** until the persisted replay proves it.
+1. Rebuild the run17 residual census and cluster the remaining **17 punctuation** / **20 numeric** failures by source-owned defect family.
+2. Search existing historical feasibility/audit evidence before introducing any new selector; avoid repeating rejected broad square-bracket/parenthesis approaches.
+3. For the next candidate family, require source-defined triggering, raw-model candidates, exact unaffected-row/source invariants and a complete persisted *Opticks* replay.
+4. Continue toward zero unresolved hard failures before downstream heavy learner/export and Windows release validation.

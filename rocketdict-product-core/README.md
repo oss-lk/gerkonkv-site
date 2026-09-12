@@ -14,11 +14,11 @@ The Workbench `rocketdict-product-run` drives the same public maintained API fro
 
 ### Stage10 source-boundary policy
 
-The default Stage10 implementation is `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, with boundary policy `rocketdict-stage10-lowercase-continuation-coalescer/1`.
+The Product/default Stage10 implementation is `structural-entity-term-discourse-pronoun-v1`, schema `rocketdict-product-stage10/1`. The low-level `run_stage10()` default and the Workbench Product Profile are intentionally aligned on V1 so direct callers do not silently opt into research resegmentation.
 
-Stage8 parser sentences remain immutable evidence. Stage10 v2 may coalesce only consecutive raw parser sentences when immutable source geometry proves that the gap is whitespace-only, contains no paragraph break, the left source has no terminal `.?!` after closing punctuation, and the first lexical character on the right is lowercase. Each removed boundary records its source offset/reason and the original spaCy sentence indices. V1 remains explicitly selectable for compatibility.
+Research implementation `structural-entity-term-discourse-pronoun-v2`, schema `rocketdict-product-stage10/2`, uses boundary policy `rocketdict-stage10-lowercase-continuation-coalescer/1`. Stage8 parser sentences remain immutable evidence. V2 may coalesce only consecutive raw parser sentences when immutable source geometry proves that the gap is whitespace-only, contains no paragraph break, the left source has no terminal `.?!` after closing punctuation, and the first lexical character on the right is lowercase. Each removed boundary records its source offset/reason and the original spaCy sentence indices.
 
-This is an upstream ownership repair, not translation-side surgery: Stage10 never rewrites source bytes or patches a target. The current complete-*Opticks* census contains exactly five boundaries satisfying the v2 predicate; all five were manually source/token reviewed as false parser splits. Dedicated Stage10 regressions passed 12/12 before integration. Terminal-head complete-corpus translation evidence is still required before attributing any hard-gate improvement to this change.
+This remains an upstream source-evidence repair, not translation-side surgery: Stage10 never rewrites source bytes or patches a target. The exact complete-*Opticks* census contains **38** V2 predicate matches. Seven are already absorbed by protected Stage12 planning; **31** change Stage12 translation geometry. A complete real-MT V2 replay improved mechanical residuals from run16 **20 numeric / 18 punctuation / 0 length, 37 unique** to **20/16/0,36**, with zero target drift on 3264 unchanged geometries, but semantic review found material regressions on newly merged clean contexts, including loss of technical content. Broad V2 translation geometry is therefore **research evidence only and rejected as a Product/default replacement**.
 
 ### Stage12 translation and research layers
 
@@ -40,7 +40,10 @@ Additional evidence-backed wrappers are implemented internally but remain **defa
 - `rocketdict-stage12-tc-big-semicolon-question-substitution-rescue/1`;
 - `rocketdict-stage12-tc-big-target-only-equals-addition-rescue/1`;
 - `rocketdict-stage12-tc-big-angular-minute-prime-rescue/1`;
-- `rocketdict-stage12-tc-big-short-angular-dms-rescue/1`.
+- `rocketdict-stage12-tc-big-short-angular-dms-rescue/1`;
+- `rocketdict-stage12-tc-big-boundary-pair-punctuation-rescue/1`.
+
+The boundary-pair punctuation wrapper deliberately does **not** switch Stage12 to broad V2 geometry. It considers only two complete adjacent V1 Stage12 rows whose exact immutable boundary is independently proven by the generic V2 source predicate, whose current defect family is punctuation-only (zero numeric/symbol and length hard failures), and whose combined source stays inside a conservative complexity cap. Only raw TC-big rank0 is considered; if strict maintained checks, emphasis preservation or completeness checks fail, both original rows remain source/target exact.
 
 No rescue path may perform source rewriting, target surgery, placeholders, post-translation literal injection, corpus-specific target patches or evaluator weakening.
 
@@ -62,11 +65,16 @@ The persisted research progression is:
 - run `13`: **23/18/0**, 40 unique;
 - run `14`: **22/18/0**, 39 unique;
 - run `15`: **21/18/0**, 38 unique;
-- run `16`: **20/18/0**, 37 unique.
+- run `16`: **20/18/0**, 37 unique;
+- run `17`: **20/17/0**, 36 unique.
 
-Run `16` is the current best persisted research residual basis until Stage10-v2 full-corpus evidence supersedes it. It composes the default-OFF TC-big target-delimiter, footnote-reference, figure-reference, semicolon→question, target-only-equals, angular-minute and short-DMS layers. Workflow `34645769684`, artifact `10282227627`, output SHA-256 `767045235fd4bb797a9cba254b459ba3e84c9d693b382cd47b1f2d5aedb6d783`, SQLite SHA-256 `573a32c5dd3ba46f6bb16a91d7a3ca949c521dcf4f033b4ff040bf498cc2ad11` and audit-evidence SHA-256 `86c865cef5a0081fd77aa8ad78c525ebb38a01e6f279cc560aea56bb84d4e37d` identify the persisted evidence.
+Run `17` is the current best persisted **research** residual basis. It composes the default-OFF run16 layers with exactly one accepted TC-big boundary-pair punctuation rescue at source boundary `522572`. The persisted replay changed two adjacent run16 rows into one raw rank0 translation, left **3342** other run16 rows source/target exact, reconstructed all `586543` source characters byte-exactly, and passed SQLite `integrity_check=ok` with zero foreign-key violations. Workflow `34656818930`, artifact `10285447200`, artifact ZIP SHA-256 `e71c105aaa514612999838bacf9ee9e4e9a560033d4ff2a57abbf2a8d10a6581`, final output SHA-256 `5a224f0ef58cca18f60ea495a5dcde54fdc516260076eea9f5368d00809961dd`, final SQLite SHA-256 `00307c3e31fe3c42e208aba4c60a0502f102df2772dd06cc8c5804f1bccd1a53` and audit-evidence SHA-256 `d52b13a3d79d01e10482ea7208b90086828de2747cb478048426a97bcffe0057` identify this evidence.
 
-These persisted improvements do **not** change Product defaults. Final approved heavy evidence still requires zero unresolved hard failures, and Stage10 v2 must be re-evaluated on the complete corpus before any new count is claimed.
+The accepted source pair is `And whence is it but from that attractive Power, ... without a great Heat?`; the raw TC-big rank0 preserves the interrogative relation, attractive power, water, salt and heat content and passes the maintained strict/research/emphasis checks. This single-pair review supports run17 as a research basis; it does **not** authorize a Product default or public Stage12 surface.
+
+For comparison, the broad Stage10-v2 full replay reached the mechanically lower punctuation count **20/16/0,36** but is not the accepted research basis because semantic regressions were observed outside the hard-failing pair.
+
+These persisted improvements do **not** change Product defaults. Final approved heavy evidence still requires zero unresolved hard failures and complete semantic acceptance.
 
 ## External production assets
 
@@ -113,6 +121,8 @@ The footnote-reference wrapper considers only an exact single current row/Stage1
 The figure-reference wrapper is similarly source-defined: an exact current row/Stage10 context must start `[in _Fig._ N.]`, already hard-fail, and lose that leading source-owned reference. A raw TC-big candidate must preserve a leading bracketed reference containing the same `N` and emphasized translated label, preserve overall emphasis, pass strict checks and stay within source-relative alpha `0.75..1.50`.
 
 The later semicolon→question, equals-addition and angular wrappers follow the same fail-closed geometry: a source-defined defect class must already hard-fail; only unmodified raw TC-big hypotheses are eligible; strict maintained checks plus family-specific source invariants must pass. The short-DMS wrapper additionally requires one short (≤12 alphabetic words) source statement containing `Angle` and exactly one `D deg. M'. S''` expression, excluding longer technical sentences where mechanical cleanliness was shown insufficient.
+
+The boundary-pair punctuation wrapper adds one more fail-closed class: two exact adjacent V1 rows, an independently proven lowercase-continuation false parser boundary, punctuation-only current hard debt, at most 40 alphabetic source words, and raw TC-big rank0 only. It does not use corpus offsets, source phrases or expected Russian text in Product selection logic.
 
 Exact replacement geometry is mandatory. If a source context cuts through a current translation row, the rescue skips fail-closed rather than slicing a target string.
 
