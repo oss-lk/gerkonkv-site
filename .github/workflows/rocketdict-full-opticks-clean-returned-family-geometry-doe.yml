@@ -1,0 +1,241 @@
+name: RocketDict Full Opticks Clean Returned Family Geometry DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_clean_returned_family_geometry_doe.py'
+      - '.github/workflows/rocketdict-full-opticks-clean-returned-family-geometry-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  clean-returned-family-geometry-doe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASE_WORKFLOW_RUN_ID: '34695164876'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-rank0-clean-replay
+      BASE_DB_SHA256: e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e
+      BASE_REPLAY_EVIDENCE_SHA256: e7504ef18ead81e9c437ab8236b787a7d59082c272ef102fcc9bae6e281deac1
+      BASE_OUTPUT_SHA256: d8948e43158a126703a90e6ce1cd25725da8774e1db64410ca67e3ec7bb1a10f
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT: ${{ github.workspace }}/work/clean-returned-family-geometry-doe
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install asset builders
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' \
+            'transformers==4.56.2' 'sacremoses==0.1.1' \
+            'huggingface_hub==0.34.4' 'safetensors==0.6.2'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+
+      - name: Download exact authenticated run41 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+
+      - name: Authenticate run41 replay evidence and database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT"
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+
+          base = Path('work/base')
+          evidence_paths = list(base.rglob('full-opticks-rank0-clean-replay.json'))
+          database_paths = list(base.rglob('rocketdict.sqlite'))
+          if len(evidence_paths) != 1:
+              raise SystemExit(f'run41 replay evidence cardinality drift: {evidence_paths}')
+          expected_db = [p for p in database_paths if p.parent.name == 'full-opticks-rank0-clean-replay']
+          if len(expected_db) != 1:
+              raise SystemExit(f'run41 database cardinality drift: {expected_db}')
+          evidence_path = evidence_paths[0]
+          database_path = expected_db[0]
+          e = json.loads(evidence_path.read_text(encoding='utf-8'))
+          canonical = dict(e)
+          recorded = canonical.pop('evidence_sha256')
+          actual = hashlib.sha256(json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+          if recorded != os.environ['BASE_REPLAY_EVIDENCE_SHA256'] or actual != recorded:
+              raise SystemExit(f'run41 replay evidence SHA drift: recorded={recorded} actual={actual}')
+          if e.get('schema') != 'rocketdict-full-opticks-rank0-clean-lineage-replay/2':
+              raise SystemExit('run41 replay schema drift')
+          if e.get('final_translation_run_id') != 41:
+              raise SystemExit('run41 translation id drift')
+          if e.get('final_translation_output_sha256') != os.environ['BASE_OUTPUT_SHA256']:
+              raise SystemExit('run41 output SHA drift')
+          if e.get('final_database_sha256') != os.environ['BASE_DB_SHA256']:
+              raise SystemExit('run41 evidence database SHA drift')
+          if e.get('final_hard_gate_counts') != {'numeric_symbol':18,'punctuation':16,'length':0,'unique':33}:
+              raise SystemExit(f"run41 hard-gate drift: {e.get('final_hard_gate_counts')!r}")
+          if e.get('source_coverage_byte_exact') is not True:
+              raise SystemExit('run41 source coverage drift')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
+              if e.get(flag) is not False:
+                  raise SystemExit(f'unsafe run41 flag: {flag}')
+          db_sha = hashlib.sha256(database_path.read_bytes()).hexdigest()
+          if db_sha != os.environ['BASE_DB_SHA256']:
+              raise SystemExit(f'run41 database SHA drift: {db_sha}')
+          destination = Path(os.environ['ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT'])
+          (destination/'rocketdict.sqlite').write_bytes(database_path.read_bytes())
+          (destination/'run41-replay-evidence.json').write_bytes(evidence_path.read_bytes())
+          print(json.dumps({'database': str(database_path), 'database_sha256': db_sha, 'evidence_sha256': recorded}, indent=2))
+          PY
+          cp "$ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT/rocketdict.sqlite" \
+             "$ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT/rocketdict-before.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and verify pinned OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+
+      - name: Build verified offline OPUS asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/clean-returned-opus-asset-build.json
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain exact pinned TC-big snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=[
+                  'README.md','config.json','generation_config.json','model.safetensors',
+                  'source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'
+              ],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+
+      - name: Build byte-verified offline TC-big asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" | tee work/clean-returned-tc-big-asset-build.json
+
+      - name: Build torch-free DOE runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/clean-returned-doe-venv
+          work/clean-returned-doe-venv/bin/python -m pip install --upgrade pip
+          work/clean-returned-doe-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/clean-returned-doe-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in DOE inference runtime')
+          PY
+
+      - name: Run read-only exact-source rank0 geometry DOE
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/clean-returned-doe-venv/bin/python -u \
+            rocketdict-workbench/tests/real_translation_full_opticks_clean_returned_family_geometry_doe.py
+          echo "$BASE_DB_SHA256  $ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+          echo "$BASE_DB_SHA256  $ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT/rocketdict-before.sqlite" | sha256sum -c -
+
+      - name: Verify DOE evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['ROCKETDICT_CLEAN_RETURNED_GEOMETRY_DOE_ROOT'])
+          p = root/'full-opticks-clean-returned-family-geometry-doe.json'
+          e = json.loads(p.read_text(encoding='utf-8'))
+          if e['schema'] != 'rocketdict-full-opticks-clean-returned-family-geometry-doe/1': raise SystemExit('schema drift')
+          if e['base_translation_run_id'] != 41 or e['base_database_sha256'] != os.environ['BASE_DB_SHA256']: raise SystemExit('base identity drift')
+          if e['base_translation_output_sha256'] != os.environ['BASE_OUTPUT_SHA256']: raise SystemExit('base output drift')
+          if e['base_hard_gate_counts'] != {'numeric_symbol':18,'punctuation':16,'length':0,'unique':33}: raise SystemExit('base count drift')
+          if e['illustration_source_starts'] != [72401,90105]: raise SystemExit(f"illustration cohort drift: {e['illustration_source_starts']!r}")
+          if e['short_dms_source_starts'] != [110881]: raise SystemExit(f"DMS cohort drift: {e['short_dms_source_starts']!r}")
+          if e['candidate_count'] != 30: raise SystemExit(f"candidate cardinality drift: {e['candidate_count']}")
+          if e['source_coverage_byte_exact'] is not True or e['database_unchanged'] is not True or e['raw_rank0_only'] is not True: raise SystemExit('immutability/rank0 drift')
+          for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
+              if e[flag] is not False: raise SystemExit(f'unsafe DOE flag: {flag}')
+          canonical=dict(e); recorded=canonical.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if actual != recorded: raise SystemExit('DOE canonical evidence SHA drift')
+          print(json.dumps({'mechanically_passed_candidate_ids':e['mechanically_passed_candidate_ids'],'evidence_sha256':recorded}, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Record DOE runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p work/clean-returned-doe-runtime
+          work/clean-returned-doe-venv/bin/python -VV > work/clean-returned-doe-runtime/python.txt || true
+          work/clean-returned-doe-venv/bin/python -m pip freeze | sort > work/clean-returned-doe-runtime/pip-freeze.txt || true
+          sha256sum work/opus-2020-02-11.zip > work/clean-returned-doe-runtime/opus.sha256 || true
+          sha256sum "$TC_BIG_SNAPSHOT/model.safetensors" > work/clean-returned-doe-runtime/tc-big-weights.sha256 || true
+
+      - name: Upload read-only DOE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-full-opticks-clean-returned-family-geometry-doe
+          path: |
+            work/clean-returned-opus-asset-build.json
+            work/clean-returned-tc-big-asset-build.json
+            work/clean-returned-family-geometry-doe/*.json
+            work/clean-returned-doe-runtime/*
+          if-no-files-found: warn
+          retention-days: 90
