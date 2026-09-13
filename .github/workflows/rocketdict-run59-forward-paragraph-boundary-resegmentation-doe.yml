@@ -1,0 +1,174 @@
+name: RocketDict Run59 Forward Paragraph Boundary Resegmentation DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe.py'
+      - '.github/workflows/rocketdict-run59-forward-paragraph-boundary-resegmentation-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run59-forward-paragraph-boundary-doe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      RUN59_RUN_ID: '34753122528'
+      RUN59_ARTIFACT_NAME: rocketdict-canonical-run59-m2m100-arithmetic
+      RUN59_DB_SHA256: a12cefa073d51250a29ee3ad9ad72ef97795536466dd1771c9d6a1036e81b2a
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT: ${{ github.workspace }}/work/run59-forward-paragraph-boundary-resegmentation-doe
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install maintained Product and Workbench runtimes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench
+
+      - name: Download immutable canonical run59 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN59_ARTIFACT_NAME }}
+          path: work/run59
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN59_RUN_ID }}
+
+      - name: Stage exact canonical run59 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_db=work/run59/canonical/rocketdict.sqlite
+          test -s "$source_db"
+          echo "$RUN59_DB_SHA256  $source_db" | sha256sum -c -
+          mkdir -p "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT"
+          cp "$source_db" "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/rocketdict.sqlite"
+          echo "$RUN59_DB_SHA256  $ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Restore pinned OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and verify official OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+
+      - name: Build verified offline CTranslate2 float32 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" \
+            | tee work/run59-forward-paragraph-opus-asset-build.json
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/rocketdict-opus-asset.json"
+          test -s "$ROCKETDICT_OPUS_ASSET_DIR/ct2/model.bin"
+
+      - name: Prove inference runtime stays Torch-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('Torch unexpectedly installed in forward-boundary DOE runtime')
+          PY
+
+      - name: Run exact read-only forward paragraph-boundary DOE
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe.py \
+            | tee "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/summary.json"
+          echo "$RUN59_DB_SHA256  $ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+
+      - name: Verify read-only evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT'])
+          e=json.loads((root/'run59-forward-paragraph-boundary-resegmentation-doe.json').read_text(encoding='utf-8'))
+          if e['schema']!='rocketdict-run59-forward-paragraph-boundary-resegmentation-doe/1':
+              raise SystemExit('schema drift')
+          if e['base_run_id'] != 59 or e['segment_count'] != 3335:
+              raise SystemExit('base identity/census drift')
+          if e['attempt_count'] != 1 or e['attempted_pairs'] != [[3008,3009]]:
+              raise SystemExit(f"generic trigger cohort drift: {e['attempted_pairs']!r}")
+          if e['trigger_contract']['corpus_sequence_whitelist'] is not False or e['trigger_contract']['source_start_whitelist'] is not False:
+              raise SystemExit('trigger became corpus-specific')
+          if e['generation'] != {'implementation':'opus-en-ru-ct2','beam_size':6,'num_hypotheses':1,'max_decoding_length':768,'selected_rank':0}:
+              raise SystemExit('generation policy drift')
+          a=e['attempts'][0]
+          if a['forward_nlp_token_count'] > 8 or a['candidate_left_nlp_token_count'] > a['preferred_token_budget'] + 8:
+              raise SystemExit('forward movement exceeded bounded envelope')
+          if a['candidate_left_source'] + a['candidate_right_source'] != a['base_left_source'] + a['base_right_source']:
+              raise SystemExit('candidate source coverage drift')
+          if any(row['model_input'] != a[f"candidate_{row['side']}_source"] for row in a['candidate_rows']):
+              raise SystemExit('model input differs from exact candidate source')
+          if any(int(row['hypothesis']['rank']) != 0 or row['hypothesis']['text'] != row['raw_rank0_target'] for row in a['candidate_rows']):
+              raise SystemExit('raw rank0 provenance drift')
+          if e['database_unchanged'] is not True or e['database_sha256_after'] != e['base_database_sha256']:
+              raise SystemExit('database mutation detected')
+          if any(e.get(flag) is not False for flag in (
+              'source_bytes_rewritten','target_rewriting','placeholders',
+              'post_translation_literal_injection','corpus_specific_target_patches',
+              'evaluator_weakened','n_best_cherry_picking'
+          )):
+              raise SystemExit('unsafe evidence flag')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False:
+              raise SystemExit('DOE unexpectedly authorizes promotion')
+          print(json.dumps({
+              'attempted_pairs':e['attempted_pairs'],
+              'accepted_pairs':e['accepted_pairs'],
+              'evidence_sha256':e['evidence_sha256'],
+          },ensure_ascii=False,indent=2))
+          PY
+
+      - name: Record runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/runtime-evidence"
+          python -VV > "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/runtime-evidence/python.txt" 2>&1
+          python -m pip freeze | sort > "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/runtime-evidence/pip-freeze.txt" 2>&1
+          sha256sum work/opus-2020-02-11.zip > "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/runtime-evidence/opus.sha256" 2>&1
+
+      - name: Upload read-only DOE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run59-forward-paragraph-boundary-resegmentation-doe
+          path: |
+            work/run59-forward-paragraph-boundary-resegmentation-doe/run59-forward-paragraph-boundary-resegmentation-doe.json
+            work/run59-forward-paragraph-boundary-resegmentation-doe/summary.json
+            work/run59-forward-paragraph-boundary-resegmentation-doe/runtime-evidence
+            work/run59-forward-paragraph-opus-asset-build.json
+          if-no-files-found: warn
+          retention-days: 90
