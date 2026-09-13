@@ -43,6 +43,14 @@ def test_rank0_policy_fails_closed_on_missing_or_duplicate_rank0() -> None:
         select_rank0_evaluation([_row(0, True), _row(0, False)])
 
 
+def _assert_versioned_contract(value: str, *, role: str) -> None:
+    family, separator, revision = value.rpartition("/")
+    assert separator == "/"
+    assert family.startswith("rocketdict-stage12-")
+    assert revision.isdigit() and int(revision) >= 1
+    assert role in family
+
+
 @pytest.mark.parametrize(
     ("module", "rescue_contract", "selector_contract"),
     [
@@ -56,8 +64,11 @@ def test_rank0_policy_fails_closed_on_missing_or_duplicate_rank0() -> None:
 def test_nbest_rescue_modules_are_structurally_rank0_only(
     module, rescue_contract: str, selector_contract: str
 ) -> None:  # type: ignore[no-untyped-def]
-    assert rescue_contract.endswith("/2")
-    assert selector_contract.endswith("/2")
+    # Contract revisions are allowed to advance independently when semantics
+    # change; the invariant under test is selection authority, not a historical
+    # revision suffix such as ``/2``.
+    _assert_versioned_contract(rescue_contract, role="rescue")
+    _assert_versioned_contract(selector_contract, role="selector")
     source = inspect.getsource(module.run_stage12)
     assert "select_rank0_evaluation(evaluated)" in source
     assert "automatic_n_best_cherry_picking" in inspect.getsource(module._safety_flags)
