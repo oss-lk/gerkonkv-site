@@ -11,6 +11,7 @@ and Russian and the M2M100 target-language prefix is supplied explicitly.
 from dataclasses import dataclass
 import hashlib
 import importlib.util
+from importlib.metadata import PackageNotFoundError, version as package_version
 import json
 import os
 from pathlib import Path
@@ -22,6 +23,7 @@ M2M100_MODEL_SHA256 = "d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b
 M2M100_LICENSE = "MIT"
 M2M100_SOURCE_LANGUAGE = "en"
 M2M100_TARGET_LANGUAGE = "ru"
+M2M100_CTRANSLATE2_VERSION = "4.8.2"
 M2M100_ASSET_SCHEMA = "rocketdict-m2m100-en-ru-asset/1"
 M2M100_ASSET_ENV = "ROCKETDICT_M2M100_ASSET_DIR"
 M2M100_MANIFEST_NAME = "rocketdict-m2m100-asset.json"
@@ -74,6 +76,13 @@ def _inside(root: Path, value: str, *, label: str) -> Path:
     except ValueError as exc:
         raise RuntimeError(f"M2M100 asset {label} escapes asset root") from exc
     return candidate
+
+
+def _installed_version(distribution: str) -> str | None:
+    try:
+        return str(package_version(distribution))
+    except PackageNotFoundError:
+        return None
 
 
 @dataclass(frozen=True)
@@ -181,6 +190,8 @@ def m2m100_status() -> dict[str, Any]:
     ctranslate2_available = importlib.util.find_spec("ctranslate2") is not None
     transformers_available = importlib.util.find_spec("transformers") is not None
     sentencepiece_available = importlib.util.find_spec("sentencepiece") is not None
+    ctranslate2_version = _installed_version("ctranslate2") if ctranslate2_available else None
+    ctranslate2_version_matches = ctranslate2_version == M2M100_CTRANSLATE2_VERSION
     try:
         asset = load_m2m100_asset()
         asset_error = None
@@ -189,14 +200,24 @@ def m2m100_status() -> dict[str, Any]:
         asset_error = str(exc)
     available = bool(
         ctranslate2_available
+        and ctranslate2_version_matches
         and transformers_available
         and sentencepiece_available
         and asset is not None
     )
+    if available:
+        reason = "ready"
+    elif ctranslate2_available and not ctranslate2_version_matches:
+        reason = "ctranslate2_version_drift"
+    else:
+        reason = "missing_runtime_or_verified_asset"
     return {
         "available": available,
-        "reason": "ready" if available else "missing_runtime_or_verified_asset",
+        "reason": reason,
         "ctranslate2_importable": ctranslate2_available,
+        "ctranslate2_version": ctranslate2_version,
+        "ctranslate2_expected_version": M2M100_CTRANSLATE2_VERSION,
+        "ctranslate2_version_matches": ctranslate2_version_matches,
         "transformers_importable": transformers_available,
         "sentencepiece_importable": sentencepiece_available,
         "asset_configured": asset is not None,
@@ -234,6 +255,11 @@ class M2M100Translator:
         import ctranslate2
         from transformers import M2M100Tokenizer
 
+        if str(ctranslate2.__version__) != M2M100_CTRANSLATE2_VERSION:
+            raise RuntimeError(
+                "Pinned M2M100 runtime changed after status probe: "
+                f"{ctranslate2.__version__!r} != {M2M100_CTRANSLATE2_VERSION!r}"
+            )
         self.asset = asset
         self._tokenizer = M2M100Tokenizer.from_pretrained(
             str(asset.tokenizer_dir), local_files_only=True
