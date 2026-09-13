@@ -1,0 +1,127 @@
+name: RocketDict Run59 Clause Paragraph Question Resegmentation DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_run59_clause_paragraph_question_resegmentation_doe.py'
+      - '.github/workflows/rocketdict-run59-clause-paragraph-question-resegmentation-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  clause-paragraph-question-doe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      RUN59_RUN_ID: '34753122528'
+      RUN59_ARTIFACT_NAME: rocketdict-canonical-run59-m2m100-arithmetic
+      RUN59_DB_SHA256: 41bafa00619c83b87f55f7e452f8e9e27a1871d601bb5c846d3d561531dbb78d
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT: ${{ github.workspace }}/work/run59-clause-paragraph-question-resegmentation-doe
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install maintained runtimes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench
+      - name: Download canonical run59
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RUN59_ARTIFACT_NAME }}
+          path: work/run59
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.RUN59_RUN_ID }}
+      - name: Stage exact canonical database
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_db=work/run59/canonical/rocketdict.sqlite
+          test -s "$source_db"
+          echo "$RUN59_DB_SHA256  $source_db" | sha256sum -c -
+          mkdir -p "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT"
+          cp "$source_db" "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/rocketdict.sqlite"
+          echo "$RUN59_DB_SHA256  $ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Restore pinned OPUS cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      - name: Obtain verified OPUS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+      - name: Build verified offline OPUS asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" | tee work/clause-paragraph-opus-asset-build.json
+      - name: Run read-only three-way DOE
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/real_translation_run59_clause_paragraph_question_resegmentation_doe.py | tee "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/summary.json"
+          echo "$RUN59_DB_SHA256  $ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
+      - name: Verify evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT'])
+          e=json.loads((root/'run59-clause-paragraph-question-resegmentation-doe.json').read_text(encoding='utf-8'))
+          if e['schema']!='rocketdict-run59-clause-paragraph-question-resegmentation-doe/1': raise SystemExit('schema drift')
+          if e['base_run_id']!=59 or e['segment_count']!=3335: raise SystemExit('base drift')
+          if e['trigger_pair']!=[3008,3009]: raise SystemExit(f"trigger cohort drift: {e['trigger_pair']!r}")
+          b=e['clause_boundary']
+          if b['lexical_anchor_used'] or b['sequence_whitelist_used'] or b['source_offset_whitelist_used']: raise SystemExit('corpus-specific boundary')
+          if not (24 <= e['source_token_counts'][0] <= 64 and 16 <= e['source_token_counts'][1] <= 32): raise SystemExit('bounded clause geometry drift')
+          if ''.join(e['source_texts']) != e['forward_trigger']['base_left_source'] + e['forward_trigger']['base_right_source']: raise SystemExit('source coverage drift')
+          if any(int(r['hypothesis']['rank'])!=0 or r['model_input']!=e['source_texts'][i] or r['hypothesis']['text']!=r['raw_rank0_target'] for i,r in enumerate(e['candidate_rows'])): raise SystemExit('raw rank0 provenance drift')
+          if not e['database_unchanged'] or e['database_sha256_after']!=e['base_database_sha256']: raise SystemExit('database mutation')
+          if any(e.get(flag) is not False for flag in ('source_bytes_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking')): raise SystemExit('unsafe flag')
+          if e['promotion_allowed'] or e['automatic_product_default_allowed']: raise SystemExit('DOE promotion guard drift')
+          print(json.dumps({'token_counts':e['source_token_counts'],'accepted':e['aggregate_selection']['accepted'],'evidence_sha256':e['evidence_sha256']},ensure_ascii=False,indent=2))
+          PY
+      - name: Record runtime evidence
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/runtime-evidence"
+          python -VV > "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/runtime-evidence/python.txt" 2>&1
+          python -m pip freeze | sort > "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/runtime-evidence/pip-freeze.txt" 2>&1
+          sha256sum work/opus-2020-02-11.zip > "$ROCKETDICT_RUN59_CLAUSE_PARAGRAPH_DOE_ROOT/runtime-evidence/opus.sha256" 2>&1
+      - name: Upload DOE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run59-clause-paragraph-question-resegmentation-doe
+          path: |
+            work/run59-clause-paragraph-question-resegmentation-doe/run59-clause-paragraph-question-resegmentation-doe.json
+            work/run59-clause-paragraph-question-resegmentation-doe/summary.json
+            work/run59-clause-paragraph-question-resegmentation-doe/runtime-evidence
+            work/clause-paragraph-opus-asset-build.json
+          if-no-files-found: warn
+          retention-days: 90
