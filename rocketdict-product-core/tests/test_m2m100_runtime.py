@@ -13,8 +13,8 @@ from rocketdict import m2m100_runtime as runtime
 def _write_asset(root: Path) -> Path:
     ct2 = root / "ct2"
     tokenizer = root / "tokenizer"
-    ct2.mkdir(parents=True)
-    tokenizer.mkdir(parents=True)
+    ct2.mkdir(parents=True, exist_ok=True)
+    tokenizer.mkdir(parents=True, exist_ok=True)
     (ct2 / "model.bin").write_bytes(b"ct2-model")
     for index, relative in enumerate(runtime.M2M100_TOKENIZER_FILES):
         (tokenizer / relative).write_bytes(f"tokenizer-{index}-{relative}".encode())
@@ -117,12 +117,7 @@ def test_translate_forces_russian_prefix_and_strips_it_before_decode(
 ) -> None:
     _write_asset(tmp_path)
     monkeypatch.setenv(runtime.M2M100_ASSET_ENV, str(tmp_path))
-    monkeypatch.setattr(
-        runtime,
-        "m2m100_status",
-        lambda: {"available": True},
-    )
-
+    monkeypatch.setattr(runtime, "m2m100_status", lambda: {"available": True})
     observed: dict[str, object] = {}
 
     class FakeTokenizer:
@@ -165,11 +160,7 @@ def test_translate_forces_russian_prefix_and_strips_it_before_decode(
             return [SimpleNamespace(hypotheses=[["__ru__", "▁Привет", "!"]], scores=[-0.25])]
 
     monkeypatch.setitem(sys.modules, "ctranslate2", SimpleNamespace(Translator=FakeBackend))
-    monkeypatch.setitem(
-        sys.modules,
-        "transformers",
-        SimpleNamespace(M2M100Tokenizer=FakeTokenizer),
-    )
+    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(M2M100Tokenizer=FakeTokenizer))
     translator = runtime.M2M100Translator()
     result = translator.translate(["Hello!"], beam_size=5, num_hypotheses=1)
     assert result == [[{"rank": 0, "text": "Привет!", "tokens": ["__ru__", "▁Привет", "!"], "score": -0.25}]]
