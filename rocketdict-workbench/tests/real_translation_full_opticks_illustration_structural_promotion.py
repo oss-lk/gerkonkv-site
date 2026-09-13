@@ -43,7 +43,7 @@ EXPECTED_SOURCE_STARTS = [72401, 90105, 203786]
 STRUCTURAL_SOURCE_STARTS = [72401, 90105]
 ORDINARY_SOURCE_START = 203786
 EXPECTED_SELECTED_RANKS = [0, 0, 0, 0, 0]
-EXPECTED_FINAL_SEGMENT_COUNT = 3341
+EXPECTED_FINAL_SEGMENT_COUNT = 3335
 UNSAFE_FLAGS = (
     "source_bytes_rewritten",
     "model_input_source_rewritten",
@@ -167,64 +167,105 @@ def _assert_structural_provenance(
 ) -> list[dict[str, Any]]:
     cases: list[dict[str, Any]] = []
     for left, right in intervals:
-        pieces = [
-            row
-            for row in _ordered(final_rows)
-            if int(row["source_start"]) >= left and int(row["source_end"]) <= right
+        carriers = [
+            row for row in _ordered(final_rows)
+            if int(row["source_start"]) == left and int(row["source_end"]) == right
         ]
-        if len(pieces) != 4:
-            raise RuntimeError(f"structural illustration {left}:{right} did not materialize four pieces")
-        roles: list[str] = []
-        piece_evidence: list[dict[str, Any]] = []
-        for row in pieces:
-            rescue = dict((row.get("payload") or {}).get("illustration_label_rescue") or {})
-            if rescue.get("contract") != ILLUSTRATION_LABEL_RESCUE_CONTRACT:
-                raise RuntimeError("illustration structural row contract drift")
-            if rescue.get("selector_contract") != ILLUSTRATION_LABEL_SELECTOR_CONTRACT:
-                raise RuntimeError("illustration structural row selector drift")
-            if rescue.get("source_plan_contract") != ILLUSTRATION_SOURCE_PLAN_CONTRACT:
-                raise RuntimeError("illustration structural row source-plan drift")
-            if rescue.get("applied") is not True:
-                raise RuntimeError("illustration structural row missing applied provenance")
-            if rescue.get("raw_rank0_only") is not True:
-                raise RuntimeError("illustration structural row lost rank0-only provenance")
-            for flag in UNSAFE_FLAGS:
-                if rescue.get(flag) is not False:
-                    raise RuntimeError(f"illustration structural row unsafe {flag}={rescue.get(flag)!r}")
-            role = str(rescue.get("role") or "")
-            roles.append(role)
-            source = str(row.get("source_text") or "")
-            target = str(row.get("target_text") or "")
-            if role in {"separator", "trailing"}:
-                if rescue.get("source_owned_passthrough") is not True or target != source:
-                    raise RuntimeError(f"source-owned {role} drift at {left}:{right}")
-            elif role in {"label", "suffix"}:
-                if rescue.get("source_owned_passthrough") is not False:
-                    raise RuntimeError(f"translated {role} incorrectly marked passthrough")
-                if rescue.get("model_input_source_exact") is not True:
-                    raise RuntimeError(f"translated {role} lost exact source/model identity")
-                if str(rescue.get("model_input") or "") != source:
-                    raise RuntimeError(f"translated {role} model input differs from source span")
-                if int(rescue.get("selected_rank", -1)) != 0:
-                    raise RuntimeError(f"translated {role} selected non-rank0")
-            else:
-                raise RuntimeError(f"unexpected structural illustration role {role!r}")
-            piece_evidence.append(
-                {
-                    "role": role,
-                    "source_start": int(row["source_start"]),
-                    "source_end": int(row["source_end"]),
-                    "source_text": source,
-                    "target_text": target,
-                    "model": rescue.get("model"),
-                    "model_input": rescue.get("model_input"),
-                    "selected_rank": rescue.get("selected_rank"),
-                    "source_owned_passthrough": rescue.get("source_owned_passthrough"),
-                }
+        if len(carriers) != 1:
+            raise RuntimeError(
+                f"structural illustration {left}:{right} did not persist one semantic carrier"
             )
-        if roles != ["label", "separator", "suffix", "trailing"]:
-            raise RuntimeError(f"structural illustration role order drift: {roles!r}")
-        cases.append({"source_span": [left, right], "pieces": piece_evidence})
+        row = carriers[0]
+        source = str(row.get("source_text") or "")
+        target = str(row.get("target_text") or "")
+        rescue = dict((row.get("payload") or {}).get("illustration_label_rescue") or {})
+        if rescue.get("contract") != ILLUSTRATION_LABEL_RESCUE_CONTRACT:
+            raise RuntimeError("illustration structural carrier contract drift")
+        if rescue.get("selector_contract") != ILLUSTRATION_LABEL_SELECTOR_CONTRACT:
+            raise RuntimeError("illustration structural carrier selector drift")
+        if rescue.get("source_plan_contract") != ILLUSTRATION_SOURCE_PLAN_CONTRACT:
+            raise RuntimeError("illustration structural carrier source-plan drift")
+        if rescue.get("applied") is not True or rescue.get("role") != "semantic_carrier":
+            raise RuntimeError("illustration structural carrier provenance drift")
+        if rescue.get("rendering") != "source_planned_semantic_carrier":
+            raise RuntimeError("illustration structural carrier rendering drift")
+        if rescue.get("raw_rank0_only") is not True:
+            raise RuntimeError("illustration structural carrier lost rank0-only provenance")
+        if rescue.get("source_owned_structural_passthrough") is not True:
+            raise RuntimeError("illustration structural carrier lost source-owned structure")
+        if rescue.get("source_owned_passthrough") is not False:
+            raise RuntimeError("mixed semantic carrier marked as pure passthrough")
+        if str(rescue.get("rendered_target") or "") != target:
+            raise RuntimeError("illustration structural carrier target provenance drift")
+        for flag in UNSAFE_FLAGS:
+            if rescue.get(flag) is not False:
+                raise RuntimeError(
+                    f"illustration structural carrier unsafe {flag}={rescue.get(flag)!r}"
+                )
+
+        source_plan = dict(rescue.get("source_plan") or {})
+        if source_plan.get("contract") != ILLUSTRATION_SOURCE_PLAN_CONTRACT:
+            raise RuntimeError("illustration structural nested source-plan drift")
+        if source_plan.get("created_before_mt") is not True:
+            raise RuntimeError("illustration structural source plan was not pre-MT")
+        pieces = list(source_plan.get("pieces") or [])
+        if [piece.get("role") for piece in pieces] != [
+            "label", "separator", "suffix", "trailing"
+        ]:
+            raise RuntimeError("illustration structural piece-role drift")
+        rendered_parts: list[str] = []
+        piece_evidence: list[dict[str, Any]] = []
+        cursor = left
+        for piece in pieces:
+            span = list(piece.get("source_span") or [])
+            if len(span) != 2:
+                raise RuntimeError("illustration structural piece source-span drift")
+            start, end = int(span[0]), int(span[1])
+            if start != cursor or end < start or end > right:
+                raise RuntimeError("illustration structural piece coverage drift")
+            piece_source = str(piece.get("source_text") or "")
+            if source[start - left:end - left] != piece_source:
+                raise RuntimeError("illustration structural piece source bytes drift")
+            role = str(piece.get("role") or "")
+            if role in {"label", "suffix"}:
+                expected_model = "opus" if role == "label" else "tc_big"
+                if piece.get("kind") != "translate" or piece.get("model") != expected_model:
+                    raise RuntimeError(f"translated {role} routing drift")
+                if piece.get("model_input_source_exact") is not True:
+                    raise RuntimeError(f"translated {role} lost exact source/model identity")
+                if str(piece.get("model_input") or "") != piece_source:
+                    raise RuntimeError(f"translated {role} model input differs from source span")
+                if int(piece.get("selected_rank", -1)) != 0:
+                    raise RuntimeError(f"translated {role} selected non-rank0")
+                if piece.get("raw_model_selected") is not True:
+                    raise RuntimeError(f"translated {role} lost raw-model provenance")
+                rendered_piece = str(piece.get("selected_target") or "")
+            else:
+                if piece.get("kind") != "preserve_source_structure":
+                    raise RuntimeError(f"source-owned {role} kind drift")
+                if piece.get("source_owned") is not True:
+                    raise RuntimeError(f"source-owned {role} ownership drift")
+                rendered_piece = str(piece.get("rendered_text") or "")
+                if rendered_piece != piece_source:
+                    raise RuntimeError(f"source-owned {role} rendered bytes drift")
+            rendered_parts.append(rendered_piece)
+            piece_evidence.append(dict(piece))
+            cursor = end
+        if cursor != right:
+            raise RuntimeError("illustration structural source plan incomplete")
+        if "".join(rendered_parts) != target:
+            raise RuntimeError("illustration structural carrier target is not plan rendering")
+        verdict = evaluate_rescue_pair(source, target)
+        if verdict.get("strictly_eligible") is not True:
+            raise RuntimeError("illustration structural carrier fails maintained gates")
+        cases.append(
+            {
+                "source_span": [left, right],
+                "source_text": source,
+                "target_text": target,
+                "pieces": piece_evidence,
+            }
+        )
     return cases
 
 

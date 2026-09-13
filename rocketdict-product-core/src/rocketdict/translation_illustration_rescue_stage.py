@@ -36,13 +36,13 @@ from .translation_rescue import evaluate_rescue_pair
 from .translation_rank0 import select_rank0_evaluation
 from . import translation_stage as primary_stage
 
-ILLUSTRATION_LABEL_RESCUE_CONTRACT = "rocketdict-stage12-illustration-label-rescue/4"
+ILLUSTRATION_LABEL_RESCUE_CONTRACT = "rocketdict-stage12-illustration-label-rescue/5"
 ILLUSTRATION_LABEL_SELECTOR_CONTRACT = "rocketdict-stage12-illustration-label-selector/4"
 ILLUSTRATION_LABEL_TRIGGER_CONTRACT = "rocketdict-stage12-illustration-label-hard-failure-trigger/2"
 ILLUSTRATION_SOURCE_PLAN_CONTRACT = "rocketdict-illustration-source-planned-structural-pieces/1"
 ILLUSTRATION_WORD_TARGET_FORM_CONTRACT = "rocketdict-stage12-illustration-word-target-form/2"
 ILLUSTRATION_LABEL_TARGET_FORM_CONTRACT = "rocketdict-stage12-illustration-label-target-form/1"
-ILLUSTRATION_LABEL_SELECTED_PHASE = "illustration-label-selected-v4"
+ILLUSTRATION_LABEL_SELECTED_PHASE = "illustration-label-selected-v5"
 DEFAULT_ENABLED = False
 ILLUSTRATION_WORD_SOURCE = "_Illustration._"
 ILLUSTRATION_WORD_MODEL_INPUT = ILLUSTRATION_WORD_SOURCE
@@ -499,6 +499,14 @@ def _structural_candidate_rows(
     label_selected_rank: int, suffix_selected_rank: int,
     trigger: dict[str, Any], selection: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    """Persist one hard-gate-safe carrier row for a four-piece source plan.
+
+    The logical plan remains label/separator/suffix/trailing and is created
+    before MT.  Only the two lexical spans are model inputs.  Source-owned
+    structural spans are rendered from immutable source bytes into the one
+    semantic carrier target; they are not persisted as standalone whitespace
+    translation rows because Product hard gates are intentionally row-local.
+    """
     if label_selected_rank != 0 or suffix_selected_rank != 0:
         raise ValueError("illustration structural rescue is rank0-only")
     label = str(plan["label_source"])
@@ -520,29 +528,85 @@ def _structural_candidate_rows(
         raise ValueError("illustration structural selection is not accepted")
     if str(selection.get("aggregate_target") or "") != expected_aggregate:
         raise ValueError("illustration structural selection target drift")
+    aggregate_verdict = dict(selection.get("aggregate_verdict") or {})
+    if aggregate_verdict.get("strictly_eligible") is not True:
+        raise ValueError("illustration structural aggregate is not strictly eligible")
 
     start = int(base["source_start"])
     label_end = start + len(label)
     separator_end = label_end + len(separator)
     suffix_end = separator_end + len(suffix)
     end = int(base["source_end"])
+    source = str(base.get("source_text") or "")
     if suffix_end + len(trailing) != end:
         raise ValueError("illustration structural source bounds drift")
-    if label + separator + suffix + trailing != str(base.get("source_text") or ""):
+    if label + separator + suffix + trailing != source:
         raise ValueError("illustration structural source plan no longer matches base source")
 
-    base_planner = dict((base.get("payload") or {}).get("planner") or {})
+    generation = {
+        "beam_size": STRUCTURAL_WORD_BEAM_SIZE,
+        "num_hypotheses": STRUCTURAL_WORD_NUM_HYPOTHESES,
+        "max_decoding_length": MAX_DECODING_LENGTH,
+        "selection_authorized_ranks": [0],
+    }
+    pieces = [
+        {
+            "role": "label",
+            "kind": "translate",
+            "model": "opus",
+            "source_span": [start, label_end],
+            "source_text": label,
+            "model_input": label_model_input,
+            "model_input_source_exact": True,
+            "source_model_input_normalized": False,
+            "selected_rank": 0,
+            "selected_target": label_target,
+            "raw_model_selected": True,
+            "raw_score": label_rank0.get("score"),
+            "hypotheses": label_hypotheses,
+            "generation": dict(generation),
+        },
+        {
+            "role": "separator",
+            "kind": "preserve_source_structure",
+            "source_span": [label_end, separator_end],
+            "source_text": separator,
+            "rendered_text": separator,
+            "source_owned": True,
+        },
+        {
+            "role": "suffix",
+            "kind": "translate",
+            "model": "tc_big",
+            "source_span": [separator_end, suffix_end],
+            "source_text": suffix,
+            "model_input": suffix_model_input,
+            "model_input_source_exact": True,
+            "source_model_input_normalized": False,
+            "selected_rank": 0,
+            "selected_target": suffix_target,
+            "raw_model_selected": True,
+            "raw_score": suffix_rank0.get("score"),
+            "hypotheses": suffix_hypotheses,
+            "generation": dict(generation),
+        },
+        {
+            "role": "trailing",
+            "kind": "preserve_source_structure",
+            "source_span": [suffix_end, end],
+            "source_text": trailing,
+            "rendered_text": trailing,
+            "source_owned": True,
+        },
+    ]
     source_plan = {
         "contract": ILLUSTRATION_SOURCE_PLAN_CONTRACT,
         "created_before_mt": True,
-        "pieces": [
-            {"role": "label", "source_span": [start, label_end], "kind": "translate", "model": "opus"},
-            {"role": "separator", "source_span": [label_end, separator_end], "kind": "preserve_source_structure"},
-            {"role": "suffix", "source_span": [separator_end, suffix_end], "kind": "translate", "model": "tc_big"},
-            {"role": "trailing", "source_span": [suffix_end, end], "kind": "preserve_source_structure"},
-        ],
+        "rendering": "semantic_carrier",
+        "pieces": pieces,
     }
-    common = {
+    base_planner = dict((base.get("payload") or {}).get("planner") or {})
+    rescue = {
         "contract": ILLUSTRATION_LABEL_RESCUE_CONTRACT,
         "selector_contract": ILLUSTRATION_LABEL_SELECTOR_CONTRACT,
         "trigger_contract": ILLUSTRATION_LABEL_TRIGGER_CONTRACT,
@@ -551,133 +615,45 @@ def _structural_candidate_rows(
         "label_target_form_contract": ILLUSTRATION_LABEL_TARGET_FORM_CONTRACT,
         "applied": True,
         "candidate_kind": "source_planned_structural_illustration",
+        "role": "semantic_carrier",
+        "rendering": "source_planned_semantic_carrier",
         "base_translation_segment_id": int(base["id"]),
         "base_source_span": [start, end],
         "figure_number": str(plan["figure_number"]),
         "source_plan": source_plan,
         "source_plan_created_before_mt": True,
         "source_owned_structural_passthrough": True,
+        "source_owned_passthrough": False,
         "trigger_evidence": trigger,
         "selection": selection,
+        "rendered_target": expected_aggregate,
+        "raw_model_selected": False,
+        "component_raw_model_selected": True,
         "raw_rank0_only": True,
         **_safety_flags(),
     }
-
-    def translated_payload(
-        *, role: str, model: str, model_input: str,
-        source_span: list[int], target: str, hypotheses: list[dict[str, Any]],
-    ) -> dict[str, Any]:
-        return {
-            "planner": {
-                **base_planner,
-                "source": f"illustration_source_planned_{role}",
-                "planner_contract": primary_stage.PLANNER_CONTRACT,
-                "split": True,
-                "rescue_strategy": "illustration_source_planned_structural_separator",
-                "illustration_label_rescue_contract": ILLUSTRATION_LABEL_RESCUE_CONTRACT,
-            },
-            "hypotheses": hypotheses,
-            "selected_rank": 0,
-            "illustration_label_rescue": {
-                **common,
-                "role": role,
-                "model": model,
-                "model_input": model_input,
-                "model_input_source_span": source_span,
-                "model_input_source_exact": True,
-                "source_model_input_normalized": False,
-                "selected_rank": 0,
-                "selected_target": target,
-                "raw_model_selected": True,
-                "source_owned_passthrough": False,
-                "generation": {
-                    "beam_size": STRUCTURAL_WORD_BEAM_SIZE,
-                    "num_hypotheses": STRUCTURAL_WORD_NUM_HYPOTHESES,
-                    "max_decoding_length": MAX_DECODING_LENGTH,
-                    "selection_authorized_ranks": [0],
-                },
-            },
-        }
-
-    def passthrough_payload(*, role: str, source_span: list[int]) -> dict[str, Any]:
-        return {
-            "planner": {
-                **base_planner,
-                "source": f"illustration_source_owned_{role}",
-                "planner_contract": primary_stage.PLANNER_CONTRACT,
-                "split": True,
-                "rescue_strategy": "illustration_source_planned_structural_separator",
-                "illustration_label_rescue_contract": ILLUSTRATION_LABEL_RESCUE_CONTRACT,
-            },
-            "illustration_label_rescue": {
-                **common,
-                "role": role,
-                "source_span": source_span,
-                "source_owned_passthrough": True,
-                "raw_model_selected": False,
-            },
-        }
-
-    rows = [
+    payload = {
+        "planner": {
+            **base_planner,
+            "source": "illustration_source_planned_semantic_carrier",
+            "planner_contract": primary_stage.PLANNER_CONTRACT,
+            "split": False,
+            "rescue_strategy": "illustration_source_planned_semantic_carrier",
+            "illustration_label_rescue_contract": ILLUSTRATION_LABEL_RESCUE_CONTRACT,
+        },
+        "illustration_label_rescue": rescue,
+    }
+    return [
         {
             "sequence_number": 0,
             "kind": "translation_segment",
             "source_start": start,
-            "source_end": label_end,
-            "source_text": label,
-            "target_text": label_target,
-            "payload": translated_payload(
-                role="label",
-                model="opus",
-                model_input=label_model_input,
-                source_span=[start, label_end],
-                target=label_target,
-                hypotheses=label_hypotheses,
-            ),
-        },
-        {
-            "sequence_number": 0,
-            "kind": "translation_segment",
-            "source_start": label_end,
-            "source_end": separator_end,
-            "source_text": separator,
-            "target_text": separator,
-            "payload": passthrough_payload(
-                role="separator", source_span=[label_end, separator_end]
-            ),
-        },
-        {
-            "sequence_number": 0,
-            "kind": "translation_segment",
-            "source_start": separator_end,
-            "source_end": suffix_end,
-            "source_text": suffix,
-            "target_text": suffix_target,
-            "payload": translated_payload(
-                role="suffix",
-                model="tc_big",
-                model_input=suffix_model_input,
-                source_span=[separator_end, suffix_end],
-                target=suffix_target,
-                hypotheses=suffix_hypotheses,
-            ),
-        },
+            "source_end": end,
+            "source_text": source,
+            "target_text": expected_aggregate,
+            "payload": payload,
+        }
     ]
-    if trailing:
-        rows.append(
-            {
-                "sequence_number": 0,
-                "kind": "translation_segment",
-                "source_start": suffix_end,
-                "source_end": end,
-                "source_text": trailing,
-                "target_text": trailing,
-                "payload": passthrough_payload(
-                    role="trailing", source_span=[suffix_end, end]
-                ),
-            }
-        )
-    return rows
 
 
 def _unique_rank0(

@@ -60,13 +60,13 @@ def _ordinary_failing_row() -> dict[str, object]:
 
 def test_wrapper_is_default_off_and_contracts_are_versioned() -> None:
     assert DEFAULT_ENABLED is False
-    assert ILLUSTRATION_LABEL_RESCUE_CONTRACT.endswith("/4")
+    assert ILLUSTRATION_LABEL_RESCUE_CONTRACT.endswith("/5")
     assert ILLUSTRATION_LABEL_SELECTOR_CONTRACT.endswith("/4")
     assert ILLUSTRATION_LABEL_TRIGGER_CONTRACT.endswith("/2")
     assert ILLUSTRATION_SOURCE_PLAN_CONTRACT.endswith("/1")
     assert ILLUSTRATION_WORD_TARGET_FORM_CONTRACT.endswith("/2")
     assert ILLUSTRATION_LABEL_TARGET_FORM_CONTRACT.endswith("/1")
-    assert ILLUSTRATION_LABEL_SELECTED_PHASE == "illustration-label-selected-v4"
+    assert ILLUSTRATION_LABEL_SELECTED_PHASE == "illustration-label-selected-v5"
 
 
 def test_base_parameters_strip_only_illustration_wrapper_controls() -> None:
@@ -325,7 +325,7 @@ def test_ordinary_candidate_rows_preserve_run41_exact_source_provenance() -> Non
     assert rescue["post_translation_literal_injection"] is False
 
 
-def test_structural_candidate_rows_are_four_source_planned_pieces() -> None:
+def test_structural_candidate_rows_persist_one_semantic_carrier() -> None:
     row = _structural_failing_row()
     trigger = evaluate_illustration_label_trigger(row)
     plan = dict(trigger["source_plan"])
@@ -356,37 +356,57 @@ def test_structural_candidate_rows_are_four_source_planned_pieces() -> None:
         trigger=trigger,
         selection=selection,
     )
-    assert len(rows) == 4
-    assert "".join(r["source_text"] for r in rows) == row["source_text"]
-    assert "".join(r["target_text"] for r in rows) == selection["aggregate_target"]
-    assert [
-        r["payload"]["illustration_label_rescue"]["role"] for r in rows
-    ] == ["label", "separator", "suffix", "trailing"]
+    assert len(rows) == 1
+    carrier = rows[0]
+    assert carrier["source_start"] == row["source_start"]
+    assert carrier["source_end"] == row["source_end"]
+    assert carrier["source_text"] == row["source_text"]
+    assert carrier["target_text"] == selection["aggregate_target"]
+    assert selection["aggregate_verdict"]["strictly_eligible"] is True
 
-    label_rescue = rows[0]["payload"]["illustration_label_rescue"]
-    separator_rescue = rows[1]["payload"]["illustration_label_rescue"]
-    suffix_rescue = rows[2]["payload"]["illustration_label_rescue"]
-    trailing_rescue = rows[3]["payload"]["illustration_label_rescue"]
+    rescue = carrier["payload"]["illustration_label_rescue"]
+    assert rescue["role"] == "semantic_carrier"
+    assert rescue["rendering"] == "source_planned_semantic_carrier"
+    assert rescue["source_owned_passthrough"] is False
+    assert rescue["source_owned_structural_passthrough"] is True
+    assert rescue["raw_model_selected"] is False
+    assert rescue["component_raw_model_selected"] is True
+    assert rescue["raw_rank0_only"] is True
+    assert rescue["rendered_target"] == carrier["target_text"]
+    assert rescue["source_plan_contract"] == ILLUSTRATION_SOURCE_PLAN_CONTRACT
+    assert rescue["source_plan_created_before_mt"] is True
+    assert rescue["source_bytes_rewritten"] is False
+    assert rescue["model_input_source_rewritten"] is False
+    assert rescue["target_rewriting"] is False
+    assert rescue["post_translation_literal_injection"] is False
+    assert rescue["automatic_n_best_cherry_picking"] is False
 
-    assert label_rescue["model"] == "opus"
-    assert label_rescue["model_input"] == rows[0]["source_text"]
-    assert label_rescue["model_input_source_exact"] is True
-    assert suffix_rescue["model"] == "tc_big"
-    assert suffix_rescue["model_input"] == rows[2]["source_text"]
-    assert suffix_rescue["model_input_source_exact"] is True
-    assert separator_rescue["source_owned_passthrough"] is True
-    assert rows[1]["target_text"] == rows[1]["source_text"] == "\n\n"
-    assert trailing_rescue["source_owned_passthrough"] is True
-    assert rows[3]["target_text"] == rows[3]["source_text"] == " "
-    for result_row in rows:
-        rescue = result_row["payload"]["illustration_label_rescue"]
-        assert rescue["source_plan_contract"] == ILLUSTRATION_SOURCE_PLAN_CONTRACT
-        assert rescue["source_plan_created_before_mt"] is True
-        assert rescue["source_bytes_rewritten"] is False
-        assert rescue["model_input_source_rewritten"] is False
-        assert rescue["target_rewriting"] is False
-        assert rescue["post_translation_literal_injection"] is False
-        assert rescue["automatic_n_best_cherry_picking"] is False
+    pieces = rescue["source_plan"]["pieces"]
+    assert [piece["role"] for piece in pieces] == [
+        "label", "separator", "suffix", "trailing"
+    ]
+    assert "".join(piece["source_text"] for piece in pieces) == row["source_text"]
+    assert pieces[0]["model"] == "opus"
+    assert pieces[0]["model_input"] == pieces[0]["source_text"]
+    assert pieces[0]["model_input_source_exact"] is True
+    assert pieces[0]["selected_rank"] == 0
+    assert pieces[0]["selected_target"] == "[Иллюстрация: FIG. 21.]"
+    assert pieces[1]["source_owned"] is True
+    assert pieces[1]["rendered_text"] == pieces[1]["source_text"] == "\n\n"
+    assert pieces[2]["model"] == "tc_big"
+    assert pieces[2]["model_input"] == pieces[2]["source_text"]
+    assert pieces[2]["model_input_source_exact"] is True
+    assert pieces[2]["selected_rank"] == 0
+    assert pieces[2]["selected_target"] == "_Иллюстрация._"
+    assert pieces[3]["source_owned"] is True
+    assert pieces[3]["rendered_text"] == pieces[3]["source_text"] == " "
+    rendered = (
+        pieces[0]["selected_target"]
+        + pieces[1]["rendered_text"]
+        + pieces[2]["selected_target"]
+        + pieces[3]["rendered_text"]
+    )
+    assert rendered == carrier["target_text"]
 
 
 def test_structural_rows_reject_any_non_exact_model_input() -> None:
