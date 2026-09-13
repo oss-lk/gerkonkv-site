@@ -1,10 +1,10 @@
-name: RocketDict Full Opticks Run20 M2M100 Product Restatement DOE
+name: RocketDict Full Opticks M2M100 Arithmetic Promotion
 
 on:
   push:
     branches: [chatgpt/product-core-forward]
     paths:
-      - 'rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_product_restatement_doe.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_m2m100_arithmetic_promotion.py'
       - '.github/workflows/rocketdict-full-opticks-run20-m2m100-product-restatement-doe.yml'
   workflow_dispatch:
 
@@ -13,53 +13,73 @@ permissions:
   actions: read
 
 jobs:
-  run20-m2m100-product-restatement-doe:
+  promote:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 150
     env:
-      BASE_RUN_ID: '34678965465'
-      BASE_ARTIFACT_NAME: rocketdict-full-opticks-parenthetical-whole-context-rescue
-      BASE_DB_SHA256: 879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d
+      BASE_WORKFLOW_RUN_ID: '34748268143'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-numeric-row-promotion
+      BASE_DB_SHA256: a24f35d6f8bb4747a4fc301511f383b8b866846a3c448655fce1b9359cc0ac94
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
       M2M100_REPO: facebook/m2m100_418M
       M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
       M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
-      ROCKETDICT_M2M100_MODEL_DIR: ${{ github.workspace }}/work/m2m100-418m
-      ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT: ${{ github.workspace }}/work/run20-m2m100-product-restatement-doe
+      M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
+      ROCKETDICT_M2M100_ASSET_DIR: ${{ github.workspace }}/work/m2m100-asset
+      ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT: ${{ github.workspace }}/work/full-opticks-m2m100-arithmetic-promotion
+      ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB: ${{ github.workspace }}/work/full-opticks-m2m100-arithmetic-promotion/rocketdict.sqlite
       HF_HUB_DISABLE_XET: '1'
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install maintained research runtime
+
+      - name: Install pinned alternative-model provisioning runtime
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench \
-            'transformers==4.56.2' 'sentencepiece==0.2.1' 'huggingface_hub==0.34.4'
-          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
-      - name: Download exact persisted run20 artifact
+          python -m pip install -e './rocketdict-product-core[production,alt-mt-build]' -e ./rocketdict-workbench \
+            'huggingface_hub==0.34.4'
+
+      - name: Download authenticated run58 artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_NAME }}
           path: work/base
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-          run-id: ${{ env.BASE_RUN_ID }}
-      - name: Stage and verify exact run20 database
+          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+
+      - name: Authenticate and stage exact run58 SQLite
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT"
-          cp work/base/full-opticks-parenthetical-whole-context-rescue/rocketdict.sqlite "$ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT/rocketdict.sqlite"
-          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
-      - name: Restore pinned M2M100 snapshot cache
+          mkdir -p "$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT"
+          python - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          dbs=[p for p in Path('work/base').rglob('rocketdict.sqlite') if p.is_file()]
+          if len(dbs)!=1: raise SystemExit(f'run58 DB cardinality drift: {dbs}')
+          sha=hashlib.sha256(dbs[0].read_bytes()).hexdigest()
+          if sha!=os.environ['BASE_DB_SHA256']: raise SystemExit(f'run58 DB identity drift: {sha}')
+          Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB']).write_bytes(dbs[0].read_bytes())
+          PY
+          echo "$BASE_DB_SHA256  $ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB" | sha256sum -c -
+
+      - name: Restore pinned TC-big snapshot cache
         uses: actions/cache@v4
         with:
-          path: work/m2m100-418m
-          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
-      - name: Obtain and verify exact M2M100 snapshot
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain and build pinned TC-big ancestry asset
         shell: bash
         run: |
           set -euo pipefail
@@ -67,37 +87,130 @@ jobs:
           import os
           from huggingface_hub import snapshot_download
           snapshot_download(
-              repo_id=os.environ['M2M100_REPO'], revision=os.environ['M2M100_REVISION'],
-              local_dir=os.environ['ROCKETDICT_M2M100_MODEL_DIR'],
-              allow_patterns=['config.json','generation_config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
           )
           PY
-          echo "$M2M100_WEIGHTS_SHA256  $ROCKETDICT_M2M100_MODEL_DIR/pytorch_model.bin" | sha256sum -c -
-      - name: Run exact read-only arithmetic restatement DOE
-        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_product_restatement_doe.py
-      - name: Verify immutable DOE contract
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" > work/tc-big-asset-build.json
+
+      - name: Restore pinned M2M100 snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/m2m100-418m
+          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+
+      - name: Obtain and build pinned M2M100 arithmetic asset
         shell: bash
         run: |
           set -euo pipefail
-          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
           python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['M2M100_REPO'],
+              revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['M2M100_SNAPSHOT'],
+              allow_patterns=['config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$M2M100_WEIGHTS_SHA256  $M2M100_SNAPSHOT/pytorch_model.bin" | sha256sum -c -
+          rm -rf "$ROCKETDICT_M2M100_ASSET_DIR"
+          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" "$ROCKETDICT_M2M100_ASSET_DIR" > work/m2m100-asset-build.json
+
+      - name: Build torch-free promotion runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/promotion-venv
+          work/promotion-venv/bin/python -m pip install --upgrade pip
+          work/promotion-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/promotion-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('torch leaked into M2M100 promotion inference runtime')
+          PY
+
+      - name: Promote exact run58 through public Stage12 arithmetic opt-in
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/promotion-venv/bin/python -u rocketdict-workbench/tests/real_translation_full_opticks_m2m100_arithmetic_promotion.py | tee work/m2m100-arithmetic-promotion.log
+
+      - name: Run independent residual census on promoted run
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROMOTED_RUN_ID=$(python - <<'PY'
           import json, os
           from pathlib import Path
-          root=Path(os.environ['ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT'])
-          e=json.loads((root/'full-opticks-run20-m2m100-product-restatement-doe.json').read_text(encoding='utf-8'))
-          if e['schema']!='rocketdict-full-opticks-run20-m2m100-product-restatement-doe/1': raise SystemExit('schema drift')
-          if e['multiplication_row_count']!=2 or e['verified_restatement_sequences']!=[2745] or e['trigger_sequences']!=[2745]: raise SystemExit('source/trigger census drift')
-          if e['model_revision']!=os.environ['M2M100_REVISION'] or e['model_weight_sha256']!=os.environ['M2M100_WEIGHTS_SHA256']: raise SystemExit('model identity drift')
-          if e['database_unchanged'] is not True or e['source_coverage_byte_exact'] is not True: raise SystemExit('read-only invariant drift')
-          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('DOE unexpectedly authorizes promotion')
-          if e['n_best_cherry_picking'] is not False: raise SystemExit('n-best policy drift')
-          print('Run20 M2M100 arithmetic restatement DOE verified.')
+          p=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT'])/'summary.json'
+          print(json.loads(p.read_text(encoding='utf-8'))['promoted_translation_run_id'])
           PY
-      - name: Upload DOE evidence
-        if: always()
+          )
+          PROMOTED_DB_SHA=$(sha256sum "$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB" | awk '{print $1}')
+          export ROCKETDICT_RESIDUAL_CENSUS_ROOT="$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT/residual-census"
+          export ROCKETDICT_RESIDUAL_CENSUS_DB="$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB"
+          export ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID="$PROMOTED_RUN_ID"
+          export ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256="$PROMOTED_DB_SHA"
+          work/promotion-venv/bin/python -u rocketdict-workbench/tests/audit_translation_residual_census.py | tee work/m2m100-arithmetic-residual-census.log
+
+      - name: Verify promotion and independent census
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os, sqlite3
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT'])
+          promotion=json.loads((root/'m2m100-arithmetic-promotion-evidence.json').read_text(encoding='utf-8'))
+          census=json.loads((root/'residual-census'/'translation-residual-census.json').read_text(encoding='utf-8'))
+          expected={'numeric_symbol':15,'punctuation':10,'length':0,'unique':24}
+          if promotion['promoted_hard_counts']!=expected: raise SystemExit(f"promotion count drift: {promotion['promoted_hard_counts']}")
+          if census['hard_gate_counts']!=expected: raise SystemExit(f"census count drift: {census['hard_gate_counts']}")
+          if promotion['promoted_translation_run_id']!=census['translation_run_id']: raise SystemExit('run id cross-check drift')
+          if promotion['promoted_translation_output_sha256']!=census['translation_output_sha256']: raise SystemExit('output SHA cross-check drift')
+          if promotion['promoted_database_sha256']!=census['database_sha256']: raise SystemExit('database SHA cross-check drift')
+          if promotion['changed_target_sequences']!=[2739] or promotion['unchanged_target_count']!=3334: raise SystemExit('changed-target cohort drift')
+          case=promotion['case']
+          if case['source_start']!=483234 or case['source_arithmetic']['product']!=490000000000 or case['raw_rank']!=0: raise SystemExit('arithmetic case drift')
+          if promotion['base_translation_run_id']!=58 or promotion['base_translation_output_sha256']!='60349256eac118e9af7aa1366761342cd2041bb6ade4db04b45c78b46a8c6e5d': raise SystemExit('run58 ancestry drift')
+          for flag in ('source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
+              if promotion[flag] is not False: raise SystemExit(f'unsafe promotion flag {flag}')
+          for evidence in (promotion,census):
+              c=dict(evidence); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+              if actual!=recorded: raise SystemExit('evidence SHA drift')
+          db=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB'])
+          sha=hashlib.sha256(db.read_bytes()).hexdigest()
+          if sha!=promotion['promoted_database_sha256']: raise SystemExit('persisted DB SHA drift')
+          con=sqlite3.connect(db)
+          integrity=con.execute('PRAGMA integrity_check').fetchone()[0]
+          fk=len(con.execute('PRAGMA foreign_key_check').fetchall())
+          con.close()
+          if integrity!='ok' or fk!=0: raise SystemExit(f'SQLite integrity drift {integrity=} {fk=}')
+          print(json.dumps({
+              'promoted_run_id':promotion['promoted_translation_run_id'],
+              'hard_counts':expected,
+              'promotion_evidence_sha256':promotion['evidence_sha256'],
+              'census_evidence_sha256':census['evidence_sha256'],
+              'database_sha256':sha,
+          },indent=2,ensure_ascii=False))
+          PY
+
+      - name: Upload promoted parent and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-full-opticks-run20-m2m100-product-restatement-doe
-          path: work/run20-m2m100-product-restatement-doe/*.json
+          name: rocketdict-full-opticks-m2m100-arithmetic-promotion
+          path: |
+            work/tc-big-asset-build.json
+            work/m2m100-asset-build.json
+            work/m2m100-arithmetic-promotion.log
+            work/m2m100-arithmetic-residual-census.log
+            work/full-opticks-m2m100-arithmetic-promotion/rocketdict.sqlite
+            work/full-opticks-m2m100-arithmetic-promotion/*.json
+            work/full-opticks-m2m100-arithmetic-promotion/residual-census/*.json
           if-no-files-found: error
           retention-days: 90
