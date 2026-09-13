@@ -20,9 +20,7 @@ Durable translation-quality conclusions only. `rocketdict/PRODUCT_TARGET.md` is 
 - promotion evidence SHA `d6dfe0771e0a0c41506494b860c1733981adace656afb6a0130c291cfdfb57ff`;
 - independent census SHA `8c79ba9f8bd17790b41bff9e10f8b89ee5706733780ddc6dcd8bebe93c77857e`.
 
-The original promotion workflow ended red only because its final verifier still asserted the old four-row segment count. Replay and independent census both succeeded. A separate persisted-artifact verifier, workflow `34743557365`, succeeded and proved the result independently: verification artifact `10312893755`, digest `sha256:5746ab7e5cdb1b70412787095a214baa0089aeaa96bb26547b3360596fb07e00`, verification SHA `dcd1e4e256edfb0b2e2729e25461dd474b251d13503692c1d6316466bf50b5b7`. SQLite integrity is `ok`, FK violations are zero, source coverage is byte-exact, unrelated run41 spans are target-exact, lexical model inputs equal immutable source subspans, raw rank0 only is preserved, and all unsafe flags are false.
-
-Previous run41 (`18 / 16 / 0, 33 unique`) remains immutable lineage evidence but is no longer the active parent. Historical run23 remains diagnostic only because automatic rank>0 selections occurred.
+Independent persisted-artifact workflow `34743557365` verified the saved artifact, SQLite integrity/FKs, evidence hashes, source coverage, unchanged unrelated spans, exact model-input/rank0 provenance and safety flags. Maintained Product Core workflow `34743880129` also completed successfully after the current research harness additions.
 
 ## Illustration source-plan / semantic-carrier contract
 
@@ -33,9 +31,20 @@ The mechanically proven source geometry is four logical pieces planned before MT
 - exact `_Illustration._` → TC-big rank0;
 - exact trailing whitespace → source-owned passthrough.
 
-The `/4` renderer exposed each logical piece as an independent translation row. Full-corpus evidence showed that this introduced four artificial length failures because row-local `_length_passed` correctly rejects standalone whitespace targets. The evaluator was not changed.
+Forward illustration rescue `/5` (substantive commit `c99749b9214db572af72fb30baf8a7e98816b972`) preserves the four-piece plan and exact component provenance but renders it through one semantic carrier row over the original source span. Carrier target is exactly `label_rank0 + separator_source + suffix_rank0 + trailing_source`. The maintained hard gates remain unchanged.
 
-Forward illustration rescue `/5` (substantive commit `c99749b9214db572af72fb30baf8a7e98816b972`) preserves the four-piece plan and exact component provenance but renders it through one semantic carrier row over the original source span. Carrier target is exactly `label_rank0 + separator_source + suffix_rank0 + trailing_source`. This is preplanned source rendering, not target post-editing. Maintained Product Core workflow `34743281948` passed dependency-light and real-runtime Stage8→25 on this implementation, and run56 proves the full-corpus result.
+## Run56 punctuation screening
+
+Read-only exact-row screening workflow `34743811304` evaluated every one of the 14 run56 punctuation failures with exact row source text and unique raw rank0 from pinned OPUS and pinned TC-big. Evidence SHA: `e001300774ddeb27d7f82f1c4e563f013d1677490384dfb913ceb0fb0de9a13a`.
+
+- OPUS raw rank0 passed the maintained mechanical/emphasis/punctuation screening for `0` rows.
+- TC-big raw rank0 passed for `5` rows: sequences `741`, `1497`, `2108`, `2589`, `3009`.
+- Four passing rows are parenthesis-loss/mismatch defects; seq `3009` is a question-mark defect.
+- The screening DB remained unchanged and prohibited-transform flags stayed false.
+
+**Durable interpretation:** TC-big has real rank0 capability on a bounded subset of the residual punctuation cohort, but exact-row success is only a candidate-discovery signal. It does not justify broad model fallback. A production path still requires a generic source-defined trigger, exact immutable model input, independent context/row-geometry evidence, raw rank0-only selection and fail-closed integration.
+
+A first whole-context parenthetical DOE (`34743895800`) is invalid evidence: the harness stopped before model comparison on `parenthetical DOE member coverage drift at 53`. Treat this strictly as an orchestration/selection bug. It neither proves nor disproves the parenthetical model geometry.
 
 ## Durable closed directions
 
@@ -43,8 +52,8 @@ Forward illustration rescue `/5` (substantive commit `c99749b9214db572af72fb30ba
 - Seq325 tested figure-reference lead/boundary-pair geometries are closed.
 - Historical seq2346 angle-list DOE has no admissible tested raw-rank0 geometry; prime-preserving TC-big variants corrupted a large integer.
 - Inline `[G]`, large-integer canonicalization, broad generic whole-context/model fallback, source rewriting, target repair and automatic n-best selection remain rejected under tested formulations.
-- Historical prime multi-context DOE `34687752297` found only `english_miles_boundary` OPUS rank0 admissible; that family is already covered by the emphasized-modifier wrapper and is absent from run56 residuals. Do not repeat that DOE.
+- Historical prime multi-context DOE `34687752297` found only `english_miles_boundary` OPUS rank0 admissible; that family is already covered by the emphasized-modifier wrapper and is absent from run56 residuals.
 
 ## Current frontier
 
-Run56 leaves 31 unique hard failures: 18 numeric/symbol and 14 punctuation with one overlapping row, and zero length failures. Choose the next source-defined family from the persisted run56 census and current wrapper eligibility. New geometry/model use must remain generic, exact-source, rank0-only, fail-closed and should first be proven read-only before promotion.
+Run56 leaves 31 unique hard failures: 18 numeric/symbol and 14 punctuation with one overlapping row, and zero length failures. Repair the parenthetical context DOE membership logic, rerun it against exact run56, and only then decide whether the four parenthetical exact-row TC-big hits form a safe generic rescue class. If not, record the negative result and move to the next source-defined residual family.

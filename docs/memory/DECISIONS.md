@@ -12,17 +12,21 @@ Store only conclusions expensive or risky to rediscover. Git/L3 remains chronolo
 
 **Decision.** Authenticated full-Opticks **run56 is the only legal forward promotion parent**. It descends from exact run41 through the source-planned illustration semantic-carrier rescue.
 
-Run56 identity: workflow `34743281964`, artifact `10312992185` (`sha256:81be4996bce174e7aaa21c41da8ef531a9b6d0f59346c26b7fb6328861ab451a`), output SHA `2971fb099674aa81c14e0b75590c5fbcb943d1ea3477efb0ceedbd81bd69fbc5`, final-text SHA `705dac5de010af8d5c08a3da49b7ec5d568ddf144e435f4617b5cbe2e604f73d`, SQLite SHA `cb4568584e70be0fb4d011cd9de212ae01edd046dec8c5ec104ee3bb0e91dc56`, promotion evidence SHA `d6dfe0771e0a0c41506494b860c1733981adace656afb6a0130c291cfdfb57ff`, independent census SHA `8c79ba9f8bd17790b41bff9e10f8b89ee5706733780ddc6dcd8bebe93c77857e`. Counts: **18 numeric / 14 punctuation / 0 length, 31 unique** over 3335 rows.
-
-The promotion workflow's final status was red only because its legacy verifier expected the superseded four-row segment count. Independent persisted-artifact workflow `34743557365` verified the saved artifact, SQLite integrity/FKs, evidence hashes, source coverage, unchanged unrelated spans, exact model-input/rank0 provenance and safety flags. Verification SHA `dcd1e4e256edfb0b2e2729e25461dd474b251d13503692c1d6316466bf50b5b7`.
-
-Run41 is now the immutable previous parent, not the active one. Historical run23 remains research-only because its ancestry includes automatic non-rank0 selections.
+Run56 identity: workflow `34743281964`, artifact `10312992185` (`sha256:81be4996bce174e7aaa21c41da8ef531a9b6d0f59346c26b7fb6328861ab451a`), output SHA `2971fb099674aa81c14e0b75590c5fbcb943d1ea3477efb0ceedbd81bd69fbc5`, final-text SHA `705dac5de010af8d5c08a3da49b7ec5d568ddf144e435f4617b5cbe2e604f73d`, SQLite SHA `cb4568584e70be0fb4d011cd9de212ae01edd046dec8c5ec104ee3bb0e91dc56`, counts **18 numeric / 14 punctuation / 0 length, 31 unique** over 3335 rows.
 
 ## Semantic-carrier representation
 
 **Decision.** A logical source plan and persisted hard-gate segmentation are different abstraction levels. Source-owned separators/whitespace may remain explicit source subspans in provenance without becoming standalone `translation_segment` rows.
 
-For the illustration class, the approved `/5` representation keeps the four-piece plan (OPUS label, source separator, TC-big suffix, source trailing whitespace) and persists one carrier row covering the original source span. The target must equal exactly `label_rank0 + separator_source + suffix_rank0 + trailing_source`; payload retains each subspan, model route, exact model input, rank0 identity and structural ownership. This is source-planned composition before MT result persistence, not post-hoc target repair. The maintained hard gates remain unchanged.
+For the illustration class, the approved `/5` representation keeps the four-piece plan (OPUS label, source separator, TC-big suffix, source trailing whitespace) and persists one carrier row covering the original source span. The target must equal exactly `label_rank0 + separator_source + suffix_rank0 + trailing_source`; payload retains each subspan, model route, exact model input, rank0 identity and structural ownership.
+
+## Residual punctuation model-routing decision
+
+**Decision.** Exact-row model screening is discovery evidence, not promotion authority. Run56 screening workflow `34743811304` found zero admissible OPUS raw-rank0 outputs and five admissible TC-big raw-rank0 outputs (`741`, `1497`, `2108`, `2589`, `3009`; evidence SHA `e001300774ddeb27d7f82f1c4e563f013d1677490384dfb913ceb0fb0de9a13a`). This proves TC-big capability on those rows but does **not** permit a broad TC-big fallback or corpus-row whitelist.
+
+**Decision.** Any production rescue derived from those hits must be selected by a generic source/geometry trigger independent of Opticks row identities, feed the exact immutable source span to the model, persist only unique raw rank0, pass unchanged maintained gates, and fail closed. Neutral synthetic tests must prove generality.
+
+**Decision.** Workflow `34743895800` is not negative model evidence. Its parenthetical context DOE aborted before model comparison with `member coverage drift at 53`; that is an orchestration/selection defect. Fix the harness and repeat the DOE before accepting or rejecting the proposed parenthetical context geometry.
 
 ## Durable rejected/closed directions
 
@@ -34,10 +38,11 @@ For the illustration class, the approved `/5` representation keeps the four-piec
 
 ## Forward decision
 
-1. Use run56 plus its independent census as the sole forward baseline.
-2. Audit current wrappers against the 31 residual failures and identify a genuinely new source-defined family rather than retrying closed geometries.
-3. Prefer read-only DOE evidence before implementing/promoting a new rescue path; preserve exact source/model/result identities and fail closed.
-4. Continue until all hard failures reach zero, then finish learner/export coverage and Windows clean-install/release validation.
+1. Keep run56 as the sole forward baseline.
+2. Repair the current parenthetical DOE so context membership is driven by the actual residual rows and exact Stage10 context geometry, not by unrelated eligible contexts.
+3. Re-run read-only whole-context OPUS/TC-big raw-rank0 evidence before writing production rescue code.
+4. Promote only a source-defined generic class with exact identities and fail-closed behavior; otherwise close the geometry and move on.
+5. Continue until all hard failures reach zero, then finish learner/export coverage and Windows clean-install/release validation.
 
 ## Memory protocol
 
