@@ -140,6 +140,7 @@ jobs:
           from pathlib import Path
           root=Path(os.environ['ROCKETDICT_NUMERIC_ROW_PROMOTION_ROOT'])
           promotion=json.loads((root/'numeric-row-promotion-evidence.json').read_text(encoding='utf-8'))
+          summary=json.loads((root/'summary.json').read_text(encoding='utf-8'))
           census=json.loads((root/'residual-census'/'translation-residual-census.json').read_text(encoding='utf-8'))
           expected={'numeric_symbol':16,'punctuation':10,'length':0,'unique':25}
           if promotion['promoted_hard_counts']!=expected: raise SystemExit(f"promotion count drift: {promotion['promoted_hard_counts']}")
@@ -149,7 +150,7 @@ jobs:
           if promotion['promoted_database_sha256']!=census['database_sha256']: raise SystemExit('database SHA cross-check drift')
           if promotion['changed_target_sequences']!=[2288,2355]: raise SystemExit('changed-target cohort drift')
           if promotion['unchanged_target_count']!=3333 or promotion['promoted_segment_count']!=3335: raise SystemExit('segmentation/unchanged drift')
-          if promotion.get('rejected_progression_source_start')!=268952: raise SystemExit('progression negative-control drift')
+          if summary.get('rejected_progression_source_start')!=268952: raise SystemExit('progression negative-control drift')
           for flag in ('source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
               if promotion[flag] is not False: raise SystemExit(f'unsafe promotion flag {flag}')
           for evidence in (promotion,census):
