@@ -90,10 +90,10 @@ def test_trigger_rejects_other_hard_debt_and_wrong_corruption_shape() -> None:
 
 def test_candidate_requires_current_strict_gates_emphasis_volume_and_arithmetic_notation() -> None:
     source = "The _force_ is above 12 x 12 (that is, above 144) times greater."
-    base = "_Сила_ выше 12 x 12 (то есть выше 145) раз больше."
+    base = "_Сила_ находится выше 12 x 12 (то есть выше 145) раз по величине."
     restatement = parse_source_arithmetic_restatement(source)
     assert restatement is not None
-    clean = "_Сила_ выше 12 x 12 (то есть выше 144) раз больше."
+    clean = "_Сила_ находится выше 12 x 12 (то есть выше 144) раз по величине."
     selection = evaluate_m2m100_arithmetic_candidate(
         source, clean, base_target=base, restatement=restatement
     )
@@ -103,15 +103,16 @@ def test_candidate_requires_current_strict_gates_emphasis_volume_and_arithmetic_
     assert selection["arithmetic_notation"]["multiplication_operator_preserved"] is True
     assert selection["emphasis_markup"]["passed"] is True
     assert selection["hard_punctuation_exact"] is True
+    assert selection["source_alpha_ratio_passed"] is True
 
-    no_operator = "_Сила_ выше 12 на 12 (то есть выше 144) раз больше."
+    no_operator = "_Сила_ находится выше 12 на 12 (то есть выше 144) раз по величине."
     selection = evaluate_m2m100_arithmetic_candidate(
         source, no_operator, base_target=base, restatement=restatement
     )
     assert selection["arithmetic_notation"]["multiplication_operator_preserved"] is False
     assert selection["accepted"] is False
 
-    no_emphasis = "Сила выше 12 x 12 (то есть выше 144) раз больше."
+    no_emphasis = "Сила находится выше 12 x 12 (то есть выше 144) раз по величине."
     selection = evaluate_m2m100_arithmetic_candidate(
         source, no_emphasis, base_target=base, restatement=restatement
     )
