@@ -1,0 +1,261 @@
+name: RocketDict Run58 M2M100 Arithmetic Public Replay
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_run58_m2m100_arithmetic_public_replay.py'
+      - '.github/workflows/rocketdict-run58-m2m100-arithmetic-public-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      BASE_WORKFLOW_RUN_ID: '34748268143'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-numeric-row-promotion
+      BASE_DB_SHA256: a24f35d6f8bb4747a4fc301511f383b8b866846a3c448655fce1b9359cc0ac94
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      M2M100_REPO: facebook/m2m100_418M
+      M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+      M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
+      M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
+      ROCKETDICT_M2M100_ASSET_DIR: ${{ github.workspace }}/work/m2m100-asset
+      ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT: ${{ github.workspace }}/work/replay-${{ matrix.replica }}
+      ROCKETDICT_M2M100_ARITHMETIC_REPLAY_DB: ${{ github.workspace }}/work/replay-${{ matrix.replica }}/rocketdict.sqlite
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact provisioning runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt-build]' -e ./rocketdict-workbench \
+            'huggingface_hub==0.34.4'
+          python - <<'PY'
+          import ctranslate2
+          if ctranslate2.__version__ != '4.8.2':
+              raise SystemExit(f'CT2 provisioning version drift: {ctranslate2.__version__}')
+          PY
+
+      - name: Download authenticated run58 parent
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+
+      - name: Authenticate and stage exact run58 SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT"
+          python - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          dbs=[p for p in Path('work/base').rglob('rocketdict.sqlite') if p.is_file()]
+          if len(dbs)!=1: raise SystemExit(f'run58 DB cardinality drift: {dbs}')
+          raw=dbs[0].read_bytes(); sha=hashlib.sha256(raw).hexdigest()
+          if sha!=os.environ['BASE_DB_SHA256']: raise SystemExit(f'run58 DB identity drift: {sha}')
+          Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_REPLAY_DB']).write_bytes(raw)
+          PY
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain and build pinned TC-big ancestry asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" > "$ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT/tc-big-asset-build.json"
+
+      - name: Restore pinned M2M100 snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/m2m100-418m
+          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+
+      - name: Obtain and build pinned M2M100 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['M2M100_REPO'],
+              revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['M2M100_SNAPSHOT'],
+              allow_patterns=['config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$M2M100_WEIGHTS_SHA256  $M2M100_SNAPSHOT/pytorch_model.bin" | sha256sum -c -
+          rm -rf "$ROCKETDICT_M2M100_ASSET_DIR"
+          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" "$ROCKETDICT_M2M100_ASSET_DIR" > "$ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT/m2m100-asset-build.json"
+
+      - name: Build exact torch-free replay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/replay-venv
+          work/replay-venv/bin/python -m pip install --upgrade pip
+          work/replay-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/replay-venv/bin/python - <<'PY'
+          import ctranslate2, importlib.util
+          if ctranslate2.__version__ != '4.8.2':
+              raise SystemExit(f'CT2 replay version drift: {ctranslate2.__version__}')
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('torch leaked into replay inference runtime')
+          PY
+
+      - name: Run forensic public Stage12 replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -a | tee "$ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT/host-uname.txt"
+          lscpu | tee "$ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT/host-lscpu.txt" || true
+          work/replay-venv/bin/python -u rocketdict-workbench/tests/real_translation_run58_m2m100_arithmetic_public_replay.py \
+            | tee "$ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT/replay.log"
+
+      - name: Verify evidence self-integrity without changing verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_REPLAY_ROOT'])/'run58-m2m100-arithmetic-public-replay.json'
+          if not p.is_file():
+              print('forensic evidence missing; aggregate will fail closed')
+              raise SystemExit(0)
+          e=json.loads(p.read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if e.get('schema')!='rocketdict-run58-m2m100-arithmetic-public-replay/1' or actual!=recorded:
+              raise SystemExit('replay evidence self-integrity drift')
+          if e.get('promotion_allowed') is not False or e.get('automatic_product_default_allowed') is not False:
+              raise SystemExit('single replay unexpectedly authorizes promotion')
+          print(json.dumps({'ready':e.get('replay_ready_for_aggregation'),'verdict':e.get('raw_rank0',{}).get('verdict'),'target_sha':e.get('rank0_target_sha256'),'tokens_sha':e.get('rank0_tokens_sha256'),'evidence_sha256':recorded},ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Always upload replay forensics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run58-m2m100-arithmetic-replay-${{ matrix.replica }}
+          path: work/replay-${{ matrix.replica }}/**
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: replay
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rocketdict-run58-m2m100-arithmetic-replay-*
+          path: work/replicas
+
+      - name: Verify three independent public Stage12 replicas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          paths=sorted(Path('work/replicas').rglob('run58-m2m100-arithmetic-public-replay.json'))
+          if len(paths)!=3: raise SystemExit(f'replay evidence cardinality drift: {paths}')
+          rows=[]
+          safety=(
+              'source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders',
+              'post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened',
+              'n_best_cherry_picking','automatic_n_best_cherry_picking',
+          )
+          for p in paths:
+              e=json.loads(p.read_text(encoding='utf-8'))
+              c=dict(e); recorded=c.pop('evidence_sha256')
+              actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+              if actual!=recorded: raise SystemExit(f'evidence SHA drift: {p}')
+              if e.get('schema')!='rocketdict-run58-m2m100-arithmetic-public-replay/1': raise SystemExit(f'schema drift: {p}')
+              if e.get('replay_ready_for_aggregation') is not True: raise SystemExit(f'replay not ready: {p}: {e.get("error") or e.get("raw_rank0")}')
+              if e.get('attempt_count')!=1 or e.get('accepted_count')!=1 or e.get('rejected_count')!=0: raise SystemExit(f'verdict cardinality drift: {p}')
+              if e.get('changed_target_sequences')!=[2739]: raise SystemExit(f'changed target drift: {p}')
+              if e.get('runtime',{}).get('ctranslate2_version')!='4.8.2': raise SystemExit(f'CT2 runtime drift: {p}')
+              if e.get('raw_rank0',{}).get('generation')!={'beam_size':6,'num_hypotheses':1,'max_decoding_length':512}: raise SystemExit(f'generation drift: {p}')
+              for flag in safety:
+                  if e.get(flag) is not False: raise SystemExit(f'unsafe flag {flag}: {p}')
+              rows.append(e)
+          targets=sorted({e['rank0_target_sha256'] for e in rows})
+          tokens=sorted({e['rank0_tokens_sha256'] for e in rows})
+          source_starts=sorted({e['source_start'] for e in rows})
+          result={
+              'schema':'rocketdict-run58-m2m100-arithmetic-public-replay-aggregate/1',
+              'replica_count':3,
+              'canonical_promotion_authorized':len(targets)==1 and len(tokens)==1 and source_starts==[483234],
+              'parent_replacement_allowed':False,
+              'rank0_target_sha256':targets,
+              'rank0_tokens_sha256':tokens,
+              'source_starts':source_starts,
+              'host_identities':[e['host'] for e in rows],
+              'runtime_identities':[e['raw_rank0']['runtime_identity'] for e in rows],
+              'promoted_output_sha256':[e['promoted_translation_output_sha256'] for e in rows],
+              'persisted_database_sha256':[e['persisted_database_sha256'] for e in rows],
+              'replica_evidence_sha256':[e['evidence_sha256'] for e in rows],
+          }
+          raw=json.dumps(result,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+          result['evidence_sha256']=hashlib.sha256(raw).hexdigest()
+          out=Path('work/aggregate'); out.mkdir(parents=True,exist_ok=True)
+          (out/'run58-m2m100-arithmetic-public-replay-aggregate.json').write_text(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True))
+          if result['canonical_promotion_authorized'] is not True:
+              raise SystemExit('cross-replica raw rank0 disagreement')
+          PY
+
+      - name: Upload replay aggregate authority
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run58-m2m100-arithmetic-replay-aggregate
+          path: work/aggregate/*.json
+          if-no-files-found: error
+          retention-days: 90
