@@ -38,7 +38,7 @@ from rocketdict.stages import (
     run_stage16 as _run_stage16,
     run_stage17 as _run_stage17,
 )
-from rocketdict.translation_m2m100_arithmetic_rescue_stage import run_stage12 as _run_stage12
+from rocketdict.translation_combined_greek_rescue_stage import run_stage12 as _run_stage12
 
 STAGE18_IMPLEMENTATION = "workbench-aligned-content-pos-v5"
 STAGE18_STAGE_KEY = "lexical_extraction"

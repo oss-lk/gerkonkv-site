@@ -3,9 +3,9 @@ from __future__ import annotations
 import rocketdict.api.operations as operations
 
 
-def test_public_stage12_routes_through_default_off_arithmetic_outer_wrapper() -> None:
+def test_public_stage12_routes_through_default_off_combined_greek_outer_wrapper() -> None:
     assert operations._run_stage12.__module__ == (
-        "rocketdict.translation_m2m100_arithmetic_rescue_stage"
+        "rocketdict.translation_combined_greek_rescue_stage"
     )
     assert operations.run_stage12.stage_number == 12
     assert operations.run_stage12.implementation_key == "opus-en-ru-ct2"
