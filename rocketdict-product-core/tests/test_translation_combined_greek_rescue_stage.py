@@ -160,7 +160,10 @@ def test_rejected_candidate_leaves_base_exact(monkeypatch: pytest.MonkeyPatch, t
     monkeypatch.setattr(stage, "_start", lambda *args, **kwargs: (60, None))
     monkeypatch.setattr(stage, "_fail", lambda *args, **kwargs: None)
     completed: dict[str, object] = {}
-    monkeypatch.setattr(stage, "_complete", lambda database, run_id, output, *, items: completed.setdefault("items", items) or output)
+    def fake_complete(database, run_id, output, *, items):  # type: ignore[no-untyped-def]
+        completed["items"] = items
+        return output
+    monkeypatch.setattr(stage, "_complete", fake_complete)
     class BadTranslator:
         def __init__(self, **kwargs) -> None: pass  # type: ignore[no-untyped-def]
         def translate(self, texts, **kwargs):  # type: ignore[no-untyped-def]
