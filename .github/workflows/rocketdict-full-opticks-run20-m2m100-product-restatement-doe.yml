@@ -1,10 +1,10 @@
-name: RocketDict Full Opticks M2M100 Arithmetic Promotion
+name: RocketDict M2M100 CT2 Determinism DOE
 
 on:
   push:
     branches: [chatgpt/product-core-forward]
     paths:
-      - 'rocketdict-workbench/tests/real_translation_full_opticks_m2m100_arithmetic_promotion.py'
+      - 'rocketdict-workbench/tests/real_translation_m2m100_ct2_determinism_doe.py'
       - '.github/workflows/rocketdict-full-opticks-run20-m2m100-product-restatement-doe.yml'
   workflow_dispatch:
 
@@ -13,25 +13,23 @@ permissions:
   actions: read
 
 jobs:
-  promote:
+  determinism:
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3]
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 100
     env:
-      BASE_WORKFLOW_RUN_ID: '34748268143'
-      BASE_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-numeric-row-promotion
-      BASE_DB_SHA256: a24f35d6f8bb4747a4fc301511f383b8b866846a3c448655fce1b9359cc0ac94
-      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
-      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
-      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
-      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
-      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      PARITY_RUN_ID: '34748655508'
+      PARITY_ARTIFACT_NAME: rocketdict-m2m100-ct2-arithmetic-parity
+      PARITY_EVIDENCE_SHA256: bc739df0594e5f73331c2a2d5301bdb6d6eb27d9ab3921703dc99a16237dac57
       M2M100_REPO: facebook/m2m100_418M
       M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
       M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
       M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
       ROCKETDICT_M2M100_ASSET_DIR: ${{ github.workspace }}/work/m2m100-asset
-      ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT: ${{ github.workspace }}/work/full-opticks-m2m100-arithmetic-promotion
-      ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB: ${{ github.workspace }}/work/full-opticks-m2m100-arithmetic-promotion/rocketdict.sqlite
+      ROCKETDICT_M2M100_DETERMINISM_ROOT: ${{ github.workspace }}/work/m2m100-determinism
       HF_HUB_DISABLE_XET: '1'
 
     steps:
@@ -40,62 +38,43 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install pinned alternative-model provisioning runtime
+      - name: Install pinned provisioning runtime
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e './rocketdict-product-core[production,alt-mt-build]' -e ./rocketdict-workbench \
-            'huggingface_hub==0.34.4'
+          python -m pip install -e './rocketdict-product-core[alt-mt-build]' -e ./rocketdict-workbench \
+            'huggingface_hub==0.34.4' 'ctranslate2==4.8.2'
 
-      - name: Download authenticated run58 artifact
+      - name: Download authenticated CT2 parity evidence
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.BASE_ARTIFACT_NAME }}
-          path: work/base
+          name: ${{ env.PARITY_ARTIFACT_NAME }}
+          path: work/parity
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+          run-id: ${{ env.PARITY_RUN_ID }}
 
-      - name: Authenticate and stage exact run58 SQLite
+      - name: Authenticate parity evidence
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT"
+          PARITY=$(find work/parity -name m2m100-ct2-arithmetic-restatement-parity.json -type f -print -quit)
+          test -n "$PARITY" -a -s "$PARITY"
+          export PARITY
           python - <<'PY'
-          import hashlib, os
+          import hashlib,json,os
           from pathlib import Path
-          dbs=[p for p in Path('work/base').rglob('rocketdict.sqlite') if p.is_file()]
-          if len(dbs)!=1: raise SystemExit(f'run58 DB cardinality drift: {dbs}')
-          sha=hashlib.sha256(dbs[0].read_bytes()).hexdigest()
-          if sha!=os.environ['BASE_DB_SHA256']: raise SystemExit(f'run58 DB identity drift: {sha}')
-          Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB']).write_bytes(dbs[0].read_bytes())
+          p=Path(os.environ['PARITY'])
+          e=json.loads(p.read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if recorded!=os.environ['PARITY_EVIDENCE_SHA256'] or actual!=recorded:
+              raise SystemExit('parity evidence SHA drift')
+          if e['source_start']!=483234 or e['exact_target_parity'] is not True:
+              raise SystemExit('parity source/target identity drift')
           PY
-          echo "$BASE_DB_SHA256  $ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB" | sha256sum -c -
-
-      - name: Restore pinned TC-big snapshot cache
-        uses: actions/cache@v4
-        with:
-          path: work/tc-big-snapshot
-          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
-
-      - name: Obtain and build pinned TC-big ancestry asset
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import os
-          from huggingface_hub import snapshot_download
-          snapshot_download(
-              repo_id=os.environ['TC_BIG_REPO'],
-              revision=os.environ['TC_BIG_REVISION'],
-              local_dir=os.environ['TC_BIG_SNAPSHOT'],
-              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
-          )
-          PY
-          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
-          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
-          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" > work/tc-big-asset-build.json
+          echo "PARITY_EVIDENCE=$PARITY" >> "$GITHUB_ENV"
 
       - name: Restore pinned M2M100 snapshot cache
         uses: actions/cache@v4
@@ -103,7 +82,7 @@ jobs:
           path: work/m2m100-418m
           key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
 
-      - name: Obtain and build pinned M2M100 arithmetic asset
+      - name: Obtain exact snapshot and build verified float32 asset
         shell: bash
         run: |
           set -euo pipefail
@@ -121,96 +100,122 @@ jobs:
           rm -rf "$ROCKETDICT_M2M100_ASSET_DIR"
           rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" "$ROCKETDICT_M2M100_ASSET_DIR" > work/m2m100-asset-build.json
 
-      - name: Build torch-free promotion runtime
+      - name: Build exact torch-free CT2 4.8.2 inference runtime
         shell: bash
         run: |
           set -euo pipefail
-          python -m venv work/promotion-venv
-          work/promotion-venv/bin/python -m pip install --upgrade pip
-          work/promotion-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
-          work/promotion-venv/bin/python - <<'PY'
-          import importlib.util
+          python -m venv work/runtime-venv
+          work/runtime-venv/bin/python -m pip install --upgrade pip
+          work/runtime-venv/bin/python -m pip install -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench 'ctranslate2==4.8.2'
+          work/runtime-venv/bin/python - <<'PY'
+          import importlib.util,ctranslate2
           if importlib.util.find_spec('torch') is not None:
-              raise SystemExit('torch leaked into M2M100 promotion inference runtime')
+              raise SystemExit('torch leaked into determinism runtime')
+          if ctranslate2.__version__!='4.8.2':
+              raise SystemExit(f'CT2 version drift: {ctranslate2.__version__}')
           PY
 
-      - name: Promote exact run58 through public Stage12 arithmetic opt-in
+      - name: Run repeated same-process and fresh-process determinism DOE
         shell: bash
         run: |
           set -euo pipefail
-          work/promotion-venv/bin/python -u rocketdict-workbench/tests/real_translation_full_opticks_m2m100_arithmetic_promotion.py | tee work/m2m100-arithmetic-promotion.log
+          echo "=== host identity ==="
+          uname -a
+          lscpu || true
+          work/runtime-venv/bin/python -u rocketdict-workbench/tests/real_translation_m2m100_ct2_determinism_doe.py \
+            --parity-evidence "$PARITY_EVIDENCE" \
+            --root "$ROCKETDICT_M2M100_DETERMINISM_ROOT" \
+            | tee work/m2m100-determinism.log
 
-      - name: Run independent residual census on promoted run
-        shell: bash
-        run: |
-          set -euo pipefail
-          PROMOTED_RUN_ID=$(python - <<'PY'
-          import json, os
-          from pathlib import Path
-          p=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT'])/'summary.json'
-          print(json.loads(p.read_text(encoding='utf-8'))['promoted_translation_run_id'])
-          PY
-          )
-          PROMOTED_DB_SHA=$(sha256sum "$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB" | awk '{print $1}')
-          export ROCKETDICT_RESIDUAL_CENSUS_ROOT="$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT/residual-census"
-          export ROCKETDICT_RESIDUAL_CENSUS_DB="$ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB"
-          export ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID="$PROMOTED_RUN_ID"
-          export ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256="$PROMOTED_DB_SHA"
-          work/promotion-venv/bin/python -u rocketdict-workbench/tests/audit_translation_residual_census.py | tee work/m2m100-arithmetic-residual-census.log
-
-      - name: Verify promotion and independent census
+      - name: Verify per-runner evidence integrity
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import hashlib, json, os, sqlite3
+          import hashlib,json,os
           from pathlib import Path
-          root=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_ROOT'])
-          promotion=json.loads((root/'m2m100-arithmetic-promotion-evidence.json').read_text(encoding='utf-8'))
-          census=json.loads((root/'residual-census'/'translation-residual-census.json').read_text(encoding='utf-8'))
-          expected={'numeric_symbol':15,'punctuation':10,'length':0,'unique':24}
-          if promotion['promoted_hard_counts']!=expected: raise SystemExit(f"promotion count drift: {promotion['promoted_hard_counts']}")
-          if census['hard_gate_counts']!=expected: raise SystemExit(f"census count drift: {census['hard_gate_counts']}")
-          if promotion['promoted_translation_run_id']!=census['translation_run_id']: raise SystemExit('run id cross-check drift')
-          if promotion['promoted_translation_output_sha256']!=census['translation_output_sha256']: raise SystemExit('output SHA cross-check drift')
-          if promotion['promoted_database_sha256']!=census['database_sha256']: raise SystemExit('database SHA cross-check drift')
-          if promotion['changed_target_sequences']!=[2739] or promotion['unchanged_target_count']!=3334: raise SystemExit('changed-target cohort drift')
-          case=promotion['case']
-          if case['source_start']!=483234 or case['source_arithmetic']['product']!=490000000000 or case['raw_rank']!=0: raise SystemExit('arithmetic case drift')
-          if promotion['base_translation_run_id']!=58 or promotion['base_translation_output_sha256']!='60349256eac118e9af7aa1366761342cd2041bb6ade4db04b45c78b46a8c6e5d': raise SystemExit('run58 ancestry drift')
+          p=Path(os.environ['ROCKETDICT_M2M100_DETERMINISM_ROOT'])/'m2m100-ct2-determinism-doe.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema']!='rocketdict-m2m100-ct2-determinism-doe/1': raise SystemExit('schema drift')
+          if e['source_start']!=483234 or e['parity_evidence_sha256']!=os.environ['PARITY_EVIDENCE_SHA256']: raise SystemExit('source/parity drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('DOE unexpectedly authorizes promotion')
+          for name,row in e['configs'].items():
+              if row['process_count']!=2 or row['record_count']!=8: raise SystemExit(f'{name} cardinality drift')
+              if row['ctranslate2_versions']!=['4.8.2']: raise SystemExit(f'{name} CT2 version drift')
+              if row['runtime_payload_tree_sha256']!=['09d8b2e6b5941382aa7c695d2fbbf8918244a8df62ca9befc72d89e43f4642eb']: raise SystemExit(f'{name} asset drift')
           for flag in ('source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
-              if promotion[flag] is not False: raise SystemExit(f'unsafe promotion flag {flag}')
-          for evidence in (promotion,census):
-              c=dict(evidence); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
-              if actual!=recorded: raise SystemExit('evidence SHA drift')
-          db=Path(os.environ['ROCKETDICT_M2M100_ARITHMETIC_PROMOTION_DB'])
-          sha=hashlib.sha256(db.read_bytes()).hexdigest()
-          if sha!=promotion['promoted_database_sha256']: raise SystemExit('persisted DB SHA drift')
-          con=sqlite3.connect(db)
-          integrity=con.execute('PRAGMA integrity_check').fetchone()[0]
-          fk=len(con.execute('PRAGMA foreign_key_check').fetchall())
-          con.close()
-          if integrity!='ok' or fk!=0: raise SystemExit(f'SQLite integrity drift {integrity=} {fk=}')
-          print(json.dumps({
-              'promoted_run_id':promotion['promoted_translation_run_id'],
-              'hard_counts':expected,
-              'promotion_evidence_sha256':promotion['evidence_sha256'],
-              'census_evidence_sha256':census['evidence_sha256'],
-              'database_sha256':sha,
-          },indent=2,ensure_ascii=False))
+              if e[flag] is not False: raise SystemExit(f'unsafe flag {flag}')
+          c=dict(e); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if actual!=recorded: raise SystemExit('evidence SHA drift')
+          print(json.dumps({'evidence_sha256':recorded,'configs':e['configs']},ensure_ascii=False,indent=2))
           PY
 
-      - name: Upload promoted parent and evidence
+      - name: Upload determinism replica evidence
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-full-opticks-m2m100-arithmetic-promotion
+          name: rocketdict-m2m100-ct2-determinism-${{ matrix.replica }}
           path: |
-            work/tc-big-asset-build.json
             work/m2m100-asset-build.json
-            work/m2m100-arithmetic-promotion.log
-            work/m2m100-arithmetic-residual-census.log
-            work/full-opticks-m2m100-arithmetic-promotion/rocketdict.sqlite
-            work/full-opticks-m2m100-arithmetic-promotion/*.json
-            work/full-opticks-m2m100-arithmetic-promotion/residual-census/*.json
+            work/m2m100-determinism.log
+            work/m2m100-determinism/**
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: determinism
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rocketdict-m2m100-ct2-determinism-*
+          path: work/replicas
+
+      - name: Aggregate cross-host target identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          paths=sorted(Path('work/replicas').rglob('m2m100-ct2-determinism-doe.json'))
+          if len(paths)!=3: raise SystemExit(f'replica evidence cardinality drift: {paths}')
+          evidences=[json.loads(p.read_text(encoding='utf-8')) for p in paths]
+          names=sorted(evidences[0]['configs'])
+          configs={}
+          for name in names:
+              rows=[e['configs'][name] for e in evidences]
+              targets=sorted({sha for row in rows for sha in row['unique_target_sha256']})
+              tokens=sorted({sha for row in rows for sha in row['unique_tokens_sha256']})
+              configs[name]={
+                  'cross_host_unique_target_sha256':targets,
+                  'cross_host_unique_tokens_sha256':tokens,
+                  'cross_host_deterministic':len(targets)==1 and len(tokens)==1,
+                  'all_exact_parity_target':all(row['all_exact_parity_target'] for row in rows),
+                  'all_selector_accepted':all(row['all_selector_accepted'] for row in rows),
+                  'cpu_model_names':[cpu.get('model_name') for row in rows for cpu in row['cpu_identities']],
+                  'cpu_vendor_ids':[cpu.get('vendor_id') for row in rows for cpu in row['cpu_identities']],
+                  'replica_evidence_sha256':[e['evidence_sha256'] for e in evidences],
+              }
+          result={
+              'schema':'rocketdict-m2m100-ct2-determinism-cross-host/1',
+              'promotion_allowed':False,
+              'automatic_product_default_allowed':False,
+              'replica_count':3,
+              'configs':configs,
+          }
+          raw=json.dumps(result,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+          result['evidence_sha256']=hashlib.sha256(raw).hexdigest()
+          out=Path('work/cross-host')
+          out.mkdir(parents=True,exist_ok=True)
+          (out/'m2m100-ct2-determinism-cross-host.json').write_text(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True))
+          PY
+
+      - name: Upload cross-host determinism evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-m2m100-ct2-determinism-cross-host
+          path: work/cross-host/*.json
           if-no-files-found: error
           retention-days: 90
