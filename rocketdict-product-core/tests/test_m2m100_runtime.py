@@ -69,7 +69,35 @@ def test_m2m100_status_persists_exact_asset_identities(
     assert status["model_sha256"] == runtime.M2M100_MODEL_SHA256
     assert status["source_language"] == "en"
     assert status["target_language"] == "ru"
+    assert status["ctranslate2_expected_version"] == runtime.M2M100_CTRANSLATE2_VERSION
     assert status["torch_required_for_inference"] is False
+
+
+def test_m2m100_status_accepts_only_validated_ctranslate2_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_asset(tmp_path)
+    monkeypatch.setenv(runtime.M2M100_ASSET_ENV, str(tmp_path))
+    monkeypatch.setattr(runtime.importlib.util, "find_spec", lambda _name: object())
+    monkeypatch.setattr(
+        runtime,
+        "_installed_version",
+        lambda distribution: runtime.M2M100_CTRANSLATE2_VERSION
+        if distribution == "ctranslate2"
+        else None,
+    )
+    status = runtime.m2m100_status()
+    assert status["available"] is True
+    assert status["reason"] == "ready"
+    assert status["ctranslate2_version"] == runtime.M2M100_CTRANSLATE2_VERSION
+    assert status["ctranslate2_version_matches"] is True
+
+    monkeypatch.setattr(runtime, "_installed_version", lambda _distribution: "4.8.3")
+    drift = runtime.m2m100_status()
+    assert drift["available"] is False
+    assert drift["reason"] == "ctranslate2_version_drift"
+    assert drift["ctranslate2_version"] == "4.8.3"
+    assert drift["ctranslate2_version_matches"] is False
 
 
 def test_load_m2m100_asset_rejects_payload_mutation(tmp_path: Path) -> None:
@@ -159,7 +187,14 @@ def test_translate_forces_russian_prefix_and_strips_it_before_decode(
             observed["kwargs"] = kwargs
             return [SimpleNamespace(hypotheses=[["__ru__", "▁Привет", "!"]], scores=[-0.25])]
 
-    monkeypatch.setitem(sys.modules, "ctranslate2", SimpleNamespace(Translator=FakeBackend))
+    monkeypatch.setitem(
+        sys.modules,
+        "ctranslate2",
+        SimpleNamespace(
+            Translator=FakeBackend,
+            __version__=runtime.M2M100_CTRANSLATE2_VERSION,
+        ),
+    )
     monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(M2M100Tokenizer=FakeTokenizer))
     translator = runtime.M2M100Translator()
     result = translator.translate(["Hello!"], beam_size=5, num_hypotheses=1)
@@ -200,7 +235,14 @@ def test_translate_rejects_backend_without_forced_prefix(
         def translate_batch(self, *_args, **_kwargs):
             return [SimpleNamespace(hypotheses=[["▁wrong"]], scores=[0.0])]
 
-    monkeypatch.setitem(sys.modules, "ctranslate2", SimpleNamespace(Translator=FakeBackend))
+    monkeypatch.setitem(
+        sys.modules,
+        "ctranslate2",
+        SimpleNamespace(
+            Translator=FakeBackend,
+            __version__=runtime.M2M100_CTRANSLATE2_VERSION,
+        ),
+    )
     monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(M2M100Tokenizer=FakeTokenizer))
     translator = runtime.M2M100Translator()
     with pytest.raises(RuntimeError, match="forced target prefix"):
