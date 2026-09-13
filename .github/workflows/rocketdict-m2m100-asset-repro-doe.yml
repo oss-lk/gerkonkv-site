@@ -1,0 +1,214 @@
+name: RocketDict M2M100 CT2 Asset Reproducibility DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - '.github/workflows/rocketdict-m2m100-asset-repro-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-replica:
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      M2M100_REPO: facebook/m2m100_418M
+      M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+      M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
+      M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact converter stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[alt-mt-build]' \
+            'huggingface_hub==0.34.4' 'ctranslate2==4.8.2'
+          python - <<'PY'
+          import ctranslate2,transformers,torch
+          print({'ctranslate2':ctranslate2.__version__,'transformers':transformers.__version__,'torch':torch.__version__})
+          if ctranslate2.__version__!='4.8.2': raise SystemExit('CT2 version drift')
+          if transformers.__version__!='4.56.2': raise SystemExit('Transformers version drift')
+          if not torch.__version__.startswith('2.8.'): raise SystemExit('torch version drift')
+          PY
+
+      - name: Restore pinned M2M100 snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/m2m100-418m
+          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+
+      - name: Obtain exact pinned source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['M2M100_REPO'],
+              revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['M2M100_SNAPSHOT'],
+              allow_patterns=['config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$M2M100_WEIGHTS_SHA256  $M2M100_SNAPSHOT/pytorch_model.bin" | sha256sum -c -
+
+      - name: Build identical source twice and record byte identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf work/asset-a work/asset-b work/asset-repro
+          mkdir -p work/asset-repro
+          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" work/asset-a > work/asset-repro/build-a.json
+          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" work/asset-b > work/asset-repro/build-b.json
+          python - <<'PY'
+          import hashlib,json,platform
+          from pathlib import Path
+          def sha(p):
+              h=hashlib.sha256()
+              with p.open('rb') as f:
+                  for b in iter(lambda:f.read(1024*1024),b''): h.update(b)
+              return h.hexdigest()
+          def files(root):
+              return [
+                  {'path':p.relative_to(root).as_posix(),'bytes':p.stat().st_size,'sha256':sha(p)}
+                  for p in sorted(x for x in root.rglob('*') if x.is_file())
+              ]
+          cpu={}
+          p=Path('/proc/cpuinfo')
+          if p.is_file():
+              first={}
+              for line in p.read_text(errors='replace').splitlines():
+                  if not line.strip():
+                      if first: break
+                      continue
+                  if ':' in line:
+                      k,v=line.split(':',1); first[k.strip()]=v.strip()
+              cpu={'vendor_id':first.get('vendor_id'),'model_name':first.get('model name'),'family':first.get('cpu family'),'model':first.get('model'),'stepping':first.get('stepping')}
+          a=files(Path('work/asset-a')); b=files(Path('work/asset-b'))
+          by_a={r['path']:r for r in a}; by_b={r['path']:r for r in b}
+          paths=sorted(set(by_a)|set(by_b))
+          differences=[]
+          for rel in paths:
+              ra,rb=by_a.get(rel),by_b.get(rel)
+              if ra!=rb: differences.append({'path':rel,'a':ra,'b':rb})
+          ba=json.loads(Path('work/asset-repro/build-a.json').read_text())
+          bb=json.loads(Path('work/asset-repro/build-b.json').read_text())
+          evidence={
+              'schema':'rocketdict-m2m100-ct2-asset-reproducibility/1',
+              'promotion_allowed':False,
+              'automatic_product_default_allowed':False,
+              'cpu':cpu,
+              'platform':platform.platform(),
+              'build_a':ba,
+              'build_b':bb,
+              'files_a':a,
+              'files_b':b,
+              'within_host_byte_identical':not differences,
+              'within_host_differences':differences,
+          }
+          c=dict(evidence)
+          raw=json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+          evidence['evidence_sha256']=hashlib.sha256(raw).hexdigest()
+          Path('work/asset-repro/evidence.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps({'cpu':cpu,'tree_a':ba['payload_tree_sha256'],'tree_b':bb['payload_tree_sha256'],'within_host_byte_identical':not differences,'difference_paths':[d['path'] for d in differences],'evidence_sha256':evidence['evidence_sha256']},ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Verify evidence self-integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          p=Path('work/asset-repro/evidence.json'); e=json.loads(p.read_text())
+          if e['schema']!='rocketdict-m2m100-ct2-asset-reproducibility/1': raise SystemExit('schema drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('DOE unexpectedly authorizes promotion')
+          if e['build_a']['model_sha256']!='d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1': raise SystemExit('source model drift')
+          if e['build_b']['model_sha256']!=e['build_a']['model_sha256']: raise SystemExit('source model mismatch')
+          c=dict(e); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if actual!=recorded: raise SystemExit('evidence SHA drift')
+          PY
+
+      - name: Upload asset reproducibility replica
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-m2m100-asset-repro-${{ matrix.replica }}
+          path: work/asset-repro/**
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: build-replica
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rocketdict-m2m100-asset-repro-*
+          path: work/replicas
+
+      - name: Compare converter output across hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          paths=sorted(Path('work/replicas').rglob('evidence.json'))
+          if len(paths)!=3: raise SystemExit(f'replica cardinality drift: {paths}')
+          ev=[json.loads(p.read_text()) for p in paths]
+          all_paths=sorted({r['path'] for e in ev for r in e['files_a']})
+          per_file={}
+          for rel in all_paths:
+              rows=[]
+              for e in ev:
+                  m={r['path']:r for r in e['files_a']}
+                  rows.append(m.get(rel))
+              per_file[rel]={
+                  'sha256':sorted({r['sha256'] for r in rows if r}),
+                  'bytes':sorted({r['bytes'] for r in rows if r}),
+                  'cross_host_byte_identical':len({(r['bytes'],r['sha256']) for r in rows if r})==1 and len(rows)==3,
+              }
+          trees=sorted({e['build_a']['payload_tree_sha256'] for e in ev})
+          result={
+              'schema':'rocketdict-m2m100-ct2-asset-reproducibility-cross-host/1',
+              'promotion_allowed':False,
+              'automatic_product_default_allowed':False,
+              'replica_count':3,
+              'all_within_host_byte_identical':all(e['within_host_byte_identical'] for e in ev),
+              'cross_host_payload_tree_sha256':trees,
+              'cross_host_byte_identical':len(trees)==1,
+              'cpu_identities':[e['cpu'] for e in ev],
+              'per_file':per_file,
+              'replica_evidence_sha256':[e['evidence_sha256'] for e in ev],
+          }
+          raw=json.dumps(result,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode(); result['evidence_sha256']=hashlib.sha256(raw).hexdigest()
+          out=Path('work/cross-host'); out.mkdir(parents=True,exist_ok=True)
+          (out/'evidence.json').write_text(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps({'within_host':result['all_within_host_byte_identical'],'cross_host':result['cross_host_byte_identical'],'trees':trees,'cpu':result['cpu_identities'],'differing_files':[k for k,v in per_file.items() if not v['cross_host_byte_identical']],'evidence_sha256':result['evidence_sha256']},ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Upload cross-host asset reproducibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-m2m100-asset-repro-cross-host
+          path: work/cross-host/evidence.json
+          if-no-files-found: error
+          retention-days: 90
