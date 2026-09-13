@@ -261,13 +261,12 @@ def test_eligible_row_requires_available_runtime_and_exact_source(
     monkeypatch.setattr(stage, "_start", lambda *args, **kwargs: (59, None))
     monkeypatch.setattr(stage, "_fail", lambda *args, **kwargs: None)
     monkeypatch.setattr(stage, "_complete", lambda database, run_id, output, *, items: output)
-    result = stage.run_stage12(
-        tmp_path / "rocketdict.sqlite",
-        context_run_id=2,
-        parameters={"enable_m2m100_arithmetic_rescue": True},
-    )
-    assert result["m2m100_arithmetic_rescue_attempt_count"] == 0
-    assert result["m2m100_arithmetic_rescue_accepted_count"] == 0
+    with pytest.raises(StageExecutionError, match="source coverage"):
+        stage.run_stage12(
+            tmp_path / "rocketdict.sqlite",
+            context_run_id=2,
+            parameters={"enable_m2m100_arithmetic_rescue": True},
+        )
 
 
 def test_controls_fail_closed(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
