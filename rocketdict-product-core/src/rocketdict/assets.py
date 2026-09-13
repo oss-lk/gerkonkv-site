@@ -4,10 +4,10 @@ from __future__ import annotations
 
 Processing itself is offline. Provisioning is a separate explicit step. The
 accepted baseline OPUS builder consumes the official archive already downloaded
-by the operator/installer. The optional independent TC-big builder consumes an
-already-downloaded pinned Hugging Face snapshot. Both builders verify immutable
-source identities before creating CTranslate2 float32 assets; neither downloads
-anything during the build operation.
+by the operator/installer. Optional independent TC-big and M2M100 builders
+consume already-downloaded pinned Hugging Face snapshots. Builders verify
+immutable source identities before creating CTranslate2 float32 assets; none
+downloads anything during the build operation.
 """
 
 import argparse
@@ -230,6 +230,10 @@ def parser() -> argparse.ArgumentParser:
     tc_big.add_argument("source_snapshot", type=Path)
     tc_big.add_argument("destination", type=Path)
     tc_big.add_argument("--force", action="store_true")
+    m2m100 = commands.add_parser("build-m2m100-en-ru")
+    m2m100.add_argument("source_snapshot", type=Path)
+    m2m100.add_argument("destination", type=Path)
+    m2m100.add_argument("--force", action="store_true")
     return p
 
 
@@ -240,7 +244,16 @@ def main(argv: list[str] | None = None) -> int:
             payload = build_opus_asset(args.archive, args.destination, force=args.force)
         elif args.command == "build-tc-big-en-ru":
             from .alternative_mt_assets import build_tc_big_asset
-            payload = build_tc_big_asset(args.source_snapshot, args.destination, force=args.force)
+
+            payload = build_tc_big_asset(
+                args.source_snapshot, args.destination, force=args.force
+            )
+        elif args.command == "build-m2m100-en-ru":
+            from .m2m100_assets import build_m2m100_asset
+
+            payload = build_m2m100_asset(
+                args.source_snapshot, args.destination, force=args.force
+            )
         else:
             raise AssertionError(args.command)
     except Exception as exc:
