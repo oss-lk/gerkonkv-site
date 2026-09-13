@@ -6,37 +6,39 @@ Store only conclusions expensive or risky to rediscover. Git/L3 remains chronolo
 
 **Decision.** Quality cannot be traded for speed, storage or convenience. Final heavy evidence requires zero unresolved numeric/symbol, punctuation and length failures. Never weaken evaluators, rewrite source, surgically repair target, inject literals/placeholders, add corpus-specific target patches, or automatically cherry-pick n-best hypotheses.
 
-## Forward parent and rank0
+**Decision.** Persisted rescue model selection is unique raw rank0 only. Higher hypotheses may be diagnostic but never gain automatic selection authority. Exact lexical model input must equal its immutable source span.
 
-**Decision.** Authenticated full-Opticks run41 is still the only forward promotion parent: workflow `34695164876`, artifact `10297359600`, SQLite SHA `e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e`, output SHA `d8948e43158a126703a90e6ce1cd25725da8774e1db64410ca67e3ec7bb1a10f`, counts **18 numeric / 16 punctuation / 0 length, 33 unique**. Historical run23 and the failed illustration promotion cannot parent later work.
+## Forward parent
 
-**Decision.** Rescue persistence is unique raw rank0 only. Higher hypotheses may be retained for diagnostics but never gain selection authority.
+**Decision.** Authenticated full-Opticks **run56 is the only legal forward promotion parent**. It descends from exact run41 through the source-planned illustration semantic-carrier rescue.
 
-## Illustration structural composition
+Run56 identity: workflow `34743281964`, artifact `10312992185` (`sha256:81be4996bce174e7aaa21c41da8ef531a9b6d0f59346c26b7fb6328861ab451a`), output SHA `2971fb099674aa81c14e0b75590c5fbcb943d1ea3477efb0ceedbd81bd69fbc5`, final-text SHA `705dac5de010af8d5c08a3da49b7ec5d568ddf144e435f4617b5cbe2e604f73d`, SQLite SHA `cb4568584e70be0fb4d011cd9de212ae01edd046dec8c5ec104ee3bb0e91dc56`, promotion evidence SHA `d6dfe0771e0a0c41506494b860c1733981adace656afb6a0130c291cfdfb57ff`, independent census SHA `8c79ba9f8bd17790b41bff9e10f8b89ee5706733780ddc6dcd8bebe93c77857e`. Counts: **18 numeric / 14 punctuation / 0 length, 31 unique** over 3335 rows.
 
-**Decision.** The source-owned separator approach is legal only as a source-only pre-MT plan. Workflow `34698906048` proved label OPUS rank0 + exact source separator + suffix TC-big rank0 + exact trailing whitespace for the generic FIG illustration class. Accepted table rendering remains the precedent for source-owned structural passthrough.
+The promotion workflow's final status was red only because its legacy verifier expected the superseded four-row segment count. Independent persisted-artifact workflow `34743557365` verified the saved artifact, SQLite integrity/FKs, evidence hashes, source coverage, unchanged unrelated spans, exact model-input/rank0 provenance and safety flags. Verification SHA `dcd1e4e256edfb0b2e2729e25461dd474b251d13503692c1d6316466bf50b5b7`.
 
-**Decision.** Forward illustration rescue `/4` (commit `cdf58def6e557c800e325aea31cd6b8a6237037d`) correctly preserves exact lexical source/model-input identity and raw rank0 selection while retaining the prior ordinary-suffix path. Maintained CI `34742479388` is green.
+Run41 is now the immutable previous parent, not the active one. Historical run23 remains research-only because its ancestry includes automatic non-rank0 selections.
 
-**Decision.** Full promotion workflow `34742555215` is rejected evidence, not a new parent. Its final run `56` reached **18 numeric / 14 punctuation / 4 length, 35 unique**. Artifact `10313456776` proves the four new length failures came from materializing two source-owned blank-line separators and two trailing spaces as standalone `translation_segment` rows.
+## Semantic-carrier representation
 
-**Decision.** Do not change `_length_passed`. A source-plan piece and a persisted hard-gate row are different abstraction levels. Structural-only pieces that are part of one semantic translation must stay explicit in provenance but be rendered inside a semantic carrier row. For this illustration class, the preferred representation is one composite row covering the original source span with target exactly `label_rank0 + separator_source + suffix_rank0 + trailing_source`; payload must retain the four source subspans, models, exact model inputs, rank0 identities and passthrough roles. This is preplanned composition, not target repair.
+**Decision.** A logical source plan and persisted hard-gate segmentation are different abstraction levels. Source-owned separators/whitespace may remain explicit source subspans in provenance without becoming standalone `translation_segment` rows.
 
-## Durable negatives
+For the illustration class, the approved `/5` representation keeps the four-piece plan (OPUS label, source separator, TC-big suffix, source trailing whitespace) and persists one carrier row covering the original source span. The target must equal exactly `label_rank0 + separator_source + suffix_rank0 + trailing_source`; payload retains each subspan, model route, exact model input, rank0 identity and structural ownership. This is source-planned composition before MT result persistence, not post-hoc target repair. The maintained hard gates remain unchanged.
 
-- Seq `638` current short-DMS exact-source/rank0 geometries are exhausted.
-- Seq `325` tested figure-reference boundary geometries are closed.
-- Historical seq `2346` angle-list DOE found no admissible raw-rank0 geometry; TC-big prime-preserving candidates corrupted a large integer.
-- Inline `[G]`, large-integer canonicalization, broad whole-context fallback, source rewriting, target repair/injection and automatic n-best selection remain rejected.
+## Durable rejected/closed directions
+
+- Seq638 current short-DMS exact-source/rank0 geometries are exhausted.
+- Seq325 tested figure-reference boundary geometries are closed.
+- Historical seq2346 angle-list DOE found no admissible raw-rank0 geometry and TC-big prime-preserving variants corrupted a large integer.
+- Inline `[G]`, large-integer canonicalization, broad generic whole-context fallback, source rewriting, target repair/injection and automatic n-best selection remain rejected.
+- Run22 prime multi-context DOE `34687752297` should not be repeated: only `english_miles_boundary` was OPUS-rank0 admissible, and that family is already implemented by the emphasized-modifier wrapper and absent from run56 residuals.
 
 ## Forward decision
 
-1. Refactor illustration structural persistence to a semantic carrier row without changing the proven four-piece source plan.
-2. Add fail-closed provenance and hard-gate regressions.
-3. Re-run maintained Product Core CI and exact run41 full promotion + independent census.
-4. Promote only if the result is **18 numeric / 14 punctuation / 0 length, 31 unique**, source coverage is byte-exact, unrelated run41 spans are unchanged and all safety flags remain false.
-5. Then remove temporary helper workflows, synchronize memory, and select the next residual cluster from primary L3 evidence.
+1. Use run56 plus its independent census as the sole forward baseline.
+2. Audit current wrappers against the 31 residual failures and identify a genuinely new source-defined family rather than retrying closed geometries.
+3. Prefer read-only DOE evidence before implementing/promoting a new rescue path; preserve exact source/model/result identities and fail closed.
+4. Continue until all hard failures reach zero, then finish learner/export coverage and Windows clean-install/release validation.
 
 ## Memory protocol
 
-Recovery is `PROJECT_STATE.md` → HEAD diff → `docs/memory/INDEX.md`/relevant L2 → unrestricted L3. Mandatory memory must be synchronized before each user-facing development result.
+Recovery is `PROJECT_STATE.md` → HEAD diff → `docs/memory/INDEX.md`/relevant L2 → unrestricted L3. Before every user-facing development report, synchronize `PROJECT_STATE.md`, `TRANSLATION_QUALITY.md` and `DECISIONS.md` to actual repository/evidence state.
