@@ -1,10 +1,10 @@
-name: RocketDict Full Opticks TC-big Numeric Shadow
+name: RocketDict Full Opticks TC-big Numeric Row Promotion
 
 on:
   push:
     branches: [chatgpt/product-core-forward]
     paths:
-      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_numeric_shadow.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_tc_big_numeric_row_promotion.py'
       - '.github/workflows/rocketdict-full-opticks-tc-big-numeric-shadow.yml'
   workflow_dispatch:
 
@@ -13,155 +13,175 @@ permissions:
   actions: read
 
 jobs:
-  tc-big-numeric-shadow:
+  promote:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     env:
-      BASELINE_RUN_ID: '34441822239'
-      BASELINE_ARTIFACT_NAME: rocketdict-full-opticks-product-stage12-audit
-      BASELINE_JSON_SHA256: 3d899605172decdadbab55eedf9fb161c5dd599a921679bea47fd98adbf2efb4
-      BASELINE_DB_SHA256: eff56dab177baa161b6e8126a9ff75ecdc341c19deff5866fec201c6bf232687
-      ALT_MODEL_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
-      ALT_MODEL_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
-      ALT_MODEL_SAFETENSORS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
-      ROCKETDICT_ALT_MT_MODEL_DIR: ${{ github.workspace }}/work/alt-mt-model
-      ROCKETDICT_NUMERIC_STRESS_ROOT: ${{ github.workspace }}/work/baseline/full-opticks-numeric-stress
+      BASE_WORKFLOW_RUN_ID: '34746052346'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-tc-big-parenthetical-row-promotion
+      BASE_DB_SHA256: f6eae41e02211a35f3519c8abcdeceb2699f4f0089dc2c2fa10800682fe06115
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      ROCKETDICT_NUMERIC_ROW_PROMOTION_ROOT: ${{ github.workspace }}/work/full-opticks-tc-big-numeric-row-promotion
+      ROCKETDICT_NUMERIC_ROW_PROMOTION_DB: ${{ github.workspace }}/work/full-opticks-tc-big-numeric-row-promotion/rocketdict.sqlite
       HF_HUB_DISABLE_XET: '1'
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install maintained evaluator and pinned TC-big runtime
+
+      - name: Install TC-big asset builder
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+          python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench \
+            'ctranslate2==4.8.2' 'sentencepiece==0.2.1' 'transformers==4.56.2' \
+            'sacremoses==0.1.1' 'huggingface_hub==0.34.4' 'safetensors==0.6.2'
           python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
-          python -m pip install \
-            'transformers==4.56.2' \
-            'huggingface_hub==0.34.4' \
-            'safetensors==0.6.2' \
-            'sentencepiece==0.2.1' \
-            'sacremoses==0.1.1'
-      - name: Download immutable full Opticks baseline artifact
+
+      - name: Download authenticated run57 artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.BASELINE_ARTIFACT_NAME }}
-          path: work/baseline
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-          run-id: ${{ env.BASELINE_RUN_ID }}
-      - name: Verify immutable replay baseline
+          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+
+      - name: Authenticate and stage exact run57 SQLite
         shell: bash
         run: |
           set -euo pipefail
-          root="$ROCKETDICT_NUMERIC_STRESS_ROOT"
-          echo "$BASELINE_JSON_SHA256  $root/full-opticks-numeric-stress.json" | sha256sum -c -
-          echo "$BASELINE_DB_SHA256  $root/project/data/rocketdict.sqlite" | sha256sum -c -
+          mkdir -p "$ROCKETDICT_NUMERIC_ROW_PROMOTION_ROOT"
           python - <<'PY'
-          import json
-          import os
+          import hashlib, os
           from pathlib import Path
-          root = Path(os.environ['ROCKETDICT_NUMERIC_STRESS_ROOT'])
-          baseline = json.loads((root / 'full-opticks-numeric-stress.json').read_text(encoding='utf-8'))
-          assert baseline['schema'] == 'rocketdict-full-opticks-numeric-stress/3'
-          assert baseline['source_sha256'] == '1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217'
-          assert baseline['source_char_count'] == 586543
-          assert baseline['stage12_planner_contract'] == 'rocketdict-stage12-protected-split/8'
-          assert baseline['numeric_bearing_unit_count'] == 688
-          assert baseline['product_numeric_failure_count'] == 27
+          dbs=[p for p in Path('work/base').rglob('rocketdict.sqlite') if p.is_file()]
+          if len(dbs)!=1: raise SystemExit(f'run57 DB cardinality drift: {dbs}')
+          sha=hashlib.sha256(dbs[0].read_bytes()).hexdigest()
+          if sha!=os.environ['BASE_DB_SHA256']: raise SystemExit(f'run57 DB identity drift: {sha}')
+          Path(os.environ['ROCKETDICT_NUMERIC_ROW_PROMOTION_DB']).write_bytes(dbs[0].read_bytes())
           PY
-      - name: Restore exact pinned TC-big cache
+          echo "$BASE_DB_SHA256  $ROCKETDICT_NUMERIC_ROW_PROMOTION_DB" | sha256sum -c -
+
+      - name: Restore pinned TC-big snapshot cache
         uses: actions/cache@v4
         with:
-          path: work/alt-mt-model
-          key: rocketdict-alt-mt-tc-big-en-zle-708be1d-e68caa9
-      - name: Obtain exact TC-big snapshot
-        shell: bash
-        run: |
-          set -euo pipefail
-          required=(
-            README.md
-            config.json
-            generation_config.json
-            model.safetensors
-            source.spm
-            special_tokens_map.json
-            target.spm
-            tokenizer_config.json
-            vocab.json
-          )
-          cache_ok=1
-          for relative in "${required[@]}"; do
-            if [ ! -s "$ROCKETDICT_ALT_MT_MODEL_DIR/$relative" ]; then
-              cache_ok=0
-              break
-            fi
-          done
-          if [ "$cache_ok" = 1 ] && echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c - >/dev/null; then
-            echo "Using exact cached TC-big snapshot; no Hub API request required."
-          else
-            rm -rf "$ROCKETDICT_ALT_MT_MODEL_DIR"
-            python - <<'PY'
-          import os
-          import time
-          from huggingface_hub import snapshot_download
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
 
-          kwargs = dict(
-              repo_id=os.environ['ALT_MODEL_REPO'],
-              revision=os.environ['ALT_MODEL_REVISION'],
-              local_dir=os.environ['ROCKETDICT_ALT_MT_MODEL_DIR'],
-              allow_patterns=[
-                  'README.md',
-                  'config.json',
-                  'generation_config.json',
-                  'model.safetensors',
-                  'source.spm',
-                  'special_tokens_map.json',
-                  'target.spm',
-                  'tokenizer_config.json',
-                  'vocab.json',
-              ],
-          )
-          for attempt in range(5):
-              try:
-                  snapshot_download(**kwargs)
-                  break
-              except Exception:
-                  if attempt == 4:
-                      raise
-                  time.sleep(15 * (attempt + 1))
-          PY
-          fi
-          for relative in "${required[@]}"; do
-            test -s "$ROCKETDICT_ALT_MT_MODEL_DIR/$relative"
-          done
-          echo "$ALT_MODEL_SAFETENSORS_SHA256  $ROCKETDICT_ALT_MT_MODEL_DIR/model.safetensors" | sha256sum -c -
-      - name: Run TC-big rank0 shadow over every ordinary numeric-bearing Product unit
-        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_tc_big_numeric_shadow.py
-      - name: Re-verify immutable replay database
-        if: always()
+      - name: Obtain and build pinned TC-big
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite"
-          echo "$BASELINE_DB_SHA256  $ROCKETDICT_NUMERIC_STRESS_ROOT/project/data/rocketdict.sqlite" | sha256sum -c -
-      - name: Record runtime identities and resources
-        if: always()
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" > work/numeric-row-promotion-tc-big.json
+
+      - name: Build torch-free promotion runtime
+        shell: bash
         run: |
-          mkdir -p work/tc-big-numeric-shadow-runtime-evidence
-          python -VV > work/tc-big-numeric-shadow-runtime-evidence/python.txt || true
-          python -m pip freeze | sort > work/tc-big-numeric-shadow-runtime-evidence/pip-freeze.txt || true
-          df -h > work/tc-big-numeric-shadow-runtime-evidence/disk.txt || true
-          free -h > work/tc-big-numeric-shadow-runtime-evidence/memory.txt || true
-          sha256sum "$ROCKETDICT_ALT_MT_MODEL_DIR"/* > work/tc-big-numeric-shadow-runtime-evidence/model-files.sha256 || true
-      - name: Upload TC-big numeric shadow evidence
-        if: always()
+          set -euo pipefail
+          python -m venv work/promotion-venv
+          work/promotion-venv/bin/python -m pip install --upgrade pip
+          work/promotion-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/promotion-venv/bin/python - <<'PY'
+          import importlib.util
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('torch leaked into promotion inference runtime')
+          PY
+
+      - name: Promote exact run57 with TC-big numeric row rescue
+        shell: bash
+        run: |
+          set -euo pipefail
+          work/promotion-venv/bin/python -u rocketdict-workbench/tests/real_translation_full_opticks_tc_big_numeric_row_promotion.py | tee work/numeric-row-promotion.log
+
+      - name: Run independent residual census on promoted run
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROMOTED_RUN_ID=$(python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_NUMERIC_ROW_PROMOTION_ROOT'])/'summary.json'
+          print(json.loads(p.read_text(encoding='utf-8'))['promoted_translation_run_id'])
+          PY
+          )
+          PROMOTED_DB_SHA=$(sha256sum "$ROCKETDICT_NUMERIC_ROW_PROMOTION_DB" | awk '{print $1}')
+          export ROCKETDICT_RESIDUAL_CENSUS_ROOT="$ROCKETDICT_NUMERIC_ROW_PROMOTION_ROOT/residual-census"
+          export ROCKETDICT_RESIDUAL_CENSUS_DB="$ROCKETDICT_NUMERIC_ROW_PROMOTION_DB"
+          export ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID="$PROMOTED_RUN_ID"
+          export ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256="$PROMOTED_DB_SHA"
+          work/promotion-venv/bin/python -u rocketdict-workbench/tests/audit_translation_residual_census.py | tee work/numeric-row-residual-census.log
+
+      - name: Verify promotion and independent census
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os, sqlite3
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_NUMERIC_ROW_PROMOTION_ROOT'])
+          promotion=json.loads((root/'numeric-row-promotion-evidence.json').read_text(encoding='utf-8'))
+          summary=json.loads((root/'summary.json').read_text(encoding='utf-8'))
+          census=json.loads((root/'residual-census'/'translation-residual-census.json').read_text(encoding='utf-8'))
+          expected={'numeric_symbol':15,'punctuation':10,'length':0,'unique':24}
+          if promotion['promoted_hard_counts']!=expected: raise SystemExit(f"promotion count drift: {promotion['promoted_hard_counts']}")
+          if census['hard_gate_counts']!=expected: raise SystemExit(f"census count drift: {census['hard_gate_counts']}")
+          if promotion['promoted_translation_run_id']!=census['translation_run_id']: raise SystemExit('run id cross-check drift')
+          if promotion['promoted_translation_output_sha256']!=census['translation_output_sha256']: raise SystemExit('output SHA cross-check drift')
+          if promotion['promoted_database_sha256']!=census['database_sha256']: raise SystemExit('database SHA cross-check drift')
+          if promotion['changed_target_sequences']!=[1577,2288,2355]: raise SystemExit('changed-target cohort drift')
+          if promotion['unchanged_target_count']!=3332 or promotion['promoted_segment_count']!=3335: raise SystemExit('segmentation/unchanged drift')
+          for flag in ('source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
+              if promotion[flag] is not False: raise SystemExit(f'unsafe promotion flag {flag}')
+          for evidence in (promotion,census):
+              c=dict(evidence); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+              if actual!=recorded: raise SystemExit('evidence SHA drift')
+          db=Path(os.environ['ROCKETDICT_NUMERIC_ROW_PROMOTION_DB'])
+          sha=hashlib.sha256(db.read_bytes()).hexdigest()
+          if sha!=promotion['promoted_database_sha256']: raise SystemExit('persisted DB SHA drift')
+          con=sqlite3.connect(db)
+          integrity=con.execute('PRAGMA integrity_check').fetchone()[0]
+          fk=len(con.execute('PRAGMA foreign_key_check').fetchall())
+          con.close()
+          if integrity!='ok' or fk!=0: raise SystemExit(f'SQLite integrity drift {integrity=} {fk=}')
+          print(json.dumps({
+              'promoted_run_id':promotion['promoted_translation_run_id'],
+              'hard_counts':expected,
+              'promotion_evidence_sha256':promotion['evidence_sha256'],
+              'census_evidence_sha256':census['evidence_sha256'],
+              'database_sha256':sha,
+          },indent=2,ensure_ascii=False))
+          PY
+
+      - name: Upload promoted parent and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-full-opticks-tc-big-numeric-shadow
+          name: rocketdict-full-opticks-tc-big-numeric-row-promotion
           path: |
-            work/baseline/full-opticks-numeric-stress/full-opticks-tc-big-numeric-shadow.json
-            work/tc-big-numeric-shadow-runtime-evidence/**
-          if-no-files-found: warn
+            work/numeric-row-promotion-tc-big.json
+            work/numeric-row-promotion.log
+            work/numeric-row-residual-census.log
+            work/full-opticks-tc-big-numeric-row-promotion/rocketdict.sqlite
+            work/full-opticks-tc-big-numeric-row-promotion/*.json
+            work/full-opticks-tc-big-numeric-row-promotion/residual-census/*.json
+          if-no-files-found: error
           retention-days: 90
