@@ -6,6 +6,7 @@ on:
     paths:
       - 'rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe.py'
       - 'rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe_v2.py'
+      - 'rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe_v3.py'
       - '.github/workflows/rocketdict-run59-forward-paragraph-boundary-resegmentation-doe.yml'
   workflow_dispatch:
 
@@ -102,7 +103,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -u rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe_v2.py \
+          python -u rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe_v3.py \
             | tee "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/summary.json"
           echo "$RUN59_DB_SHA256  $ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
 
@@ -115,7 +116,7 @@ jobs:
           from pathlib import Path
           root=Path(os.environ['ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT'])
           e=json.loads((root/'run59-forward-paragraph-boundary-resegmentation-doe.json').read_text(encoding='utf-8'))
-          if e['schema']!='rocketdict-run59-forward-paragraph-boundary-resegmentation-doe/1':
+          if e['schema']!='rocketdict-run59-forward-paragraph-boundary-resegmentation-doe/2':
               raise SystemExit('schema drift')
           if e['base_run_id'] != 59 or e['segment_count'] != 3335:
               raise SystemExit('base identity/census drift')
@@ -126,6 +127,9 @@ jobs:
           if e['generation'] != {'implementation':'opus-en-ru-ct2','beam_size':6,'num_hypotheses':1,'max_decoding_length':768,'selected_rank':0}:
               raise SystemExit('generation policy drift')
           a=e['attempts'][0]
+          gate=a.get('base_left_attempt_gate') or {}
+          if gate.get('candidate_selector_weakened') is not False or gate.get('accepted') is not True:
+              raise SystemExit('base-left attempt-gate drift')
           if a['forward_nlp_token_count'] > 8 or a['candidate_left_nlp_token_count'] > a['preferred_token_budget'] + 8:
               raise SystemExit('forward movement exceeded bounded envelope')
           if a['candidate_left_source'] + a['candidate_right_source'] != a['base_left_source'] + a['base_right_source']:
