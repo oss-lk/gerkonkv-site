@@ -1,13 +1,10 @@
-name: RocketDict M2M100 CTranslate2 Arithmetic Parity
+name: RocketDict Full Opticks Run20 M2M100 Product Restatement DOE
 
 on:
   push:
     branches: [chatgpt/product-core-forward]
     paths:
-      - 'rocketdict-product-core/src/rocketdict/m2m100_runtime.py'
-      - 'rocketdict-product-core/src/rocketdict/m2m100_assets.py'
-      - 'rocketdict-product-core/src/rocketdict/assets.py'
-      - 'rocketdict-workbench/tests/real_translation_m2m100_ct2_restatement_parity.py'
+      - 'rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_product_restatement_doe.py'
       - '.github/workflows/rocketdict-full-opticks-run20-m2m100-product-restatement-doe.yml'
   workflow_dispatch:
 
@@ -16,67 +13,53 @@ permissions:
   actions: read
 
 jobs:
-  m2m100-ct2-parity:
+  run20-m2m100-product-restatement-doe:
     runs-on: ubuntu-latest
-    timeout-minutes: 110
+    timeout-minutes: 75
     env:
-      HISTORICAL_RUN_ID: '34683317996'
-      HISTORICAL_ARTIFACT_NAME: rocketdict-full-opticks-run20-m2m100-product-restatement-doe
+      BASE_RUN_ID: '34678965465'
+      BASE_ARTIFACT_NAME: rocketdict-full-opticks-parenthetical-whole-context-rescue
+      BASE_DB_SHA256: 879ea83d0f6803e2fdce609e4ef0dc57017626e4fd0e007d3440b12c7f6f4f2d
       M2M100_REPO: facebook/m2m100_418M
       M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
       M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
-      M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
-      ROCKETDICT_M2M100_ASSET_DIR: ${{ github.workspace }}/work/m2m100-asset
-      ROCKETDICT_M2M100_CT2_PARITY_ROOT: ${{ github.workspace }}/work/m2m100-ct2-parity
-      ROCKETDICT_M2M100_HISTORICAL_EVIDENCE: ${{ github.workspace }}/work/historical/full-opticks-run20-m2m100-product-restatement-doe.json
+      ROCKETDICT_M2M100_MODEL_DIR: ${{ github.workspace }}/work/m2m100-418m
+      ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT: ${{ github.workspace }}/work/run20-m2m100-product-restatement-doe
       HF_HUB_DISABLE_XET: '1'
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      - name: Install pinned M2M100 provisioning runtime
+      - name: Install maintained research runtime
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e './rocketdict-product-core[alt-mt-build]' -e ./rocketdict-workbench \
-            'huggingface_hub==0.34.4'
-
-      - name: Download immutable historical PyTorch rank0 evidence
+          python -m pip install -e './rocketdict-product-core[production]' -e ./rocketdict-workbench \
+            'transformers==4.56.2' 'sentencepiece==0.2.1' 'huggingface_hub==0.34.4'
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0'
+      - name: Download exact persisted run20 artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.HISTORICAL_ARTIFACT_NAME }}
-          path: work/historical
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-          run-id: ${{ env.HISTORICAL_RUN_ID }}
-
-      - name: Verify historical evidence availability
+          run-id: ${{ env.BASE_RUN_ID }}
+      - name: Stage and verify exact run20 database
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$ROCKETDICT_M2M100_HISTORICAL_EVIDENCE"
-          python - <<'PY'
-          import hashlib,json,os
-          from pathlib import Path
-          p=Path(os.environ['ROCKETDICT_M2M100_HISTORICAL_EVIDENCE'])
-          e=json.loads(p.read_text(encoding='utf-8'))
-          c=dict(e); recorded=c.pop('evidence_sha256')
-          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
-          if recorded!='e3b508d5bf466d9ca8695fc8f9a4002e51cd4dfd2501f93d46190707db5bf7e7' or actual!=recorded:
-              raise SystemExit('historical evidence SHA drift')
-          PY
-
+          mkdir -p "$ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT"
+          cp work/base/full-opticks-parenthetical-whole-context-rescue/rocketdict.sqlite "$ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT/rocketdict.sqlite"
+          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
       - name: Restore pinned M2M100 snapshot cache
         uses: actions/cache@v4
         with:
           path: work/m2m100-418m
           key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
-
-      - name: Obtain exact pinned M2M100 snapshot
+      - name: Obtain and verify exact M2M100 snapshot
         shell: bash
         run: |
           set -euo pipefail
@@ -84,91 +67,37 @@ jobs:
           import os
           from huggingface_hub import snapshot_download
           snapshot_download(
-              repo_id=os.environ['M2M100_REPO'],
-              revision=os.environ['M2M100_REVISION'],
-              local_dir=os.environ['M2M100_SNAPSHOT'],
-              allow_patterns=[
-                  'config.json','pytorch_model.bin','sentencepiece.bpe.model',
-                  'special_tokens_map.json','tokenizer_config.json','vocab.json'
-              ],
+              repo_id=os.environ['M2M100_REPO'], revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['ROCKETDICT_M2M100_MODEL_DIR'],
+              allow_patterns=['config.json','generation_config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
           )
           PY
-          echo "$M2M100_WEIGHTS_SHA256  $M2M100_SNAPSHOT/pytorch_model.bin" | sha256sum -c -
-
-      - name: Build verified float32 CTranslate2 asset with Product builder
+          echo "$M2M100_WEIGHTS_SHA256  $ROCKETDICT_M2M100_MODEL_DIR/pytorch_model.bin" | sha256sum -c -
+      - name: Run exact read-only arithmetic restatement DOE
+        run: python -u rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_product_restatement_doe.py
+      - name: Verify immutable DOE contract
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf "$ROCKETDICT_M2M100_ASSET_DIR"
-          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" "$ROCKETDICT_M2M100_ASSET_DIR" > work/m2m100-asset-build.json
-          test -s "$ROCKETDICT_M2M100_ASSET_DIR/rocketdict-m2m100-asset.json"
-          test -s "$ROCKETDICT_M2M100_ASSET_DIR/ct2/model.bin"
-
-      - name: Build torch-free M2M100 inference runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m venv work/m2m100-runtime-venv
-          work/m2m100-runtime-venv/bin/python -m pip install --upgrade pip
-          work/m2m100-runtime-venv/bin/python -m pip install -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench
-          work/m2m100-runtime-venv/bin/python - <<'PY'
-          import importlib.util
-          if importlib.util.find_spec('torch') is not None:
-              raise SystemExit('torch leaked into M2M100 inference runtime')
-          PY
-
-      - name: Run exact-source CT2 arithmetic parity and acceptance DOE
-        shell: bash
-        run: |
-          set -euo pipefail
-          work/m2m100-runtime-venv/bin/python -u rocketdict-workbench/tests/real_translation_m2m100_ct2_restatement_parity.py | tee work/m2m100-ct2-parity.log
-
-      - name: Verify parity evidence contract
-        shell: bash
-        run: |
-          set -euo pipefail
+          echo "$BASE_DB_SHA256  $ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
           python - <<'PY'
-          import hashlib,json,os
+          import json, os
           from pathlib import Path
-          root=Path(os.environ['ROCKETDICT_M2M100_CT2_PARITY_ROOT'])
-          e=json.loads((root/'m2m100-ct2-arithmetic-restatement-parity.json').read_text(encoding='utf-8'))
-          if e['schema']!='rocketdict-m2m100-ct2-arithmetic-restatement-parity/1': raise SystemExit('schema drift')
-          if e['source_start']!=483234: raise SystemExit('source identity drift')
-          if e['model']['revision']!=os.environ['M2M100_REVISION'] or e['model']['weight_sha256']!=os.environ['M2M100_WEIGHTS_SHA256']: raise SystemExit('model identity drift')
-          if e['model']['torch_required_for_inference'] is not False: raise SystemExit('torch-free invariant drift')
-          if e['source_restatement']['arithmetic_verified'] is not True or e['source_restatement']['product']!=490000000000: raise SystemExit('arithmetic source invariant drift')
-          if e['ct2_candidate_accepted'] is not True or e['arithmetic_literals_preserved'] is not True: raise SystemExit('CT2 rank0 acceptance drift')
-          if e['mechanical_verdict']['strictly_eligible'] is not True or e['emphasis_markup']['passed'] is not True: raise SystemExit('mechanical/emphasis drift')
-          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('parity DOE unexpectedly authorizes promotion')
-          for flag in ('source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
-              if e[flag] is not False: raise SystemExit(f'unsafe flag {flag}')
-          c=dict(e); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
-          if actual!=recorded: raise SystemExit('evidence SHA drift')
-          print(json.dumps({'exact_target_parity':e['exact_target_parity'],'ct2_candidate_accepted':True,'evidence_sha256':recorded},indent=2,ensure_ascii=False))
+          root=Path(os.environ['ROCKETDICT_RUN20_M2M100_PRODUCT_DOE_ROOT'])
+          e=json.loads((root/'full-opticks-run20-m2m100-product-restatement-doe.json').read_text(encoding='utf-8'))
+          if e['schema']!='rocketdict-full-opticks-run20-m2m100-product-restatement-doe/1': raise SystemExit('schema drift')
+          if e['multiplication_row_count']!=2 or e['verified_restatement_sequences']!=[2745] or e['trigger_sequences']!=[2745]: raise SystemExit('source/trigger census drift')
+          if e['model_revision']!=os.environ['M2M100_REVISION'] or e['model_weight_sha256']!=os.environ['M2M100_WEIGHTS_SHA256']: raise SystemExit('model identity drift')
+          if e['database_unchanged'] is not True or e['source_coverage_byte_exact'] is not True: raise SystemExit('read-only invariant drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('DOE unexpectedly authorizes promotion')
+          if e['n_best_cherry_picking'] is not False: raise SystemExit('n-best policy drift')
+          print('Run20 M2M100 arithmetic restatement DOE verified.')
           PY
-
-      - name: Record conversion/runtime identities
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p work/m2m100-ct2-runtime-evidence
-          python -VV > work/m2m100-ct2-runtime-evidence/builder-python.txt || true
-          python -m pip freeze | sort > work/m2m100-ct2-runtime-evidence/builder-pip-freeze.txt || true
-          work/m2m100-runtime-venv/bin/python -VV > work/m2m100-ct2-runtime-evidence/runtime-python.txt || true
-          work/m2m100-runtime-venv/bin/python -m pip freeze | sort > work/m2m100-ct2-runtime-evidence/runtime-pip-freeze.txt || true
-          sha256sum "$ROCKETDICT_M2M100_ASSET_DIR"/ct2/* > work/m2m100-ct2-runtime-evidence/ct2-files.sha256 || true
-          sha256sum "$ROCKETDICT_M2M100_ASSET_DIR"/tokenizer/* > work/m2m100-ct2-runtime-evidence/tokenizer-files.sha256 || true
-          cp work/m2m100-asset-build.json work/m2m100-ct2-runtime-evidence/ 2>/dev/null || true
-          cp "$ROCKETDICT_M2M100_ASSET_DIR/rocketdict-m2m100-asset.json" work/m2m100-ct2-runtime-evidence/ 2>/dev/null || true
-
-      - name: Upload CT2 parity evidence
+      - name: Upload DOE evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rocketdict-m2m100-ct2-arithmetic-parity
-          path: |
-            work/m2m100-ct2-parity/*.json
-            work/m2m100-ct2-parity.log
-            work/m2m100-ct2-runtime-evidence/**
-          if-no-files-found: warn
+          name: rocketdict-full-opticks-run20-m2m100-product-restatement-doe
+          path: work/run20-m2m100-product-restatement-doe/*.json
+          if-no-files-found: error
           retention-days: 90
