@@ -1,0 +1,568 @@
+name: RocketDict Run59 Combined Greek Public Replay and Run60 Promotion
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_run59_combined_greek_public_replay.py'
+      - 'rocketdict-workbench/tests/verify_run60_combined_greek_canonical_promotion.py'
+      - '.github/workflows/rocketdict-run60-combined-greek-public-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      BASE_WORKFLOW_RUN_ID: '34753122528'
+      BASE_ARTIFACT_NAME: rocketdict-canonical-run59-m2m100-arithmetic
+      BASE_DB_SHA256: 41bafa00619c83b87f55f7e452f8e9e27a1871d601bb5c846d3d561531dbb78d
+      TC_BIG_REPO: Helsinki-NLP/opus-mt-tc-big-en-zle
+      TC_BIG_REVISION: 708be1d372fe4c358a352f404e6dc9ca0126ba48
+      TC_BIG_WEIGHTS_SHA256: e68caa9a233c177a3489257b69c18cece6da97767ab2581918ce3fc3c3899416
+      TC_BIG_SNAPSHOT: ${{ github.workspace }}/work/tc-big-snapshot
+      ROCKETDICT_TC_BIG_ASSET_DIR: ${{ github.workspace }}/work/tc-big-asset
+      M2M100_REPO: facebook/m2m100_418M
+      M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+      M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
+      M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
+      ROCKETDICT_M2M100_ASSET_DIR: ${{ github.workspace }}/work/m2m100-asset
+      OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
+      OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+      ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
+      ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT: ${{ github.workspace }}/work/replay-${{ matrix.replica }}
+      ROCKETDICT_COMBINED_GREEK_REPLAY_DB: ${{ github.workspace }}/work/replay-${{ matrix.replica }}/rocketdict.sqlite
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact provisioning runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[production,alt-mt-build]' -e ./rocketdict-workbench \
+            'huggingface_hub==0.34.4'
+          python - <<'PY'
+          import ctranslate2
+          if ctranslate2.__version__ != '4.8.2':
+              raise SystemExit(f'CT2 provisioning version drift: {ctranslate2.__version__}')
+          PY
+
+      - name: Download authenticated canonical run59 parent
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_ARTIFACT_NAME }}
+          path: work/base
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASE_WORKFLOW_RUN_ID }}
+
+      - name: Authenticate and stage exact run59 SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT"
+          python - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          dbs=[p for p in Path('work/base').rglob('rocketdict.sqlite') if p.is_file()]
+          if len(dbs)!=1: raise SystemExit(f'run59 DB cardinality drift: {dbs}')
+          raw=dbs[0].read_bytes(); sha=hashlib.sha256(raw).hexdigest()
+          if sha!=os.environ['BASE_DB_SHA256']: raise SystemExit(f'run59 DB identity drift: {sha}')
+          Path(os.environ['ROCKETDICT_COMBINED_GREEK_REPLAY_DB']).write_bytes(raw)
+          PY
+
+      - name: Restore pinned TC-big snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/tc-big-snapshot
+          key: rocketdict-tc-big-en-zle-708be1d372fe4c358a352f404e6dc9ca0126ba48-e68caa9a
+
+      - name: Obtain and build pinned TC-big ancestry asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['TC_BIG_REPO'],
+              revision=os.environ['TC_BIG_REVISION'],
+              local_dir=os.environ['TC_BIG_SNAPSHOT'],
+              allow_patterns=['README.md','config.json','generation_config.json','model.safetensors','source.spm','special_tokens_map.json','target.spm','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$TC_BIG_WEIGHTS_SHA256  $TC_BIG_SNAPSHOT/model.safetensors" | sha256sum -c -
+          rm -rf "$ROCKETDICT_TC_BIG_ASSET_DIR"
+          rocketdict-assets build-tc-big-en-ru "$TC_BIG_SNAPSHOT" "$ROCKETDICT_TC_BIG_ASSET_DIR" \
+            > "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT/tc-big-asset-build.json"
+
+      - name: Restore pinned M2M100 snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/m2m100-418m
+          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+
+      - name: Obtain and build pinned M2M100 ancestry asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['M2M100_REPO'],
+              revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['M2M100_SNAPSHOT'],
+              allow_patterns=['config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$M2M100_WEIGHTS_SHA256  $M2M100_SNAPSHOT/pytorch_model.bin" | sha256sum -c -
+          rm -rf "$ROCKETDICT_M2M100_ASSET_DIR"
+          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" "$ROCKETDICT_M2M100_ASSET_DIR" \
+            > "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT/m2m100-asset-build.json"
+
+      - name: Restore pinned official OPUS archive cache
+        uses: actions/cache@v4
+        with:
+          path: work/opus-2020-02-11.zip
+          key: rocketdict-opus-en-ru-2020-02-11-798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
+
+      - name: Obtain and build pinned OPUS candidate asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ ! -s work/opus-2020-02-11.zip ]; then
+            rm -f work/opus-2020-02-11.zip.tmp
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
+              "$OPUS_URL" -o work/opus-2020-02-11.zip.tmp
+            echo "$OPUS_SHA256  work/opus-2020-02-11.zip.tmp" | sha256sum -c -
+            mv work/opus-2020-02-11.zip.tmp work/opus-2020-02-11.zip
+          fi
+          echo "$OPUS_SHA256  work/opus-2020-02-11.zip" | sha256sum -c -
+          rm -rf "$ROCKETDICT_OPUS_ASSET_DIR"
+          rocketdict-assets build-opus-en-ru work/opus-2020-02-11.zip "$ROCKETDICT_OPUS_ASSET_DIR" \
+            > "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT/opus-asset-build.json"
+
+      - name: Build exact torch-free replay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/replay-venv
+          work/replay-venv/bin/python -m pip install --upgrade pip
+          work/replay-venv/bin/python -m pip install -e './rocketdict-product-core[production,alt-mt]' -e ./rocketdict-workbench
+          work/replay-venv/bin/python - <<'PY'
+          import ctranslate2, importlib.util
+          if ctranslate2.__version__ != '4.8.2':
+              raise SystemExit(f'CT2 replay version drift: {ctranslate2.__version__}')
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('torch leaked into combined-Greek replay inference runtime')
+          PY
+
+      - name: Run forensic public Stage12 combined-Greek replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -a | tee "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT/host-uname.txt"
+          lscpu | tee "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT/host-lscpu.txt" || true
+          work/replay-venv/bin/python -u rocketdict-workbench/tests/real_translation_run59_combined_greek_public_replay.py \
+            | tee "$ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT/replay.log"
+
+      - name: Verify replay evidence self-integrity without changing verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_COMBINED_GREEK_REPLAY_ROOT'])/'run59-combined-greek-public-replay.json'
+          if not p.is_file():
+              print('forensic evidence missing; aggregate will fail closed')
+              raise SystemExit(0)
+          e=json.loads(p.read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256','')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if e.get('schema')!='rocketdict-run59-combined-greek-public-replay/1' or actual!=recorded:
+              raise SystemExit('replay evidence self-integrity drift')
+          if e.get('promotion_allowed') is not False or e.get('parent_replacement_allowed') is not False:
+              raise SystemExit('single replay unexpectedly authorizes promotion')
+          print(json.dumps({
+              'ready':e.get('replay_ready_for_aggregation'),
+              'target_sha':e.get('candidate_target_sha256'),
+              'prefix_tokens_sha':e.get('prefix_rank0_tokens_sha256'),
+              'suffix_tokens_sha':e.get('suffix_rank0_tokens_sha256'),
+              'evidence_sha256':recorded,
+          },ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Always upload replay forensics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run59-combined-greek-replay-${{ matrix.replica }}
+          path: work/replay-${{ matrix.replica }}/**
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: replay
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rocketdict-run59-combined-greek-replay-*
+          path: work/replicas
+
+      - name: Verify three independent public Stage12 replicas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          paths=sorted(Path('work/replicas').rglob('run59-combined-greek-public-replay.json'))
+          if len(paths)!=3: raise SystemExit(f'replay evidence cardinality drift: {paths}')
+          rows=[]
+          safety=(
+              'source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders',
+              'post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened',
+              'n_best_cherry_picking','automatic_n_best_cherry_picking',
+          )
+          for p in paths:
+              e=json.loads(p.read_text(encoding='utf-8'))
+              c=dict(e); recorded=c.pop('evidence_sha256','')
+              actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+              if e.get('schema')!='rocketdict-run59-combined-greek-public-replay/1' or actual!=recorded:
+                  raise SystemExit(f'replay evidence integrity drift: {p}')
+              if e.get('replay_ready_for_aggregation') is not True:
+                  raise SystemExit(f'replay not ready: {p}: {e.get("error")!r}')
+              if e.get('promotion_allowed') is not False or e.get('parent_replacement_allowed') is not False:
+                  raise SystemExit(f'single replay authority boundary drift: {p}')
+              if e.get('attempt_count')!=1 or e.get('accepted_count')!=1 or e.get('rejected_count')!=0:
+                  raise SystemExit(f'replay verdict cardinality drift: {p}')
+              if e.get('changed_target_sequences')!=[1753] or e.get('unchanged_target_row_count')!=3334:
+                  raise SystemExit(f'target delta drift: {p}')
+              if e.get('translation_segment_count')!=3335 or e.get('source_coverage_byte_exact') is not True:
+                  raise SystemExit(f'source coverage/cardinality drift: {p}')
+              if e.get('promoted_translation_run_id')!=60 or e.get('source_start')!=301051:
+                  raise SystemExit(f'run/source identity drift: {p}')
+              if e.get('candidate_target_sha256')!='c53660ded405267f6346d0611fa41edf4bfde8fb86155ca40289669c6c2a6f51':
+                  raise SystemExit(f'candidate target drift: {p}')
+              if e.get('prefix_rank0_target_sha256')!='e8d5b27cd3ce22898f5d443aca5b578af85b5a67885e944607e9f10527c8bf7e':
+                  raise SystemExit(f'prefix target drift: {p}')
+              if e.get('prefix_rank0_tokens_sha256')!='bf1994714366cb1b57949a493932d4d1432c78dc089bcc7db2180189ea3fec7e':
+                  raise SystemExit(f'prefix token drift: {p}')
+              if e.get('suffix_rank0_target_sha256')!='603757cfe250ed5f95f8bec0f1c9649599a008e2cf8e7eb37853358b438d3086':
+                  raise SystemExit(f'suffix target drift: {p}')
+              if e.get('suffix_rank0_tokens_sha256')!='1f95a6c89f8aa6a99d408d90862079f57cf4ddb4b71a0faeee1d2ea679805ae5':
+                  raise SystemExit(f'suffix token drift: {p}')
+              if e.get('generation')!={'beam_size':6,'num_hypotheses':1,'max_decoding_length':512,'selected_rank':0}:
+                  raise SystemExit(f'generation drift: {p}')
+              for flag in safety:
+                  if e.get(flag) is not False: raise SystemExit(f'unsafe flag {flag}: {p}')
+              rows.append(e)
+
+          def unique(field):
+              return sorted({json.dumps(e.get(field),ensure_ascii=False,sort_keys=True,separators=(',',':')) for e in rows})
+          candidate=sorted({e['candidate_target_sha256'] for e in rows})
+          prefix_target=sorted({e['prefix_rank0_target_sha256'] for e in rows})
+          prefix_tokens=sorted({e['prefix_rank0_tokens_sha256'] for e in rows})
+          suffix_target=sorted({e['suffix_rank0_target_sha256'] for e in rows})
+          suffix_tokens=sorted({e['suffix_rank0_tokens_sha256'] for e in rows})
+          output_sha=sorted({e['promoted_translation_output_sha256'] for e in rows})
+          params_sha=sorted({e['promoted_parameters_sha256'] for e in rows})
+          runtime=unique('runtime_identity')
+          ready=(
+              candidate==['c53660ded405267f6346d0611fa41edf4bfde8fb86155ca40289669c6c2a6f51']
+              and prefix_target==['e8d5b27cd3ce22898f5d443aca5b578af85b5a67885e944607e9f10527c8bf7e']
+              and prefix_tokens==['bf1994714366cb1b57949a493932d4d1432c78dc089bcc7db2180189ea3fec7e']
+              and suffix_target==['603757cfe250ed5f95f8bec0f1c9649599a008e2cf8e7eb37853358b438d3086']
+              and suffix_tokens==['1f95a6c89f8aa6a99d408d90862079f57cf4ddb4b71a0faeee1d2ea679805ae5']
+              and len(output_sha)==1 and len(params_sha)==1 and len(runtime)==1
+          )
+          result={
+              'schema':'rocketdict-run59-combined-greek-public-replay-aggregate/1',
+              'replica_count':3,
+              'canonical_promotion_authorized':ready,
+              'parent_replacement_allowed':False,
+              'candidate_target_sha256':candidate,
+              'prefix_rank0_target_sha256':prefix_target,
+              'prefix_rank0_tokens_sha256':prefix_tokens,
+              'suffix_rank0_target_sha256':suffix_target,
+              'suffix_rank0_tokens_sha256':suffix_tokens,
+              'promoted_translation_output_sha256':output_sha,
+              'promoted_parameters_sha256':params_sha,
+              'runtime_identities':[json.loads(x) for x in runtime],
+              'persisted_database_sha256':[e['persisted_database_sha256'] for e in rows],
+              'replica_evidence_sha256':[e['evidence_sha256'] for e in rows],
+              'host_identities':[e['host'] for e in rows],
+          }
+          raw=json.dumps(result,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+          result['evidence_sha256']=hashlib.sha256(raw).hexdigest()
+          out=Path('work/aggregate'); out.mkdir(parents=True,exist_ok=True)
+          (out/'run59-combined-greek-public-replay-aggregate.json').write_text(
+              json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8'
+          )
+          print(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True))
+          if ready is not True: raise SystemExit('cross-replica combined-Greek rank0 disagreement')
+          PY
+
+      - name: Upload replay aggregate authority
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run59-combined-greek-replay-aggregate
+          path: work/aggregate/*.json
+          if-no-files-found: error
+          retention-days: 90
+
+  census:
+    needs: [replay, aggregate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ROCKETDICT_RUN60_CENSUS_ROOT: ${{ github.workspace }}/work/census
+      ROCKETDICT_RUN60_CENSUS_DB: ${{ github.workspace }}/work/census/rocketdict.sqlite
+      ROCKETDICT_RESIDUAL_CENSUS_ROOT: ${{ github.workspace }}/work/census/residual-census
+      ROCKETDICT_RESIDUAL_CENSUS_DB: ${{ github.workspace }}/work/census/rocketdict.sqlite
+      ROCKETDICT_RESIDUAL_TRANSLATION_RUN_ID: '60'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install read-only verification runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+
+      - name: Download selected persisted run60 replica
+        uses: actions/download-artifact@v4
+        with:
+          name: rocketdict-run59-combined-greek-replay-1
+          path: work/replica
+
+      - name: Authenticate and stage selected run60 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_RUN60_CENSUS_ROOT"
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          evs=list(Path('work/replica').rglob('run59-combined-greek-public-replay.json'))
+          dbs=list(Path('work/replica').rglob('rocketdict.sqlite'))
+          if len(evs)!=1 or len(dbs)!=1: raise SystemExit(f'replica cardinality drift: {evs=} {dbs=}')
+          e=json.loads(evs[0].read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256','')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if e.get('schema')!='rocketdict-run59-combined-greek-public-replay/1' or actual!=recorded:
+              raise SystemExit('selected replay evidence integrity drift')
+          if e.get('replay_ready_for_aggregation') is not True: raise SystemExit('selected replay not ready')
+          raw=dbs[0].read_bytes(); sha=hashlib.sha256(raw).hexdigest()
+          if sha!=e.get('persisted_database_sha256'): raise SystemExit('selected run60 DB identity drift')
+          Path(os.environ['ROCKETDICT_RUN60_CENSUS_DB']).write_bytes(raw)
+          with Path(os.environ['GITHUB_ENV']).open('a',encoding='utf-8') as f:
+              f.write(f'ROCKETDICT_RESIDUAL_EXPECTED_DB_SHA256={sha}\n')
+          print(json.dumps({'database_sha256':sha,'replay_evidence_sha256':recorded},sort_keys=True))
+          PY
+
+      - name: Run independent persisted run60 residual census
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/audit_translation_residual_census.py \
+            | tee "$ROCKETDICT_RUN60_CENSUS_ROOT/residual-census.log"
+
+      - name: Verify run60 hard-gate delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_RESIDUAL_CENSUS_ROOT'])/'translation-residual-census.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256','')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if e.get('schema')!='rocketdict-translation-residual-census/1' or actual!=recorded:
+              raise SystemExit('run60 census evidence integrity drift')
+          expected={'numeric_symbol':15,'punctuation':9,'length':0,'unique':23}
+          if e.get('translation_run_id')!=60 or e.get('hard_gate_counts')!=expected:
+              raise SystemExit(f'run60 hard-count forecast rejected by persisted census: {e.get("hard_gate_counts")}')
+          if e.get('source_coverage_byte_exact') is not True or e.get('database_unchanged') is not True:
+              raise SystemExit('run60 census source/read-only drift')
+          print(json.dumps({'hard_gate_counts':expected,'evidence_sha256':recorded},sort_keys=True))
+          PY
+
+      - name: Upload independent run60 census
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-run60-combined-greek-residual-census
+          path: |
+            work/census/residual-census/*.json
+            work/census/residual-census.log
+          if-no-files-found: error
+          retention-days: 90
+
+  canonicalize:
+    needs: [replay, aggregate, census]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ROCKETDICT_RUN60_CANONICAL_ROOT: ${{ github.workspace }}/work/canonical
+      ROCKETDICT_RUN60_CANONICAL_DB: ${{ github.workspace }}/work/canonical/rocketdict.sqlite
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install no-inference canonical verification runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ./rocketdict-product-core -e ./rocketdict-workbench
+
+      - name: Download selected persisted run60 replica
+        uses: actions/download-artifact@v4
+        with:
+          name: rocketdict-run59-combined-greek-replay-1
+          path: work/replica
+
+      - name: Download cross-replica replay authority
+        uses: actions/download-artifact@v4
+        with:
+          name: rocketdict-run59-combined-greek-replay-aggregate
+          path: work/aggregate
+
+      - name: Download independent run60 census
+        uses: actions/download-artifact@v4
+        with:
+          name: rocketdict-run60-combined-greek-residual-census
+          path: work/census
+
+      - name: Authenticate evidence inputs and stage exact selected database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ROCKETDICT_RUN60_CANONICAL_ROOT"
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          rep=list(Path('work/replica').rglob('run59-combined-greek-public-replay.json'))
+          agg=list(Path('work/aggregate').rglob('run59-combined-greek-public-replay-aggregate.json'))
+          cen=list(Path('work/census').rglob('translation-residual-census.json'))
+          dbs=list(Path('work/replica').rglob('rocketdict.sqlite'))
+          if not (len(rep)==len(agg)==len(cen)==len(dbs)==1):
+              raise SystemExit(f'canonical input cardinality drift: {rep=} {agg=} {cen=} {dbs=}')
+          def auth(path,schema):
+              e=json.loads(path.read_text(encoding='utf-8'))
+              c=dict(e); recorded=c.pop('evidence_sha256','')
+              actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+              if e.get('schema')!=schema or actual!=recorded: raise SystemExit(f'evidence integrity drift: {path}')
+              return e
+          r=auth(rep[0],'rocketdict-run59-combined-greek-public-replay/1')
+          a=auth(agg[0],'rocketdict-run59-combined-greek-public-replay-aggregate/1')
+          c=auth(cen[0],'rocketdict-translation-residual-census/1')
+          if a.get('canonical_promotion_authorized') is not True or a.get('parent_replacement_allowed') is not False:
+              raise SystemExit('aggregate authority boundary drift')
+          if r.get('evidence_sha256') not in a.get('replica_evidence_sha256',[]):
+              raise SystemExit('selected replica not authenticated by aggregate')
+          raw=dbs[0].read_bytes(); sha=hashlib.sha256(raw).hexdigest()
+          if sha!=r.get('persisted_database_sha256') or sha!=c.get('database_sha256'):
+              raise SystemExit('selected run60 DB/census identity drift')
+          Path(os.environ['ROCKETDICT_RUN60_CANONICAL_DB']).write_bytes(raw)
+          with Path(os.environ['GITHUB_ENV']).open('a',encoding='utf-8') as f:
+              f.write(f'ROCKETDICT_RUN60_REPLICA_EVIDENCE={rep[0].resolve()}\n')
+              f.write(f'ROCKETDICT_RUN60_AGGREGATE_EVIDENCE={agg[0].resolve()}\n')
+              f.write(f'ROCKETDICT_RUN60_CENSUS_EVIDENCE={cen[0].resolve()}\n')
+          print(json.dumps({'database_sha256':sha,'replay':r['evidence_sha256'],'aggregate':a['evidence_sha256'],'census':c['evidence_sha256']},sort_keys=True))
+          PY
+
+      - name: Run no-inference canonical run60 verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u rocketdict-workbench/tests/verify_run60_combined_greek_canonical_promotion.py \
+            | tee "$ROCKETDICT_RUN60_CANONICAL_ROOT/canonical-verifier.log"
+
+      - name: Independently cross-check canonical run60 evidence and SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os,sqlite3
+          from pathlib import Path
+          root=Path(os.environ['ROCKETDICT_RUN60_CANONICAL_ROOT'])
+          p=root/'run60-combined-greek-canonical-promotion.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256','')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if e.get('schema')!='rocketdict-run60-combined-greek-canonical-promotion/1' or actual!=recorded:
+              raise SystemExit('canonical run60 evidence integrity drift')
+          if e.get('parent_replacement_allowed') is not True:
+              raise SystemExit('canonical run60 parent replacement not authorized')
+          if e.get('canonical_translation_run_id')!=60 or e.get('base_translation_run_id')!=59:
+              raise SystemExit('canonical run60 ancestry drift')
+          if e.get('changed_target_sequences')!=[1753] or e.get('unchanged_target_row_count')!=3334:
+              raise SystemExit('canonical run60 target delta drift')
+          if e.get('hard_gate_counts')!={'numeric_symbol':15,'punctuation':9,'length':0,'unique':23}:
+              raise SystemExit('canonical run60 hard-count drift')
+          db=Path(os.environ['ROCKETDICT_RUN60_CANONICAL_DB'])
+          sha=hashlib.sha256(db.read_bytes()).hexdigest()
+          if sha!=e.get('database_sha256'): raise SystemExit('canonical run60 DB SHA drift')
+          con=sqlite3.connect(db)
+          integrity=con.execute('PRAGMA integrity_check').fetchone()[0]
+          fk=len(con.execute('PRAGMA foreign_key_check').fetchall())
+          con.close()
+          if integrity!='ok' or fk!=0: raise SystemExit(f'canonical run60 SQLite integrity drift: {integrity=} {fk=}')
+          print(json.dumps({
+              'parent_replacement_allowed':True,
+              'canonical_run_id':60,
+              'output_sha256':e['translation_output_sha256'],
+              'parameters_sha256':e['parameters_sha256'],
+              'database_sha256':sha,
+              'target_text_sha256':e['target_text_sha256'],
+              'hard_gate_counts':e['hard_gate_counts'],
+              'canonical_evidence_sha256':recorded,
+          },indent=2,sort_keys=True))
+          PY
+
+      - name: Upload canonical run60 parent and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-canonical-run60-combined-greek
+          path: |
+            work/canonical/rocketdict.sqlite
+            work/canonical/*.json
+            work/canonical/*.log
+            work/aggregate/**/*.json
+            work/census/**/*.json
+            work/replica/**/run59-combined-greek-public-replay.json
+          if-no-files-found: error
+          retention-days: 90
