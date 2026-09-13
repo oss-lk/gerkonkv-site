@@ -8,4 +8,4 @@
 - Default-OFF row-local wrapper + neutral tests landed in `122392b89055eb515fea0cb2911e61a7d1ebbf4a`; Product Core workflow `34744782708` passed dependency-light and real-runtime jobs.
 - Wrapper base-chain correction `6793fd19cc2c0e2a9779b72d15ad198624820cc0` delegates through `translation_illustration_rescue_stage`, preserving run56 ancestry.
 - Mandatory L1/L2 recovery sync completed through commits `41a0ef1`, `97ad64d`, `96af399`.
-- Corrected promotion replay trigger commit is prepared as `15da0a6a999f552c42a657965fb303f2e06907b0`; accept promotion only if base is exact run56, exactly four target rows change, unrelated spans remain exact, provenance is raw rank0/exact source, SQLite integrity passes, and independent census is **18 / 10 / 0, 27 unique**.
+- Corrected promotion replay trigger commit is prepared as `5c0da641695d9b975c806e93ad86bd80f353bdeb`; accept promotion only if base is exact run56, exactly four target rows change, unrelated spans remain exact, provenance is raw rank0/exact source, SQLite integrity passes, and independent census is **18 / 10 / 0, 27 unique**.
