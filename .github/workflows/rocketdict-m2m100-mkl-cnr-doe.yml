@@ -1,0 +1,230 @@
+name: RocketDict M2M100 MKL CNR DOE
+
+on:
+  push:
+    branches: [chatgpt/product-core-forward]
+    paths:
+      - 'rocketdict-workbench/tests/real_translation_m2m100_ct2_mkl_cnr_doe.py'
+      - '.github/workflows/rocketdict-m2m100-mkl-cnr-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  cnr:
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PARITY_RUN_ID: '34748655508'
+      PARITY_ARTIFACT_NAME: rocketdict-m2m100-ct2-arithmetic-parity
+      PARITY_EVIDENCE_SHA256: bc739df0594e5f73331c2a2d5301bdb6d6eb27d9ab3921703dc99a16237dac57
+      M2M100_REPO: facebook/m2m100_418M
+      M2M100_REVISION: 55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+      M2M100_WEIGHTS_SHA256: d907ea45e4e4b9db163382a6674f6218b3c59566fe06d77f4055c208b4e87ed1
+      M2M100_SNAPSHOT: ${{ github.workspace }}/work/m2m100-418m
+      ROCKETDICT_M2M100_ASSET_DIR: ${{ github.workspace }}/work/m2m100-asset
+      ROCKETDICT_M2M100_MKL_CNR_ROOT: ${{ github.workspace }}/work/m2m100-mkl-cnr
+      HF_HUB_DISABLE_XET: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned provisioning runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e './rocketdict-product-core[alt-mt-build]' -e ./rocketdict-workbench \
+            'huggingface_hub==0.34.4' 'ctranslate2==4.8.2'
+
+      - name: Download authenticated CT2 parity evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PARITY_ARTIFACT_NAME }}
+          path: work/parity
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.PARITY_RUN_ID }}
+
+      - name: Authenticate parity evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          PARITY=$(find work/parity -name m2m100-ct2-arithmetic-restatement-parity.json -type f -print -quit)
+          test -n "$PARITY" -a -s "$PARITY"
+          export PARITY
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['PARITY'])
+          e=json.loads(p.read_text(encoding='utf-8'))
+          c=dict(e); recorded=c.pop('evidence_sha256')
+          actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if recorded!=os.environ['PARITY_EVIDENCE_SHA256'] or actual!=recorded:
+              raise SystemExit('parity evidence SHA drift')
+          if e['source_start']!=483234 or e['exact_target_parity'] is not True:
+              raise SystemExit('parity source/target identity drift')
+          PY
+          echo "PARITY_EVIDENCE=$PARITY" >> "$GITHUB_ENV"
+
+      - name: Restore pinned M2M100 snapshot cache
+        uses: actions/cache@v4
+        with:
+          path: work/m2m100-418m
+          key: rocketdict-m2m100-418m-55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636
+
+      - name: Obtain exact snapshot and build verified float32 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id=os.environ['M2M100_REPO'],
+              revision=os.environ['M2M100_REVISION'],
+              local_dir=os.environ['M2M100_SNAPSHOT'],
+              allow_patterns=['config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
+          )
+          PY
+          echo "$M2M100_WEIGHTS_SHA256  $M2M100_SNAPSHOT/pytorch_model.bin" | sha256sum -c -
+          rm -rf "$ROCKETDICT_M2M100_ASSET_DIR"
+          rocketdict-assets build-m2m100-en-ru "$M2M100_SNAPSHOT" "$ROCKETDICT_M2M100_ASSET_DIR" > work/m2m100-asset-build.json
+
+      - name: Build exact torch-free CT2 4.8.2 inference runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv work/runtime-venv
+          work/runtime-venv/bin/python -m pip install --upgrade pip
+          work/runtime-venv/bin/python -m pip install -e './rocketdict-product-core[alt-mt]' -e ./rocketdict-workbench 'ctranslate2==4.8.2'
+          work/runtime-venv/bin/python - <<'PY'
+          import importlib.util,ctranslate2
+          if importlib.util.find_spec('torch') is not None:
+              raise SystemExit('torch leaked into CNR runtime')
+          if ctranslate2.__version__!='4.8.2':
+              raise SystemExit(f'CT2 version drift: {ctranslate2.__version__}')
+          PY
+
+      - name: Run forced MKL COMPATIBLE reproducibility DOE
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== host identity ==='
+          uname -a
+          lscpu || true
+          work/runtime-venv/bin/python -u rocketdict-workbench/tests/real_translation_m2m100_ct2_mkl_cnr_doe.py \
+            --parity-evidence "$PARITY_EVIDENCE" \
+            --root "$ROCKETDICT_M2M100_MKL_CNR_ROOT" \
+            | tee work/m2m100-mkl-cnr.log
+
+      - name: Verify per-runner CNR evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['ROCKETDICT_M2M100_MKL_CNR_ROOT'])/'m2m100-ct2-mkl-cnr-doe.json'
+          e=json.loads(p.read_text(encoding='utf-8'))
+          if e['schema']!='rocketdict-m2m100-ct2-mkl-cnr-doe/1': raise SystemExit('schema drift')
+          if e['source_start']!=483234 or e['parity_evidence_sha256']!=os.environ['PARITY_EVIDENCE_SHA256']: raise SystemExit('source/parity drift')
+          if e['promotion_allowed'] is not False or e['automatic_product_default_allowed'] is not False: raise SystemExit('DOE unexpectedly authorizes promotion')
+          required={
+              'CT2_USE_MKL':'1','CT2_PACKED_GEMM':'0','CT2_FORCE_CPU_ISA':'AVX2',
+              'MKL_CBWR':'COMPATIBLE','MKL_DYNAMIC':'FALSE','MKL_NUM_THREADS':'1',
+              'OMP_DYNAMIC':'FALSE','OMP_NUM_THREADS':'1',
+          }
+          if e['cnr_environment']!=required: raise SystemExit(f'CNR environment drift: {e["cnr_environment"]}')
+          for name,row in e['configs'].items():
+              if row['process_count']!=2 or row['record_count']!=6: raise SystemExit(f'{name} cardinality drift')
+              if row['runtime_payload_tree_sha256']!=['09d8b2e6b5941382aa7c695d2fbbf8918244a8df62ca9befc72d89e43f4642eb']: raise SystemExit(f'{name} asset drift')
+              if row['deterministic_within_runner'] is not True: raise SystemExit(f'{name} is not deterministic within runner')
+              if row['all_selector_accepted'] is not True: raise SystemExit(f'{name} selector rejected a CNR raw rank0')
+          for flag in ('source_bytes_rewritten','model_input_source_rewritten','target_rewriting','placeholders','post_translation_literal_injection','corpus_specific_target_patches','evaluator_weakened','n_best_cherry_picking','automatic_n_best_cherry_picking'):
+              if e[flag] is not False: raise SystemExit(f'unsafe flag {flag}')
+          c=dict(e); recorded=c.pop('evidence_sha256'); actual=hashlib.sha256(json.dumps(c,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+          if actual!=recorded: raise SystemExit('evidence SHA drift')
+          print(json.dumps({'evidence_sha256':recorded,'configs':e['configs']},ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload CNR replica evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-m2m100-mkl-cnr-${{ matrix.replica }}
+          path: |
+            work/m2m100-asset-build.json
+            work/m2m100-mkl-cnr.log
+            work/m2m100-mkl-cnr/**
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: cnr
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rocketdict-m2m100-mkl-cnr-*
+          path: work/replicas
+
+      - name: Aggregate CNR identities across hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          paths=sorted(Path('work/replicas').rglob('m2m100-ct2-mkl-cnr-doe.json'))
+          if len(paths)!=3: raise SystemExit(f'replica cardinality drift: {paths}')
+          evidences=[json.loads(p.read_text(encoding='utf-8')) for p in paths]
+          names=sorted(evidences[0]['configs'])
+          configs={}
+          for name in names:
+              rows=[e['configs'][name] for e in evidences]
+              targets=sorted({sha for row in rows for sha in row['unique_target_sha256']})
+              tokens=sorted({sha for row in rows for sha in row['unique_tokens_sha256']})
+              configs[name]={
+                  'cross_host_unique_target_sha256':targets,
+                  'cross_host_unique_tokens_sha256':tokens,
+                  'cross_host_deterministic':len(targets)==1 and len(tokens)==1,
+                  'all_exact_parity_target':all(row['all_exact_parity_target'] for row in rows),
+                  'all_selector_accepted':all(row['all_selector_accepted'] for row in rows),
+                  'cpu_model_names':[cpu.get('model_name') for row in rows for cpu in row['cpu_identities']],
+                  'cpu_vendor_ids':[cpu.get('vendor_id') for row in rows for cpu in row['cpu_identities']],
+                  'replica_evidence_sha256':[e['evidence_sha256'] for e in evidences],
+              }
+          result={
+              'schema':'rocketdict-m2m100-ct2-mkl-cnr-cross-host/1',
+              'promotion_allowed':False,
+              'automatic_product_default_allowed':False,
+              'replica_count':3,
+              'configs':configs,
+          }
+          raw=json.dumps(result,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+          result['evidence_sha256']=hashlib.sha256(raw).hexdigest()
+          out=Path('work/cross-host'); out.mkdir(parents=True,exist_ok=True)
+          (out/'m2m100-ct2-mkl-cnr-cross-host.json').write_text(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True))
+          for name,row in configs.items():
+              if row['cross_host_deterministic'] is not True or row['all_selector_accepted'] is not True:
+                  raise SystemExit(f'CNR cross-host reproducibility failed for {name}: {row}')
+          PY
+
+      - name: Upload cross-host CNR evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rocketdict-m2m100-mkl-cnr-cross-host
+          path: work/cross-host/*.json
+          if-no-files-found: error
+          retention-days: 90
