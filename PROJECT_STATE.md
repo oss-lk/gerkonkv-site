@@ -7,4 +7,5 @@
 - Focused exact-row TC-big DOE `34744521997`, evidence SHA `c82ce59e48eb380a4cf23b41e69574271cf8480659f0815617732fd4cc56ce5e`, accepted generic trigger rows `741,1497,2108,2589` and rejected `2719,3081`.
 - Default-OFF row-local wrapper + neutral tests landed in `122392b89055eb515fea0cb2911e61a7d1ebbf4a`; Product Core workflow `34744782708` passed dependency-light and real-runtime jobs.
 - Wrapper base-chain correction `6793fd19cc2c0e2a9779b72d15ad198624820cc0` delegates through `translation_illustration_rescue_stage`, preserving run56 ancestry.
-- Current action: rerun full-Opticks promotion on the fixed chain. Accept only if base is exact run56, only four target rows change, all unrelated spans remain exact, provenance is raw rank0/exact source, SQLite integrity passes, and independent census is **18 / 10 / 0, 27 unique**.
+- Mandatory L1/L2 recovery sync completed through commits `41a0ef1`, `97ad64d`, `96af399`.
+- Current action: corrected full-Opticks replay is being triggered without changing harness content; accept only if base is exact run56, only four target rows change, all unrelated spans remain exact, provenance is raw rank0/exact source, SQLite integrity passes, and independent census is **18 / 10 / 0, 27 unique**.
