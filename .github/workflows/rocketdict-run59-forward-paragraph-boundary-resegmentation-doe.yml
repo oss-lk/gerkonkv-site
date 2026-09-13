@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/product-core-forward]
     paths:
       - 'rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe.py'
+      - 'rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe_v2.py'
       - '.github/workflows/rocketdict-run59-forward-paragraph-boundary-resegmentation-doe.yml'
   workflow_dispatch:
 
@@ -19,7 +20,7 @@ jobs:
     env:
       RUN59_RUN_ID: '34753122528'
       RUN59_ARTIFACT_NAME: rocketdict-canonical-run59-m2m100-arithmetic
-      RUN59_DB_SHA256: a12cefa073d51250a29ee3ad9ad72ef97795536466dd1771c9d6a1036e81b2a
+      RUN59_DB_SHA256: 41bafa00619c83b87f55f7e452f8e9e27a1871d601bb5c846d3d561531dbb78d
       OPUS_URL: https://object.pouta.csc.fi/OPUS-MT-models/en-ru/opus-2020-02-11.zip
       OPUS_SHA256: 798027c7e4ae7ddf89fea13ce80de517b6726d7e710fa5a9b5a376316dbf1677
       ROCKETDICT_OPUS_ASSET_DIR: ${{ github.workspace }}/work/opus-asset
@@ -101,7 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -u rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe.py \
+          python -u rocketdict-workbench/tests/real_translation_run59_forward_paragraph_boundary_resegmentation_doe_v2.py \
             | tee "$ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/summary.json"
           echo "$RUN59_DB_SHA256  $ROCKETDICT_RUN59_FORWARD_PARAGRAPH_DOE_ROOT/rocketdict.sqlite" | sha256sum -c -
 
