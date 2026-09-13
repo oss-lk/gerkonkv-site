@@ -72,7 +72,7 @@ jobs:
               allow_patterns=['config.json','generation_config.json','pytorch_model.bin','sentencepiece.bpe.model','special_tokens_map.json','tokenizer_config.json','vocab.json'],
           )
           PY
-          echo "$M2M100_WEIGHTS_SHA256  $M2M100_MODEL_DIR/pytorch_model.bin" | sha256sum -c -
+          echo "$M2M100_WEIGHTS_SHA256  $ROCKETDICT_M2M100_MODEL_DIR/pytorch_model.bin" | sha256sum -c -
       - name: Run exact read-only arithmetic restatement DOE
         run: python -u rocketdict-workbench/tests/real_translation_full_opticks_run20_m2m100_product_restatement_doe.py
       - name: Verify immutable DOE contract
