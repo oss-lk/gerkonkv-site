@@ -26,9 +26,7 @@ from .alternative_mt_runtime import TcBigTranslator, tc_big_status
 from .database import connect, get_document, get_run, get_run_items
 from .emphasis_markup import compare_emphasis_markup_preservation
 from .stages import StageExecutionError, _complete, _fail, _start
-from .translation_emphasized_modifier_boundary_rescue_stage import (
-    run_stage12 as run_base_stage12,
-)
+from .translation_illustration_rescue_stage import run_stage12 as run_base_stage12
 from .translation_rescue import evaluate_rescue_pair
 
 
