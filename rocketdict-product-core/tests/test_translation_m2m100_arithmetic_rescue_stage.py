@@ -49,6 +49,7 @@ def _runtime() -> dict[str, object]:
         "available": True,
         "asset_manifest_sha256": "c" * 64,
         "asset_payload_tree_sha256": "d" * 64,
+        "ctranslate2_version": "4.8.2",
         "repository": "facebook/m2m100_418M",
         "revision": "revision-1",
         "model_sha256": "e" * 64,
@@ -84,6 +85,8 @@ def test_contract_is_default_off_and_wraps_run58_outer_layer_controls() -> None:
     assert stage.BEAM_SIZE == 6
     assert stage.NUM_HYPOTHESES == 1
     assert stage.MAX_DECODING_LENGTH == 512
+    assert stage.M2M100_ARITHMETIC_RESCUE_CONTRACT.endswith("/2")
+    assert stage.M2M100_ARITHMETIC_SELECTED_PHASE.endswith("-v2")
     parameters = {
         "enable_tc_big_numeric_row_rescue": True,
         "enable_m2m100_arithmetic_rescue": True,
@@ -182,6 +185,7 @@ def test_enabled_run_accepts_exact_source_raw_rank0_and_records_runtime_identity
     assert identity["base_translation_run_id"] == 58
     assert identity["m2m100_runtime_identity"]["revision"] == "revision-1"
     assert identity["m2m100_runtime_identity"]["asset_payload_tree_sha256"] == "d" * 64
+    assert identity["m2m100_runtime_identity"]["ctranslate2_version"] == "4.8.2"
 
     items = completed["items"]
     assert isinstance(items, list) and len(items) == 2
@@ -222,7 +226,7 @@ def test_rejected_rank0_leaves_base_target_exact(
 
         def translate(self, texts, **kwargs):  # type: ignore[no-untyped-def]
             bad = CANDIDATE.replace(" x ", " на ")
-            return [[{"rank": 0, "text": bad, "score": -0.1}]]
+            return [[{"rank": 0, "text": bad, "tokens": ["__ru__", "bad"], "score": -0.1}]]
 
     monkeypatch.setattr(stage, "M2M100Translator", BadTranslator)
     result = stage.run_stage12(
@@ -233,6 +237,11 @@ def test_rejected_rank0_leaves_base_target_exact(
     assert result["m2m100_arithmetic_rescue_attempt_count"] == 1
     assert result["m2m100_arithmetic_rescue_accepted_count"] == 0
     assert result["m2m100_arithmetic_rescue_rejected_count"] == 1
+    rejected = result["m2m100_arithmetic_rescue_rejected"][0]
+    assert rejected["rank0_target"] == CANDIDATE.replace(" x ", " на ")
+    assert rejected["rank0_tokens"] == ["__ru__", "bad"]
+    assert rejected["generation"] == {"beam_size": 6, "num_hypotheses": 1, "max_decoding_length": 512}
+    assert rejected["runtime_identity"]["ctranslate2_version"] == "4.8.2"
     items = completed["items"]
     assert items[0]["target_text"] == BASE
     assert items[0]["payload"]["m2m100_arithmetic_rescue"]["applied"] is False

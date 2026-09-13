@@ -17,9 +17,9 @@ from .translation_m2m100_arithmetic_rules import (
 from .translation_tc_big_numeric_row_rescue_stage import run_stage12 as run_base_stage12
 
 M2M100_ARITHMETIC_RESCUE_CONTRACT = (
-    "rocketdict-stage12-m2m100-arithmetic-restatement-row-rescue/1"
+    "rocketdict-stage12-m2m100-arithmetic-restatement-row-rescue/2"
 )
-M2M100_ARITHMETIC_SELECTED_PHASE = "m2m100-arithmetic-restatement-row-selected-v1"
+M2M100_ARITHMETIC_SELECTED_PHASE = "m2m100-arithmetic-restatement-row-selected-v2"
 DEFAULT_ENABLED = False
 BEAM_SIZE = 6
 NUM_HYPOTHESES = 1
@@ -36,6 +36,7 @@ _WRAPPER_KEYS = frozenset(
 _RUNTIME_IDENTITY_KEYS = (
     "asset_manifest_sha256",
     "asset_payload_tree_sha256",
+    "ctranslate2_version",
     "repository",
     "revision",
     "model_sha256",
@@ -258,7 +259,14 @@ def run_stage12(
                         "source_start": int(row["source_start"]),
                         "reason": "rank0_selector_rejected",
                         "rank0_target": target,
+                        "rank0_tokens": list(hypothesis.get("tokens") or []),
                         "rank0_score": hypothesis.get("score"),
+                        "generation": {
+                            "beam_size": BEAM_SIZE,
+                            "num_hypotheses": NUM_HYPOTHESES,
+                            "max_decoding_length": MAX_DECODING_LENGTH,
+                        },
+                        "runtime_identity": _runtime_identity(runtime_status),
                         "trigger": trigger,
                         "selection": selection,
                     }
