@@ -4,74 +4,31 @@
 
 ## Current state
 
-- Repository: `oss-lk/gerkonkv-site`; engineering branch: `chatgpt/product-core-forward`.
-- L3/engineering state incorporated through `a1b021a94c4a81800e0a2f771a1a93a2c5d96f06`; substantive code hardening commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2` (`Enforce exact-source illustration model input`).
-- Authoritative Product contract: `rocketdict/PRODUCT_TARGET.md`. Release still requires **0 unresolved numeric/symbol, punctuation and length hard failures** on the complete 90k+ corpus, then learner/export coverage and Windows clean-install validation.
-- Historical run23 remains immutable research evidence only; it is not legal promotion lineage because historical rank3/rank2 automatic beam selections were proven.
-- Authenticated rank0-clean run41 is the **only forward promotion parent**.
+- Repository: `oss-lk/gerkonkv-site`; branch: `chatgpt/product-core-forward`.
+- State incorporated through HEAD `2f442b2f7ade7ef7b98223deb09241cd6d2a0507`; substantive engineering commit `cdf58def6e557c800e325aea31cd6b8a6237037d` implements default-OFF illustration source-plan contract `/4`.
+- Maintained Product Core workflow `34742479388` passed dependency-light and real-runtime Stage8→25. Focused verification passed 27 targeted tests, 374 Product Core tests, 213 Workbench tests (1 skipped).
+- `rocketdict/PRODUCT_TARGET.md` remains authoritative. Release requires zero unresolved numeric/symbol, punctuation and length failures on the full 90k+ corpus, then complete learner/export and Windows clean-install validation.
+- Authenticated rank0-clean run41 remains the only forward promotion parent. Historical run23 and the failed illustration promotion are not legal parents.
 
-## Recovery protocol
+## Canonical run41
 
-Follow `AGENTS.md`: compare current HEAD with the checkpoint above, then route through `docs/memory/INDEX.md`; for translation-quality work load `TRANSLATION_QUALITY.md` and `DECISIONS.md`. L3 source/tests/CI/artifacts/SQLite outrank memory.
+Project Gutenberg *Opticks*: source SHA `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized SHA `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; `586543` chars.
 
-## Canonical run41 baseline
+Workflow `34695164876`, artifact `10297359600`, run `41`: `3335` rows; **18 numeric/symbol / 16 punctuation / 0 length, 33 unique**; output SHA `d8948e43158a126703a90e6ce1cd25725da8774e1db64410ca67e3ec7bb1a10f`; SQLite SHA `e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e`; replay evidence SHA `e7504ef18ead81e9c437ab8236b787a7d59082c272ef102fcc9bae6e281deac1`; census SHA `b384ae0936f2ec792dd8ec6fbfcdf5da0dea1ba097df951c6049f2f2cbbb5319`.
 
-Full Project Gutenberg *Opticks*: source SHA-256 `1e25ec2c54fc6e9fa05d7f0a663e05cf2ee671231c65731f4845df2539dfb217`; normalized SHA-256 `436bfa539f5e8c84c5c3af71eff49a89858d3b2c4ad45ddd55144b6f4066c87a`; `586543` chars.
+Persisted rescue output must remain exact-source, unique raw rank0 only, with no source rewriting, target surgery, literal injection, placeholders, corpus patches, automatic n-best selection or evaluator weakening.
 
-Rank0-clean replay workflow `34695164876`, artifact `10297359600`, final run `41`:
+## Illustration frontier
 
-- `3335` rows;
-- **18 numeric/symbol / 16 punctuation / 0 length, 33 unique**;
-- output SHA `d8948e43158a126703a90e6ce1cd25725da8774e1db64410ca67e3ec7bb1a10f`;
-- final-text SHA `23170683ddbe183b4da6b4097d72cedc86b9c98044e9f3e1dee015015e16e15e`;
-- SQLite SHA `e48df8a90a3aa5e07bbc7e86c150d7b65ce450e7b6a0ec0d2e34a0caf9846e2e`;
-- replay evidence SHA `e7504ef18ead81e9c437ab8236b787a7d59082c272ef102fcc9bae6e281deac1`;
-- independent census evidence SHA `b384ae0936f2ec792dd8ec6fbfcdf5da0dea1ba097df951c6049f2f2cbbb5319`.
+Read-only DOE `34698906048` / artifact `10299487345` proved a generic four-piece pre-MT source plan for starts `72401` and `90105`: label → OPUS rank0; exact blank-line separator → source passthrough; `_Illustration._` → TC-big rank0; trailing whitespace → source passthrough. Aggregate outputs pass maintained gates and preserve exact source/model-input identity.
 
-Persisted rescue selection is unique raw rank0 only; no source rewriting, target rewriting/surgery, literal injection, placeholders, corpus patches, automatic n-best cherry-picking or evaluator weakening.
+Contract `/4` preserves the existing ordinary-suffix OPUS path and adds that geometry. Full promotion workflow `34742555215` authenticated run41 and pinned assets but was **rejected**: final run `56` had **18 numeric / 14 punctuation / 4 length, 35 unique**. Failure artifact `10313456776`, ZIP digest `sha256:8ca8aabf3fe8d8cab32f503c9997435162e7a3bd71d46014f191bd0385abec93`.
 
-## Returned-family DOE
-
-Workflow `34697653680`, artifact `10298988451`, evidence SHA `b6166ec906e30afa622d9a7b4af1d84a485b3188b148cce3c3d404f2368d61e7` established:
-
-- illustration seq `424/514`: OPUS rank0 on exact `[Illustration: FIG. N.]` + TC-big rank0 on exact `_Illustration._` passes mechanical gates, but the first aggregation incorrectly dropped source-owned `\n\n`; that aggregate is rejected;
-- short-DMS seq `638`: tested exact-source/raw-rank0 whole/split geometries are exhausted and inadmissible;
-- historical illustration canonicalization/beam experiments are diagnostic only because they rewrote model input and/or selected rank>0.
-
-## Illustration structural-separator DOE
-
-Workflow `34698906048` succeeded on exact run41 at engineering HEAD `001ba055f47f059529aa4b876db8d5308ae957d7`.
-
-- artifact `10299487345`;
-- artifact digest `sha256:87c38ebc60cea7b243e36e580f8908bd90f9f975186a96cc7342344528ce87de`;
-- schema `rocketdict-full-opticks-illustration-structural-separator-doe/1`;
-- evidence SHA-256 `0af3deb591aee8da0dd11ba7a59aeab64c65d2d2327e923ebbeb64b9b077e3ee`;
-- exact run41 DB authenticated and unchanged; source coverage byte-exact; source plan created before MT; raw rank0 only;
-- `source_owned_structural_passthrough=true`; all unsafe flags remain false, including `post_translation_literal_injection=false` and both n-best flags false;
-- 8 candidates tested; exactly two pass maintained mechanical gates:
-  - `illustration:72401:planned-separator:opus+tc_big`
-  - `illustration:90105:planned-separator:opus+tc_big`.
-
-The passing geometry is source-defined before MT:
-
-1. exact label `[Illustration: FIG. N.]` → OPUS raw rank0;
-2. exact source-owned blank-line separator `\n\n` is structural passthrough;
-3. exact suffix `_Illustration._` → TC-big raw rank0;
-4. exact trailing source whitespace is structural passthrough.
-
-Representative aggregate: `[Иллюстрация: FIG. 21.]\n\n_Иллюстрация._ `, with square delimiters, emphasis, punctuation, numeric identity and source structural boundary all preserved.
-
-This DOE resolves the **mechanical geometry** question. Subsequent L3 audit also resolved the two remaining provenance questions:
-
-- direct read-only inspection of persisted run41 SQLite from artifact `10297359600` found `illustration_label_rescue_normalized_model_input_source_starts=[]` and only accepted source start `203786`; therefore run41 itself did **not** persist any candidate generated from normalized `_Illustration._ → Illustration.` input and remains a valid exact-source parent;
-- accepted `rocketdict-stage12-ascii-table-logical-rank0/1` (`table_stage12.py`, `table_logical_structure.py`, `test_table_stage12.py`) already plans immutable source structure before MT, translates lexical source groups only, and renders source-owned whitespace/delimiters/numeric cells from their original spans. This establishes the architectural precedent for the illustration blank-line/trailing structural passthrough; it is not post-hoc target injection.
-
-Forward illustration-label code is now contract `/3`: exact source remainder is the only legal model input, normalization is fail-closed, `model_input_source_rewritten=false`, and `_candidate_rows` rejects `model_input != remainder_source`. Targeted hardening workflow `34703487403` completed successfully before commit `71bf94322b608fcdaa8379abb59e3089c4c1f7c2`; one-shot helper workflows were removed afterward.
+L3 SQLite + evaluator audit proved the four new length failures are exactly the two standalone `\n\n` rows and two standalone trailing-space rows. `_length_passed` intentionally rejects zero-alpha source rows whose target strips empty. The aggregate translation is valid; the persisted four-row representation is incompatible with row-local hard gates. Do not weaken the evaluator.
 
 ## Active next actions
 
-1. Implement the now-authorized generic/default-OFF illustration structural-separator wrapper from the proven source-only plan: OPUS rank0 label + source-owned separator + TC-big rank0 exact suffix + source-owned trailing whitespace.
-2. Add fail-closed tests for exact source/model-input identity, unique rank0, exact structural spans, semantic target form and aggregate mechanical/emphasis checks.
-3. Run maintained Product Core CI, then replay the wrapper from exact run41 and run an independent residual census. The arithmetic expectation **18 numeric / 14 punctuation / 0 length, 31 unique** is not acceptance evidence.
-4. Promote a new parent only if the full replay proves byte-exact source coverage, no regressions/unsafe flags, semantic/boundary acceptance and the expected strict hard-gate improvement.
-5. Continue to zero hard failures, then complete learner/export and Windows release validation.
+1. Keep the four-piece immutable source plan/provenance but persist each structural illustration as a hard-gate-safe semantic carrier row, preferably one composite row covering the original source span and exact aggregate target.
+2. Add tests proving aggregate target identity, exact lexical source/model-input subspans, source-owned structural provenance, raw rank0-only selection, and no post-MT repair.
+3. Re-run maintained CI and exact run41 promotion + independent census. Promote only on **18 numeric / 14 punctuation / 0 length, 31 unique**, byte-exact source coverage, unchanged unrelated run41 spans and clean safety flags.
+4. Remove temporary one-shot workflows after verification, synchronize mandatory memory, then move to the next residual cluster from L3 evidence.
